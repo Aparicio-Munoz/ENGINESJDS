@@ -1,0 +1,145 @@
+.dashboardShell {
+  display: grid;
+  min-height: 100vh;
+  grid-template-columns: 280px 1fr;
+  color: #172033;
+  background: #f6f8fb;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  border-right: 1px solid #d9e1ec;
+  padding: 28px 20px;
+  background: #ffffff;
+}
+
+.brand {
+  color: #101828;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+}
+
+.sidebarNav {
+  display: grid;
+  gap: 6px;
+}
+
+.navItem {
+  border-radius: 8px;
+  color: #475467;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 12px 14px;
+  text-decoration: none;
+}
+
+.navItem:hover {
+  background: #eef4ff;
+  color: #1849a9;
+}
+
+.activeNavItem {
+  background: #dbeafe;
+  color: #1849a9;
+}
+
+.contentShell {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.topHeader {
+  display: flex;
+  min-height: 76px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid #d9e1ec;
+  padding: 16px 32px;
+  background: #ffffff;
+}
+
+.headerLabel,
+.userName {
+  margin: 0;
+}
+
+.headerLabel {
+  color: #667085;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.userName {
+  color: #101828;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.logoutButton {
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #ffffff;
+  background: #1d4ed8;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.logoutButton:hover {
+  background: #1e40af;
+}
+
+.mainContent {
+  width: min(1180px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 32px 0;
+}
+
+@media (max-width: 900px) {
+  .dashboardShell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    border-right: 0;
+    border-bottom: 1px solid #d9e1ec;
+    padding: 20px;
+  }
+
+  .sidebarNav {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .navItem {
+    white-space: nowrap;
+  }
+
+  .topHeader {
+    padding: 16px 20px;
+  }
+
+  .mainContent {
+    width: min(100% - 32px, 1180px);
+    padding: 24px 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .topHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .logoutButton {
+    width: 100%;
+  }
+}
