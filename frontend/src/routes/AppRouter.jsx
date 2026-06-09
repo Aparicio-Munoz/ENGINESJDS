@@ -7,6 +7,9 @@ import { Home } from '../pages/Home/Home'
 import { Login } from '../pages/Login/Login'
 import { Clientes } from '../pages/admin/Clientes/Clientes'
 import { Motocicletas } from '../pages/admin/Motocicletas/Motocicletas'
+import { ProtectedRoute } from '../components/ProtectedRoute/ProtectedRoute'
+import { Empleados } from '../pages/admin/Empleados/Empleados'
+import { Inventario } from '../pages/admin/Inventario/Inventario'
 import { OrdenesTrabajo } from '../pages/admin/OrdenesTrabajo/OrdenesTrabajo'
 import { Register } from '../pages/Register/Register'
 import { ROUTES } from '../utils/routes'
@@ -32,7 +35,11 @@ const router = createBrowserRouter([
   },
   {
     path: ROUTES.admin,
-    element: <DashboardLayout />,
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout />
+      </ProtectedRoute>
+    ),
     children: [
       {
         index: true,
@@ -44,7 +51,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'empleados',
-        element: <AdminSectionPlaceholder title="Empleados" />,
+        element: <Empleados />,
       },
       {
         path: 'clientes',
@@ -60,7 +67,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'inventario',
-        element: <AdminSectionPlaceholder title="Inventario" />,
+        element: <Inventario />,
       },
       {
         path: 'reportes',
