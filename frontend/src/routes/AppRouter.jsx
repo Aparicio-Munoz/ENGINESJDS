@@ -5,7 +5,9 @@ import { AdminSectionPlaceholder } from '../pages/DashboardAdmin/AdminSectionPla
 import { DashboardAdmin } from '../pages/DashboardAdmin/DashboardAdmin'
 import { Home } from '../pages/Home/Home'
 import { Login } from '../pages/Login/Login'
+import { Clientes } from '../pages/admin/Clientes/Clientes'
 import { Motocicletas } from '../pages/admin/Motocicletas/Motocicletas'
+import { OrdenesTrabajo } from '../pages/admin/OrdenesTrabajo/OrdenesTrabajo'
 import { Register } from '../pages/Register/Register'
 import { ROUTES } from '../utils/routes'
 
@@ -45,12 +47,16 @@ const router = createBrowserRouter([
         element: <AdminSectionPlaceholder title="Empleados" />,
       },
       {
+        path: 'clientes',
+        element: <Clientes />,
+      },
+      {
         path: 'motocicletas',
         element: <Motocicletas />,
       },
       {
         path: 'ordenes',
-        element: <AdminSectionPlaceholder title="Ordenes de trabajo" />,
+        element: <OrdenesTrabajo />,
       },
       {
         path: 'inventario',

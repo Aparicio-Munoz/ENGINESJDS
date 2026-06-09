@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { getMotorcycles, saveMotorcycles } from '../../../services/motorcyclesService'
 import styles from './Motocicletas.module.css'
 
 const initialMotorcycles = [
@@ -96,10 +97,14 @@ function validateMotorcycle(formData, motorcycles) {
 }
 
 export function Motocicletas() {
-  const [motorcycles, setMotorcycles] = useState(initialMotorcycles)
+  const [motorcycles, setMotorcycles] = useState(() => getMotorcycles(initialMotorcycles))
   const [formData, setFormData] = useState(initialFormData)
   const [errors, setErrors] = useState({})
   const [isModalOpen, setIsModalOpen] = useState(false)
+
+  useEffect(() => {
+    saveMotorcycles(motorcycles)
+  }, [motorcycles])
 
   const totalInService = useMemo(
     () => motorcycles.filter((motorcycle) => motorcycle.status === 'En servicio').length,
