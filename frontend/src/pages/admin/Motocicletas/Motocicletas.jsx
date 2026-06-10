@@ -101,6 +101,7 @@ export function Motocicletas() {
   const [formData, setFormData] = useState(initialFormData)
   const [errors, setErrors] = useState({})
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     saveMotorcycles(motorcycles)
@@ -110,6 +111,14 @@ export function Motocicletas() {
     () => motorcycles.filter((motorcycle) => motorcycle.status === 'En servicio').length,
     [motorcycles],
   )
+
+  const filteredMotorcycles = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim()
+    if (!q) return motorcycles
+    return motorcycles.filter(
+      (m) => m.plate.toLowerCase().includes(q) || m.brand.toLowerCase().includes(q),
+    )
+  }, [motorcycles, searchQuery])
 
   function openModal() {
     setErrors({})
@@ -180,8 +189,22 @@ export function Motocicletas() {
       </div>
 
       <div className={styles.summaryBar}>
-        <span>{motorcycles.length} motocicletas registradas</span>
-        <span>{totalInService} ordenes en servicio</span>
+        <span>
+          {searchQuery
+            ? `${filteredMotorcycles.length} de ${motorcycles.length} motocicletas`
+            : `${motorcycles.length} motocicletas registradas`}
+        </span>
+        <span>{totalInService} en servicio</span>
+      </div>
+
+      <div className={styles.searchBar}>
+        <input
+          className={styles.searchInput}
+          type="search"
+          placeholder="Buscar por placa o marca..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
       </div>
 
       <div className={styles.tableWrapper}>
@@ -198,7 +221,7 @@ export function Motocicletas() {
             </tr>
           </thead>
           <tbody>
-            {motorcycles.map((motorcycle) => (
+            {filteredMotorcycles.map((motorcycle) => (
               <tr key={motorcycle.id}>
                 <td data-label="Placa">{motorcycle.plate}</td>
                 <td data-label="Marca">{motorcycle.brand}</td>
@@ -224,6 +247,15 @@ export function Motocicletas() {
                 </td>
               </tr>
             ))}
+            {filteredMotorcycles.length === 0 ? (
+              <tr>
+                <td colSpan={7} className={styles.emptyState}>
+                  {searchQuery
+                    ? `Sin resultados para "${searchQuery.trim()}"`
+                    : 'No hay motocicletas registradas aún'}
+                </td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>

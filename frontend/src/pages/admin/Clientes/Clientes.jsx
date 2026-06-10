@@ -77,12 +77,21 @@ export function Clientes() {
   const [formData, setFormData] = useState(initialFormData)
   const [errors, setErrors] = useState({})
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     saveClients(clients)
   }, [clients])
 
   const totalClients = useMemo(() => clients.length, [clients])
+
+  const filteredClients = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim()
+    if (!q) return clients
+    return clients.filter(
+      (c) => c.name.toLowerCase().includes(q) || c.document.includes(q),
+    )
+  }, [clients, searchQuery])
 
   function openModal() {
     setErrors({})
@@ -142,7 +151,21 @@ export function Clientes() {
       </div>
 
       <div className={styles.summaryBar}>
-        <span>{totalClients} clientes registrados</span>
+        <span>
+          {searchQuery
+            ? `${filteredClients.length} de ${totalClients} clientes`
+            : `${totalClients} clientes registrados`}
+        </span>
+      </div>
+
+      <div className={styles.searchBar}>
+        <input
+          className={styles.searchInput}
+          type="search"
+          placeholder="Buscar por nombre o documento..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
       </div>
 
       <div className={styles.tableWrapper}>
@@ -158,7 +181,7 @@ export function Clientes() {
             </tr>
           </thead>
           <tbody>
-            {clients.map((client) => (
+            {filteredClients.map((client) => (
               <tr key={client.id}>
                 <td data-label="Nombre">
                   <span className={styles.clientName}>{client.name}</span>
@@ -178,6 +201,15 @@ export function Clientes() {
                 </td>
               </tr>
             ))}
+            {filteredClients.length === 0 ? (
+              <tr>
+                <td colSpan={6} className={styles.emptyState}>
+                  {searchQuery
+                    ? `Sin resultados para "${searchQuery.trim()}"`
+                    : 'No hay clientes registrados aún'}
+                </td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>

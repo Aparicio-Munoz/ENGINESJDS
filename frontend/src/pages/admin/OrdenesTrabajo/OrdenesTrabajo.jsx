@@ -62,6 +62,13 @@ const initialFormData = {
   repuestoId: '',
   mileage: '',
   faultDescription: '',
+  status: 'Recibida',
+}
+
+function findRepuestoId(repuestoString, inventory) {
+  if (!repuestoString) return ''
+  const item = inventory.find((i) => `${i.code} - ${i.name}` === repuestoString)
+  return item ? item.id : ''
 }
 
 function generateOrderNumber(orders) {
@@ -104,6 +111,10 @@ export function OrdenesTrabajo() {
   const [formData, setFormData] = useState(initialFormData)
   const [errors, setErrors] = useState({})
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingOrderId, setEditingOrderId] = useState(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterStatus, setFilterStatus] = useState('')
+  const [filterEmployee, setFilterEmployee] = useState('')
 
   useEffect(() => {
     saveOrders(orders)
@@ -119,14 +130,46 @@ export function OrdenesTrabajo() {
     [orders],
   )
 
+  const employeeOptions = useMemo(() => {
+    const set = new Set(orders.map((o) => o.assignedEmployee).filter(Boolean))
+    return [...set].sort()
+  }, [orders])
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter((o) => {
+      const q = searchQuery.toLowerCase().trim()
+      const matchSearch = !q || o.orderNumber.toLowerCase().includes(q)
+      const matchStatus = !filterStatus || o.status === filterStatus
+      const matchEmployee = !filterEmployee || o.assignedEmployee === filterEmployee
+      return matchSearch && matchStatus && matchEmployee
+    })
+  }, [orders, searchQuery, filterStatus, filterEmployee])
+
   function openModal() {
     setErrors({})
+    setEditingOrderId(null)
     setFormData(initialFormData)
+    setIsModalOpen(true)
+  }
+
+  function openEditModal(order) {
+    setErrors({})
+    setEditingOrderId(order.id)
+    setFormData({
+      clientName: order.clientName || '',
+      motorcycle: order.motorcycle || '',
+      assignedEmployee: order.assignedEmployee || '',
+      repuestoId: findRepuestoId(order.repuesto, inventory),
+      mileage: order.mileage || '',
+      faultDescription: order.faultDescription || '',
+      status: order.status || 'Recibida',
+    })
     setIsModalOpen(true)
   }
 
   function closeModal() {
     setIsModalOpen(false)
+    setEditingOrderId(null)
     setErrors({})
   }
 
@@ -165,6 +208,37 @@ export function OrdenesTrabajo() {
     closeModal()
   }
 
+  function handleUpdateOrder(event) {
+    event.preventDefault()
+
+    const validationErrors = validateOrder(formData)
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors)
+      return
+    }
+
+    const selectedItem = inventory.find((i) => i.id === formData.repuestoId)
+
+    setOrders((current) =>
+      current.map((order) =>
+        order.id === editingOrderId
+          ? {
+              ...order,
+              clientName: formData.clientName.trim(),
+              motorcycle: formData.motorcycle.trim(),
+              assignedEmployee: formData.assignedEmployee.trim(),
+              repuesto: selectedItem ? `${selectedItem.code} - ${selectedItem.name}` : '',
+              costoEstimado: selectedItem ? selectedItem.price : '',
+              mileage: formData.mileage.trim(),
+              faultDescription: formData.faultDescription.trim(),
+              status: formData.status,
+            }
+          : order,
+      ),
+    )
+    closeModal()
+  }
+
   function handleChangeStatus(orderId, newStatus) {
     setOrders((current) =>
       current.map((order) => (order.id === orderId ? { ...order, status: newStatus } : order)),
@@ -190,8 +264,42 @@ export function OrdenesTrabajo() {
       </div>
 
       <div className={styles.summaryBar}>
-        <span>{orders.length} ordenes registradas</span>
+        <span>
+          {searchQuery || filterStatus || filterEmployee
+            ? `${filteredOrders.length} de ${orders.length} ordenes`
+            : `${orders.length} ordenes registradas`}
+        </span>
         <span>{inProgressCount} en proceso</span>
+      </div>
+
+      <div className={styles.searchBar}>
+        <input
+          className={styles.searchInput}
+          type="search"
+          placeholder="Buscar por número OT..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        <select
+          className={styles.filterSelect}
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+        >
+          <option value="">Todos los estados</option>
+          {ORDER_STATUSES.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        <select
+          className={styles.filterSelect}
+          value={filterEmployee}
+          onChange={(e) => setFilterEmployee(e.target.value)}
+        >
+          <option value="">Todos los empleados</option>
+          {employeeOptions.map((name) => (
+            <option key={name} value={name}>{name}</option>
+          ))}
+        </select>
       </div>
 
       <div className={styles.tableWrapper}>
@@ -210,7 +318,7 @@ export function OrdenesTrabajo() {
             </tr>
           </thead>
           <tbody>
-            {orders.map((order) => (
+            {filteredOrders.map((order) => (
               <tr key={order.id}>
                 <td data-label="Número OT">
                   <span className={styles.orderNumber}>{order.orderNumber}</span>
@@ -241,6 +349,13 @@ export function OrdenesTrabajo() {
                 </td>
                 <td data-label="Acciones">
                   <button
+                    className={styles.editButton}
+                    type="button"
+                    onClick={() => openEditModal(order)}
+                  >
+                    Editar
+                  </button>
+                  <button
                     className={styles.deleteButton}
                     type="button"
                     onClick={() => handleDeleteOrder(order.id)}
@@ -250,6 +365,15 @@ export function OrdenesTrabajo() {
                 </td>
               </tr>
             ))}
+            {filteredOrders.length === 0 ? (
+              <tr>
+                <td colSpan={9} className={styles.emptyState}>
+                  {searchQuery || filterStatus || filterEmployee
+                    ? 'Sin resultados para los filtros aplicados'
+                    : 'No hay órdenes registradas aún'}
+                </td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>
@@ -264,15 +388,20 @@ export function OrdenesTrabajo() {
           >
             <div className={styles.modalHeader}>
               <div>
-                <p className={styles.eyebrow}>Registro</p>
-                <h2 id="order-modal-title">Nueva orden de trabajo</h2>
+                <p className={styles.eyebrow}>{editingOrderId ? 'Edicion' : 'Registro'}</p>
+                <h2 id="order-modal-title">
+                  {editingOrderId ? 'Editar orden de trabajo' : 'Nueva orden de trabajo'}
+                </h2>
               </div>
               <button className={styles.iconButton} type="button" onClick={closeModal}>
                 X
               </button>
             </div>
 
-            <form className={styles.form} onSubmit={handleCreateOrder}>
+            <form
+              className={styles.form}
+              onSubmit={editingOrderId ? handleUpdateOrder : handleCreateOrder}
+            >
               <label className={styles.formField}>
                 Cliente
                 <select name="clientName" value={formData.clientName} onChange={handleInputChange}>
@@ -355,12 +484,25 @@ export function OrdenesTrabajo() {
                 {errors.faultDescription ? <span>{errors.faultDescription}</span> : null}
               </label>
 
+              {editingOrderId ? (
+                <label className={styles.formField}>
+                  Estado
+                  <select name="status" value={formData.status} onChange={handleInputChange}>
+                    {ORDER_STATUSES.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+
               <div className={styles.formActions}>
                 <button className={styles.secondaryButton} type="button" onClick={closeModal}>
                   Cancelar
                 </button>
                 <button className={styles.primaryButton} type="submit">
-                  Guardar orden
+                  {editingOrderId ? 'Guardar cambios' : 'Guardar orden'}
                 </button>
               </div>
             </form>

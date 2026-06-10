@@ -237,6 +237,36 @@
   margin-top: 8px;
 }
 
+.searchBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 200px;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #101828;
+  background: #ffffff;
+  font-family: inherit;
+  font-size: 0.92rem;
+}
+
+.searchInput:focus {
+  border-color: #2563eb;
+  outline: 3px solid #bfdbfe;
+}
+
+.table .emptyState {
+  padding: 40px 16px;
+  color: #667085;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
 @media (max-width: 760px) {
   .pageHeader {
     flex-direction: column;
