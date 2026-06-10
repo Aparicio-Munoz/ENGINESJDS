@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import heroBike from '../../assets/images/hero-bike.png'
 import { ROUTES } from '../../utils/routes'
 import styles from './Home.module.css'
 
@@ -116,8 +117,17 @@ export function Home() {
           </div>
         </div>
         <div className={styles.heroVisual} aria-hidden="true">
-          <div className={styles.heroOrb} />
-          <div className={styles.heroIcon}>🏍️</div>
+          <div className={styles.heroHalo} />
+          <div className={styles.heroHaloRing} />
+          <div className={styles.heroBikeWrapper}>
+            <img
+              src={heroBike}
+              alt="Motocicleta deportiva ENGINES JDS"
+              className={styles.heroBikeImg}
+              draggable={false}
+            />
+          </div>
+          <div className={styles.heroGroundGlow} />
         </div>
       </section>
 

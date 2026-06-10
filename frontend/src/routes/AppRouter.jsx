@@ -17,6 +17,7 @@ import { Inventario } from '../pages/admin/Inventario/Inventario'
 import { OrdenesTrabajo } from '../pages/admin/OrdenesTrabajo/OrdenesTrabajo'
 import { Citas } from '../pages/admin/Citas/Citas'
 import { Register } from '../pages/Register/Register'
+import { NotFound } from '../pages/NotFound/NotFound'
 import { ROUTES } from '../utils/routes'
 
 const router = createBrowserRouter([
@@ -95,6 +96,10 @@ const router = createBrowserRouter([
         element: <AdminSectionPlaceholder title="Configuracion" />,
       },
     ],
+  },
+  {
+    path: '*',
+    element: <NotFound />,
   },
 ])
 

@@ -1,0 +1,7 @@
+export { clientsApi }      from './clientsApi'
+export { motorcyclesApi }  from './motorcyclesApi'
+export { ordersApi }       from './ordersApi'
+export { inventoryApi }    from './inventoryApi'
+export { employeesApi }    from './employeesApi'
+export { usersApi }        from './usersApi'
+export { appointmentsApi } from './appointmentsApi'

@@ -77,20 +77,96 @@
 
 /* ── Sidebar footer ───────────────────────────────── */
 .sidebarFooter {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  position: relative;
   padding-top: 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   margin-top: auto;
 }
 
+/* ── Profile menu (opens upward) ──────────────────── */
+.profileMenu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: #1E293B;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--r-md, 12px);
+  padding: 6px;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4);
+  z-index: 200;
+  animation: menuFadeIn 0.15s ease;
+}
+
+@keyframes menuFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.profileMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 0;
+  background: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s, color 0.15s;
+}
+
+.profileMenuItem:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #ffffff;
+}
+
+.profileMenuItemDanger {
+  color: #F87171;
+}
+
+.profileMenuItemDanger:hover {
+  background: rgba(220, 38, 38, 0.12);
+  color: #FCA5A5;
+}
+
+.profileMenuDivider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.07);
+  margin: 4px 0;
+}
+
+/* ── User chip (now a button) ─────────────────────── */
 .userChip {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex: 1;
-  min-width: 0;
+  width: 100%;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  padding: 6px 4px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+
+.userChip:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.chevron {
+  margin-left: auto;
+  color: rgba(255, 255, 255, 0.3);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.chevronUp {
+  transform: rotate(180deg);
 }
 
 .userAvatar {
@@ -127,25 +203,6 @@
   color: rgba(255, 255, 255, 0.35);
 }
 
-.logoutButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  border: 0;
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.4);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background 0.15s, color 0.15s;
-}
-
-.logoutButton:hover {
-  background: rgba(220, 38, 38, 0.15);
-  color: #F87171;
-}
 
 /* ── Content shell ────────────────────────────────── */
 .contentShell {
@@ -221,7 +278,8 @@
     padding-left: 12px;
   }
 
-  .userInfo {
+  .userInfo,
+  .chevron {
     display: none;
   }
 

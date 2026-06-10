@@ -1,0 +1,65 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 15, 30, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wrapper {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ── Spinner ──────────────────────────────────────── */
+.spinner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sm  { width: 20px; height: 20px; }
+.md  { width: 36px; height: 36px; }
+.lg  { width: 56px; height: 56px; }
+
+.ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  border-top-color: var(--accent, #F97316);
+  animation: spin 0.8s linear infinite;
+}
+
+.sm .ring  { border-width: 2px; }
+.lg .ring  { border-width: 4px; }
+
+.ringDelay {
+  border-top-color: transparent;
+  border-right-color: rgba(249, 115, 22, 0.3);
+  animation-duration: 1.2s;
+  animation-direction: reverse;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Screen reader only ───────────────────────────── */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

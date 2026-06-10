@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { GlobalSearch } from '../../components/GlobalSearch/GlobalSearch'
@@ -93,6 +94,18 @@ const NAV_ITEMS = [
 export function DashboardLayout() {
   const { logout, user } = useAuth()
   const navigate = useNavigate()
+  const [profileOpen, setProfileOpen] = useState(false)
+  const profileRef = useRef(null)
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setProfileOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   function handleLogout() {
     logout()
@@ -123,8 +136,55 @@ export function DashboardLayout() {
           ))}
         </nav>
 
-        <div className={styles.sidebarFooter}>
-          <div className={styles.userChip}>
+        <div className={styles.sidebarFooter} ref={profileRef}>
+          {profileOpen ? (
+            <div className={styles.profileMenu} role="menu" aria-label="Menú de usuario">
+              <button
+                className={styles.profileMenuItem}
+                type="button"
+                role="menuitem"
+                onClick={() => { navigate(`${ROUTES.admin}/configuracion`); setProfileOpen(false) }}
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15" aria-hidden="true">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-5.5-2.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0ZM10 12a5.99 5.99 0 0 0-4.793 2.39A6.483 6.483 0 0 0 10 16.5a6.483 6.483 0 0 0 4.793-2.11A5.99 5.99 0 0 0 10 12Z" clipRule="evenodd" />
+                </svg>
+                Mi perfil
+              </button>
+              <button
+                className={styles.profileMenuItem}
+                type="button"
+                role="menuitem"
+                onClick={() => { navigate(`${ROUTES.admin}/configuracion`); setProfileOpen(false) }}
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15" aria-hidden="true">
+                  <path fillRule="evenodd" d="M7.84 1.804A1 1 0 0 1 8.82 1h2.36a1 1 0 0 1 .98.804l.331 1.652a6.993 6.993 0 0 1 1.929 1.115l1.598-.54a1 1 0 0 1 1.186.447l1.18 2.044a1 1 0 0 1-.205 1.251l-1.267 1.113a7.047 7.047 0 0 1 0 2.228l1.267 1.113a1 1 0 0 1 .206 1.25l-1.18 2.045a1 1 0 0 1-1.187.447l-1.598-.54a6.993 6.993 0 0 1-1.929 1.115l-.33 1.652a1 1 0 0 1-.98.804H8.82a1 1 0 0 1-.98-.804l-.331-1.652a6.993 6.993 0 0 1-1.929-1.115l-1.598.54a1 1 0 0 1-1.186-.447l-1.18-2.044a1 1 0 0 1 .205-1.251l1.267-1.114a7.05 7.05 0 0 1 0-2.227L1.821 7.773a1 1 0 0 1-.206-1.25l1.18-2.045a1 1 0 0 1 1.187-.447l1.598.54A6.993 6.993 0 0 1 7.51 3.456l.33-1.652ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clipRule="evenodd" />
+                </svg>
+                Configuración
+              </button>
+              <div className={styles.profileMenuDivider} />
+              <button
+                className={`${styles.profileMenuItem} ${styles.profileMenuItemDanger}`}
+                type="button"
+                role="menuitem"
+                onClick={() => { handleLogout(); setProfileOpen(false) }}
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15" aria-hidden="true">
+                  <path fillRule="evenodd" d="M3 4.25A2.25 2.25 0 0 1 5.25 2h5.5A2.25 2.25 0 0 1 13 4.25v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 0-.75-.75h-5.5a.75.75 0 0 0-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 0 0 .75-.75v-2a.75.75 0 0 1 1.5 0v2A2.25 2.25 0 0 1 10.75 18h-5.5A2.25 2.25 0 0 1 3 15.75V4.25Z" clipRule="evenodd" />
+                  <path fillRule="evenodd" d="M19 10a.75.75 0 0 0-.75-.75H8.704l1.048-.943a.75.75 0 1 0-1.004-1.114l-2.5 2.25a.75.75 0 0 0 0 1.114l2.5 2.25a.75.75 0 1 0 1.004-1.114l-1.048-.943h9.546A.75.75 0 0 0 19 10Z" clipRule="evenodd" />
+                </svg>
+                Cerrar sesión
+              </button>
+            </div>
+          ) : null}
+
+          <button
+            className={styles.userChip}
+            type="button"
+            aria-expanded={profileOpen}
+            aria-haspopup="menu"
+            aria-label="Menú de usuario"
+            onClick={() => setProfileOpen((v) => !v)}
+          >
             <div className={styles.userAvatar} aria-hidden="true">
               {(user?.name || 'U')[0].toUpperCase()}
             </div>
@@ -132,16 +192,15 @@ export function DashboardLayout() {
               <span className={styles.userName}>{user?.name || 'Usuario'}</span>
               <span className={styles.userRole}>Administrador</span>
             </div>
-          </div>
-          <button
-            className={styles.logoutButton}
-            type="button"
-            onClick={handleLogout}
-            title="Cerrar sesión"
-          >
-            <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18" aria-hidden="true">
-              <path fillRule="evenodd" d="M3 4.25A2.25 2.25 0 0 1 5.25 2h5.5A2.25 2.25 0 0 1 13 4.25v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 0-.75-.75h-5.5a.75.75 0 0 0-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 0 0 .75-.75v-2a.75.75 0 0 1 1.5 0v2A2.25 2.25 0 0 1 10.75 18h-5.5A2.25 2.25 0 0 1 3 15.75V4.25Z" clipRule="evenodd" />
-              <path fillRule="evenodd" d="M19 10a.75.75 0 0 0-.75-.75H8.704l1.048-.943a.75.75 0 1 0-1.004-1.114l-2.5 2.25a.75.75 0 0 0 0 1.114l2.5 2.25a.75.75 0 1 0 1.004-1.114l-1.048-.943h9.546A.75.75 0 0 0 19 10Z" clipRule="evenodd" />
+            <svg
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              width="14"
+              height="14"
+              aria-hidden="true"
+              className={`${styles.chevron} ${profileOpen ? styles.chevronUp : ''}`}
+            >
+              <path fillRule="evenodd" d="M9.47 6.47a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 1 1-1.06 1.06L10 8.06l-3.72 3.72a.75.75 0 0 1-1.06-1.06l4.25-4.25Z" clipRule="evenodd" />
             </svg>
           </button>
         </div>
