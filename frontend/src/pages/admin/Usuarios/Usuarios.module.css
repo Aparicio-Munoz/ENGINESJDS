@@ -63,7 +63,7 @@
 
 .table {
   width: 100%;
-  min-width: 1100px;
+  min-width: 680px;
   border-collapse: collapse;
 }
 
@@ -93,14 +93,14 @@
   border-bottom: 0;
 }
 
-.orderNumber {
+.username {
   font-family: ui-monospace, monospace;
   font-weight: 800;
-  font-size: 0.88rem;
+  font-size: 0.92rem;
   color: #1d4ed8;
 }
 
-/* Status badge — color driven by data-status attribute */
+.roleBadge,
 .statusBadge {
   display: inline-flex;
   align-items: center;
@@ -112,48 +112,41 @@
   white-space: nowrap;
 }
 
-.statusSelect {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  border: 0;
-  border-radius: 999px;
-  padding: 5px 10px;
-  font-size: 0.82rem;
-  font-weight: 800;
-  white-space: nowrap;
-  cursor: pointer;
-  font-family: inherit;
-  appearance: none;
-}
-
-.statusSelect:focus {
-  outline: 3px solid #bfdbfe;
-}
-
-.statusBadge[data-status="Recibida"] {
-  background: #dbeafe;
-  color: #1d4ed8;
-}
-
-.statusBadge[data-status="Diagnóstico"] {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.statusBadge[data-status="En reparación"] {
-  background: #ffedd5;
-  color: #9a3412;
-}
-
-.statusBadge[data-status="Lista para entrega"] {
+/* Role badges */
+.roleBadge[data-role="Administrador"] {
   background: #ede9fe;
   color: #6d28d9;
 }
 
-.statusBadge[data-status="Entregada"] {
+.roleBadge[data-role="Recepcionista"] {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.roleBadge[data-role="Mecánico"] {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.roleBadge[data-role="Supervisor"] {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* Status badges */
+.statusBadge[data-status="Activo"] {
   background: #d1fae5;
   color: #047857;
+}
+
+.statusBadge[data-status="Inactivo"] {
+  background: #f1f5f9;
+  color: #475467;
+}
+
+.statusBadge[data-status="Bloqueado"] {
+  background: #fee4e2;
+  color: #b42318;
 }
 
 .primaryButton,
@@ -245,13 +238,8 @@
   font-weight: 800;
 }
 
-.fullWidth {
-  grid-column: 1 / -1;
-}
-
 .formField input,
-.formField select,
-.formField textarea {
+.formField select {
   width: 100%;
   border: 1px solid #d0d5dd;
   border-radius: 8px;
@@ -262,14 +250,8 @@
   font-size: inherit;
 }
 
-.formField textarea {
-  resize: vertical;
-  min-height: 80px;
-}
-
 .formField input:focus,
-.formField select:focus,
-.formField textarea:focus {
+.formField select:focus {
   border-color: #2563eb;
   outline: 3px solid #bfdbfe;
 }

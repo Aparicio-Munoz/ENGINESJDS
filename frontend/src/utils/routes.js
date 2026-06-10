@@ -7,4 +7,6 @@ export const ROUTES = {
   adminOrdenes: '/admin/ordenes',
   adminInventario: '/admin/inventario',
   adminEmpleados: '/admin/empleados',
+  adminUsuarios: '/admin/usuarios',
+  adminReportes: '/admin/reportes',
 }

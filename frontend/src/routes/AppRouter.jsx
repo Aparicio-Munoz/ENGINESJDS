@@ -9,6 +9,8 @@ import { Clientes } from '../pages/admin/Clientes/Clientes'
 import { Motocicletas } from '../pages/admin/Motocicletas/Motocicletas'
 import { ProtectedRoute } from '../components/ProtectedRoute/ProtectedRoute'
 import { Empleados } from '../pages/admin/Empleados/Empleados'
+import { Reportes } from '../pages/admin/Reportes/Reportes'
+import { Usuarios } from '../pages/admin/Usuarios/Usuarios'
 import { Inventario } from '../pages/admin/Inventario/Inventario'
 import { OrdenesTrabajo } from '../pages/admin/OrdenesTrabajo/OrdenesTrabajo'
 import { Register } from '../pages/Register/Register'
@@ -47,7 +49,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'usuarios',
-        element: <AdminSectionPlaceholder title="Usuarios" />,
+        element: <Usuarios />,
       },
       {
         path: 'empleados',
@@ -71,7 +73,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'reportes',
-        element: <AdminSectionPlaceholder title="Reportes" />,
+        element: <Reportes />,
       },
       {
         path: 'configuracion',

@@ -1,6 +1,26 @@
 import { useEffect, useMemo, useState } from 'react'
+import { getClients } from '../../../services/clientsService'
+import { getEmployees } from '../../../services/employeesService'
+import { getInventory } from '../../../services/inventoryService'
+import { getMotorcycles } from '../../../services/motorcyclesService'
 import { getOrders, saveOrders } from '../../../services/ordersService'
 import styles from './OrdenesTrabajo.module.css'
+
+const ORDER_STATUSES = [
+  'Recibida',
+  'Diagnóstico',
+  'En reparación',
+  'Lista para entrega',
+  'Entregada',
+]
+
+const STATUS_STYLES = {
+  'Recibida':           { background: '#dbeafe', color: '#1d4ed8' },
+  'Diagnóstico':        { background: '#fef3c7', color: '#92400e' },
+  'En reparación':      { background: '#ffedd5', color: '#9a3412' },
+  'Lista para entrega': { background: '#ede9fe', color: '#6d28d9' },
+  'Entregada':          { background: '#d1fae5', color: '#047857' },
+}
 
 const initialOrders = [
   {
@@ -38,6 +58,8 @@ const initialOrders = [
 const initialFormData = {
   clientName: '',
   motorcycle: '',
+  assignedEmployee: '',
+  repuestoId: '',
   mileage: '',
   faultDescription: '',
 }
@@ -87,6 +109,11 @@ export function OrdenesTrabajo() {
     saveOrders(orders)
   }, [orders])
 
+  const clients = useMemo(() => getClients([]), [])
+  const motorcycles = useMemo(() => getMotorcycles([]), [])
+  const employees = useMemo(() => getEmployees([]), [])
+  const inventory = useMemo(() => getInventory([]), [])
+
   const inProgressCount = useMemo(
     () => orders.filter((order) => order.status !== 'Entregada').length,
     [orders],
@@ -118,11 +145,16 @@ export function OrdenesTrabajo() {
       return
     }
 
+    const selectedItem = inventory.find((i) => i.id === formData.repuestoId)
+
     const nextOrder = {
       id: crypto.randomUUID(),
       orderNumber: generateOrderNumber(orders),
       clientName: formData.clientName.trim(),
       motorcycle: formData.motorcycle.trim(),
+      assignedEmployee: formData.assignedEmployee.trim(),
+      repuesto: selectedItem ? `${selectedItem.code} - ${selectedItem.name}` : '',
+      costoEstimado: selectedItem ? selectedItem.price : '',
       mileage: formData.mileage.trim(),
       faultDescription: formData.faultDescription.trim(),
       entryDate: new Date().toLocaleDateString('es-CO'),
@@ -131,6 +163,12 @@ export function OrdenesTrabajo() {
 
     setOrders((current) => [nextOrder, ...current])
     closeModal()
+  }
+
+  function handleChangeStatus(orderId, newStatus) {
+    setOrders((current) =>
+      current.map((order) => (order.id === orderId ? { ...order, status: newStatus } : order)),
+    )
   }
 
   function handleDeleteOrder(orderId) {
@@ -163,6 +201,9 @@ export function OrdenesTrabajo() {
               <th>Número OT</th>
               <th>Cliente</th>
               <th>Motocicleta</th>
+              <th>Empleado</th>
+              <th>Repuesto</th>
+              <th>Costo</th>
               <th>Fecha ingreso</th>
               <th>Estado</th>
               <th>Acciones</th>
@@ -176,11 +217,27 @@ export function OrdenesTrabajo() {
                 </td>
                 <td data-label="Cliente">{order.clientName}</td>
                 <td data-label="Motocicleta">{order.motorcycle}</td>
+                <td data-label="Empleado">{order.assignedEmployee || '—'}</td>
+                <td data-label="Repuesto">{order.repuesto || '—'}</td>
+                <td data-label="Costo">
+                  {order.costoEstimado
+                    ? `$ ${Number(order.costoEstimado).toLocaleString('es-CO')}`
+                    : '—'}
+                </td>
                 <td data-label="Fecha ingreso">{order.entryDate}</td>
                 <td data-label="Estado">
-                  <span className={styles.statusBadge} data-status={order.status}>
-                    {order.status}
-                  </span>
+                  <select
+                    className={styles.statusSelect}
+                    style={STATUS_STYLES[order.status] ?? {}}
+                    value={order.status}
+                    onChange={(e) => handleChangeStatus(order.id, e.target.value)}
+                  >
+                    {ORDER_STATUSES.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
                 </td>
                 <td data-label="Acciones">
                   <button
@@ -218,24 +275,60 @@ export function OrdenesTrabajo() {
             <form className={styles.form} onSubmit={handleCreateOrder}>
               <label className={styles.formField}>
                 Cliente
-                <input
-                  name="clientName"
-                  value={formData.clientName}
-                  onChange={handleInputChange}
-                  placeholder="Nombre del cliente"
-                />
+                <select name="clientName" value={formData.clientName} onChange={handleInputChange}>
+                  <option value="">Selecciona un cliente</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.name}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
                 {errors.clientName ? <span>{errors.clientName}</span> : null}
               </label>
 
               <label className={styles.formField}>
                 Motocicleta
-                <input
-                  name="motorcycle"
-                  value={formData.motorcycle}
-                  onChange={handleInputChange}
-                  placeholder="JDS12E - Yamaha FZ 2.0"
-                />
+                <select name="motorcycle" value={formData.motorcycle} onChange={handleInputChange}>
+                  <option value="">Selecciona una motocicleta</option>
+                  {motorcycles.map((m) => (
+                    <option key={m.id} value={`${m.plate} - ${m.brand} ${m.model}`}>
+                      {m.plate} — {m.brand} {m.model}
+                    </option>
+                  ))}
+                </select>
                 {errors.motorcycle ? <span>{errors.motorcycle}</span> : null}
+              </label>
+
+              <label className={styles.formField}>
+                Empleado asignado
+                <select
+                  name="assignedEmployee"
+                  value={formData.assignedEmployee}
+                  onChange={handleInputChange}
+                >
+                  <option value="">Sin asignar</option>
+                  {employees.map((e) => (
+                    <option key={e.id} value={e.name}>
+                      {e.name} — {e.specialty}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className={styles.formField}>
+                Repuesto principal
+                <select
+                  name="repuestoId"
+                  value={formData.repuestoId}
+                  onChange={handleInputChange}
+                >
+                  <option value="">Sin repuesto</option>
+                  {inventory.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.code} — {item.name} ($ {Number(item.price).toLocaleString('es-CO')})
+                    </option>
+                  ))}
+                </select>
               </label>
 
               <label className={styles.formField}>
