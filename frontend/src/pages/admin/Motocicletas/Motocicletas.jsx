@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getMotorcycles, saveMotorcycles } from '../../../services/motorcyclesService'
+import { ConfirmModal } from '../../../components/ConfirmModal/ConfirmModal'
 import styles from './Motocicletas.module.css'
 
 const initialMotorcycles = [
@@ -101,6 +102,7 @@ export function Motocicletas() {
   const [formData, setFormData] = useState(initialFormData)
   const [errors, setErrors] = useState({})
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
@@ -166,10 +168,13 @@ export function Motocicletas() {
     closeModal()
   }
 
-  function handleDeleteMotorcycle(motorcycleId) {
-    setMotorcycles((currentMotorcycles) =>
-      currentMotorcycles.filter((motorcycle) => motorcycle.id !== motorcycleId),
-    )
+  function handleDeleteMotorcycle(motorcycleId, label) {
+    setDeleteTarget({ id: motorcycleId, label })
+  }
+
+  function handleConfirmDelete() {
+    setMotorcycles((current) => current.filter((m) => m.id !== deleteTarget.id))
+    setDeleteTarget(null)
   }
 
   return (
@@ -240,7 +245,12 @@ export function Motocicletas() {
                   <button
                     className={styles.deleteButton}
                     type="button"
-                    onClick={() => handleDeleteMotorcycle(motorcycle.id)}
+                    onClick={() =>
+                      handleDeleteMotorcycle(
+                        motorcycle.id,
+                        `${motorcycle.plate} — ${motorcycle.brand} ${motorcycle.model}`,
+                      )
+                    }
                   >
                     Eliminar
                   </button>
@@ -370,6 +380,13 @@ export function Motocicletas() {
           </section>
         </div>
       ) : null}
+
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        entityLabel={deleteTarget?.label ?? ''}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </section>
   )
 }

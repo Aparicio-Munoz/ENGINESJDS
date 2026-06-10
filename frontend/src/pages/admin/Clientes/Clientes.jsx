@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getClients, saveClients } from '../../../services/clientsService'
+import { ConfirmModal } from '../../../components/ConfirmModal/ConfirmModal'
 import styles from './Clientes.module.css'
 
 const initialClients = [
@@ -77,6 +78,7 @@ export function Clientes() {
   const [formData, setFormData] = useState(initialFormData)
   const [errors, setErrors] = useState({})
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
@@ -132,8 +134,13 @@ export function Clientes() {
     closeModal()
   }
 
-  function handleDeleteClient(clientId) {
-    setClients((current) => current.filter((client) => client.id !== clientId))
+  function handleDeleteClient(clientId, label) {
+    setDeleteTarget({ id: clientId, label })
+  }
+
+  function handleConfirmDelete() {
+    setClients((current) => current.filter((c) => c.id !== deleteTarget.id))
+    setDeleteTarget(null)
   }
 
   return (
@@ -194,7 +201,7 @@ export function Clientes() {
                   <button
                     className={styles.deleteButton}
                     type="button"
-                    onClick={() => handleDeleteClient(client.id)}
+                    onClick={() => handleDeleteClient(client.id, client.name)}
                   >
                     Eliminar
                   </button>
@@ -303,6 +310,13 @@ export function Clientes() {
           </section>
         </div>
       ) : null}
+
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        entityLabel={deleteTarget?.label ?? ''}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </section>
   )
 }

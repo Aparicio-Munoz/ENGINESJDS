@@ -4,6 +4,7 @@ import { getEmployees } from '../../../services/employeesService'
 import { getInventory } from '../../../services/inventoryService'
 import { getMotorcycles } from '../../../services/motorcyclesService'
 import { getOrders, saveOrders } from '../../../services/ordersService'
+import { ConfirmModal } from '../../../components/ConfirmModal/ConfirmModal'
 import styles from './OrdenesTrabajo.module.css'
 
 const ORDER_STATUSES = [
@@ -115,6 +116,7 @@ export function OrdenesTrabajo() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [filterEmployee, setFilterEmployee] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   useEffect(() => {
     saveOrders(orders)
@@ -245,8 +247,13 @@ export function OrdenesTrabajo() {
     )
   }
 
-  function handleDeleteOrder(orderId) {
-    setOrders((current) => current.filter((order) => order.id !== orderId))
+  function handleDeleteOrder(orderId, label) {
+    setDeleteTarget({ id: orderId, label })
+  }
+
+  function handleConfirmDelete() {
+    setOrders((current) => current.filter((order) => order.id !== deleteTarget.id))
+    setDeleteTarget(null)
   }
 
   return (
@@ -358,7 +365,7 @@ export function OrdenesTrabajo() {
                   <button
                     className={styles.deleteButton}
                     type="button"
-                    onClick={() => handleDeleteOrder(order.id)}
+                    onClick={() => handleDeleteOrder(order.id, order.orderNumber)}
                   >
                     Eliminar
                   </button>
@@ -509,6 +516,13 @@ export function OrdenesTrabajo() {
           </section>
         </div>
       ) : null}
+
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        entityLabel={deleteTarget?.label ?? ''}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </section>
   )
 }

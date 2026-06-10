@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getUsers, saveUsers } from '../../../services/usersService'
+import { ConfirmModal } from '../../../components/ConfirmModal/ConfirmModal'
 import styles from './Usuarios.module.css'
 
 const ROLES = ['Administrador', 'Recepcionista', 'Mecánico', 'Supervisor']
@@ -66,6 +67,7 @@ export function Usuarios() {
   const [formData, setFormData] = useState(initialFormData)
   const [errors, setErrors] = useState({})
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   useEffect(() => {
     saveUsers(users)
@@ -114,8 +116,13 @@ export function Usuarios() {
     closeModal()
   }
 
-  function handleDeleteUser(userId) {
-    setUsers((current) => current.filter((u) => u.id !== userId))
+  function handleDeleteUser(userId, label) {
+    setDeleteTarget({ id: userId, label })
+  }
+
+  function handleConfirmDelete() {
+    setUsers((current) => current.filter((u) => u.id !== deleteTarget.id))
+    setDeleteTarget(null)
   }
 
   return (
@@ -169,7 +176,7 @@ export function Usuarios() {
                   <button
                     className={styles.deleteButton}
                     type="button"
-                    onClick={() => handleDeleteUser(u.id)}
+                    onClick={() => handleDeleteUser(u.id, u.username)}
                   >
                     Eliminar
                   </button>
@@ -257,6 +264,13 @@ export function Usuarios() {
           </section>
         </div>
       ) : null}
+
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        entityLabel={deleteTarget?.label ?? ''}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </section>
   )
 }

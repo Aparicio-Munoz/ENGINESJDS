@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getInventory, saveInventory } from '../../../services/inventoryService'
+import { ConfirmModal } from '../../../components/ConfirmModal/ConfirmModal'
 import styles from './Inventario.module.css'
 
 const initialItems = [
@@ -88,6 +89,7 @@ export function Inventario() {
   const [formData, setFormData] = useState(initialFormData)
   const [errors, setErrors] = useState({})
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   useEffect(() => {
     saveInventory(items)
@@ -145,8 +147,13 @@ export function Inventario() {
     closeModal()
   }
 
-  function handleDeleteItem(itemId) {
-    setItems((current) => current.filter((item) => item.id !== itemId))
+  function handleDeleteItem(itemId, label) {
+    setDeleteTarget({ id: itemId, label })
+  }
+
+  function handleConfirmDelete() {
+    setItems((current) => current.filter((item) => item.id !== deleteTarget.id))
+    setDeleteTarget(null)
   }
 
   return (
@@ -207,7 +214,7 @@ export function Inventario() {
                   <button
                     className={styles.deleteButton}
                     type="button"
-                    onClick={() => handleDeleteItem(item.id)}
+                    onClick={() => handleDeleteItem(item.id, `${item.code} — ${item.name}`)}
                   >
                     Eliminar
                   </button>
@@ -306,6 +313,13 @@ export function Inventario() {
           </section>
         </div>
       ) : null}
+
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        entityLabel={deleteTarget?.label ?? ''}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </section>
   )
 }

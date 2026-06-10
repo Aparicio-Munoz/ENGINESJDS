@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getEmployees, saveEmployees } from '../../../services/employeesService'
+import { ConfirmModal } from '../../../components/ConfirmModal/ConfirmModal'
 import styles from './Empleados.module.css'
 
 const STATUSES = ['Activo', 'Inactivo', 'Vacaciones']
@@ -83,6 +84,7 @@ export function Empleados() {
   const [formData, setFormData] = useState(initialFormData)
   const [errors, setErrors] = useState({})
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   useEffect(() => {
     saveEmployees(employees)
@@ -133,8 +135,13 @@ export function Empleados() {
     closeModal()
   }
 
-  function handleDeleteEmployee(employeeId) {
-    setEmployees((current) => current.filter((emp) => emp.id !== employeeId))
+  function handleDeleteEmployee(employeeId, label) {
+    setDeleteTarget({ id: employeeId, label })
+  }
+
+  function handleConfirmDelete() {
+    setEmployees((current) => current.filter((emp) => emp.id !== deleteTarget.id))
+    setDeleteTarget(null)
   }
 
   return (
@@ -190,7 +197,7 @@ export function Empleados() {
                   <button
                     className={styles.deleteButton}
                     type="button"
-                    onClick={() => handleDeleteEmployee(emp.id)}
+                    onClick={() => handleDeleteEmployee(emp.id, emp.name)}
                   >
                     Eliminar
                   </button>
@@ -301,6 +308,13 @@ export function Empleados() {
           </section>
         </div>
       ) : null}
+
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        entityLabel={deleteTarget?.label ?? ''}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </section>
   )
 }

@@ -1,0 +1,68 @@
+.backdrop {
+  position: fixed;
+  z-index: 30;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.54);
+}
+
+.modal {
+  display: grid;
+  gap: 16px;
+  width: min(480px, 100%);
+  border-radius: 8px;
+  padding: 28px 24px 24px;
+  background: #ffffff;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+}
+
+.title {
+  margin: 0;
+  color: #101828;
+  font-size: 1.25rem;
+}
+
+.message {
+  margin: 0;
+  color: #475467;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.cancelButton,
+.deleteButton {
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.cancelButton {
+  color: #344054;
+  background: #e5e7eb;
+}
+
+.cancelButton:hover {
+  background: #d1d5db;
+}
+
+.deleteButton {
+  color: #ffffff;
+  background: #b42318;
+}
+
+.deleteButton:hover {
+  background: #912018;
+}
