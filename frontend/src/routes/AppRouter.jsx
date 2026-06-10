@@ -5,6 +5,8 @@ import { AdminSectionPlaceholder } from '../pages/DashboardAdmin/AdminSectionPla
 import { DashboardAdmin } from '../pages/DashboardAdmin/DashboardAdmin'
 import { Home } from '../pages/Home/Home'
 import { Login } from '../pages/Login/Login'
+import { AgendarCita } from '../pages/AgendarCita/AgendarCita'
+import { Repuestos } from '../pages/Repuestos/Repuestos'
 import { Clientes } from '../pages/admin/Clientes/Clientes'
 import { Motocicletas } from '../pages/admin/Motocicletas/Motocicletas'
 import { ProtectedRoute } from '../components/ProtectedRoute/ProtectedRoute'
@@ -32,6 +34,14 @@ const router = createBrowserRouter([
       {
         path: ROUTES.register,
         element: <Register />,
+      },
+      {
+        path: ROUTES.agendarCita,
+        element: <AgendarCita />,
+      },
+      {
+        path: ROUTES.repuestos,
+        element: <Repuestos />,
       },
     ],
   },

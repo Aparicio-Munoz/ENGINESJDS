@@ -1,11 +1,9 @@
 .appShell {
   min-height: 100vh;
-  background: #f5f7fb;
-  color: #172033;
+  background: var(--dark-900, #0A0F1E);
+  color: #ffffff;
 }
 
 .mainContent {
-  width: min(1120px, calc(100% - 32px));
-  margin: 0 auto;
-  padding: 40px 0;
+  width: 100%;
 }
