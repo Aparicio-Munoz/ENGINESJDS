@@ -63,7 +63,7 @@
 /* ── KPI grid ─────────────────────────────────────── */
 .kpiGrid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(7, 1fr);
   gap: 16px;
 }
 
@@ -83,8 +83,28 @@
 
 .kpiCard:hover {
   border-color: var(--kpi-accent, #F97316);
-  transform: translateY(-3px);
-  box-shadow: 0 8px 28px rgba(0,0,0,.1);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 28px rgba(0,0,0,.12), 0 0 0 1px var(--kpi-accent, #F97316), 0 0 20px rgba(249,115,22,.06);
+}
+
+.kpiCard::before {
+  content: '';
+  display: block;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--kpi-accent, transparent);
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.kpiCard {
+  position: relative;
+}
+
+.kpiCard:hover::before {
+  opacity: 1;
 }
 
 .kpiTop {
@@ -121,7 +141,7 @@
 /* ── Bottom row ───────────────────────────────────── */
 .bottomRow {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
 }
 
@@ -133,6 +153,30 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.panelTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--border, #E2E8F0);
+}
+
+.panelTitleRow .panelTitle {
+  border-bottom: 0;
+  flex: 1;
+}
+
+.pendingBadge {
+  margin-right: 20px;
+  padding: 2px 8px;
+  border-radius: var(--r-full, 9999px);
+  background: #FEF3C7;
+  color: #D97706;
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .panelTitle {
@@ -296,19 +340,21 @@
 }
 
 /* ── Responsive ───────────────────────────────────── */
+@media (max-width: 1280px) {
+  .kpiGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
 @media (max-width: 1100px) {
   .bottomRow {
     grid-template-columns: 1fr 1fr;
-  }
-
-  .bottomRow .panel:last-child {
-    grid-column: span 2;
   }
 }
 
 @media (max-width: 900px) {
   .kpiGrid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
@@ -316,15 +362,11 @@
   .bottomRow {
     grid-template-columns: 1fr;
   }
-
-  .bottomRow .panel:last-child {
-    grid-column: span 1;
-  }
 }
 
 @media (max-width: 560px) {
   .kpiGrid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .kpiValue {

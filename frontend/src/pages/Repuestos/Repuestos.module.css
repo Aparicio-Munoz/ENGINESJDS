@@ -44,11 +44,17 @@
   line-height: 1.7;
 }
 
-/* ── Search ───────────────────────────────────────── */
+/* ── Search + filter bar ──────────────────────────── */
 .searchBar {
-  position: relative;
-  max-width: 560px;
+  display: flex;
+  gap: 12px;
+  max-width: 680px;
   margin: 0 auto 32px;
+}
+
+.searchWrapper {
+  position: relative;
+  flex: 1;
 }
 
 .searchIcon {
@@ -81,6 +87,29 @@
   background: rgba(249, 115, 22, 0.05);
 }
 
+.filterSelect {
+  padding: 12px 16px;
+  border-radius: var(--r-full, 9999px);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 500;
+  outline: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s;
+}
+
+.filterSelect:focus {
+  border-color: #F97316;
+}
+
+.filterSelect option {
+  background: #1E293B;
+  color: #ffffff;
+}
+
 /* ── Results count ────────────────────────────────── */
 .resultCount {
   margin: 0 0 20px;
@@ -92,57 +121,101 @@
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 16px;
+  gap: 20px;
 }
 
 /* ── Card ─────────────────────────────────────────── */
 .card {
-  padding: 20px;
   border-radius: var(--r-lg, 18px);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  transition: background 0.2s, border-color 0.2s, transform 0.2s;
+  overflow: hidden;
+  transition: background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s;
 }
 
 .card:hover {
   background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(255, 255, 255, 0.14);
-  transform: translateY(-3px);
+  border-color: rgba(249, 115, 22, 0.3);
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
 }
 
-.cardTop {
+.cardOut {
+  opacity: 0.65;
+}
+
+/* ── Card image ───────────────────────────────────── */
+.cardImage {
+  position: relative;
+  aspect-ratio: 16/10;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.productImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s ease;
+}
+
+.card:hover .productImg {
+  transform: scale(1.04);
+}
+
+.imgPlaceholder {
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.cardCode {
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: rgba(255, 255, 255, 0.4);
-  font-family: ui-monospace, monospace;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .cardBadge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
   font-size: 0.74rem;
   font-weight: 700;
   padding: 3px 10px;
   border-radius: var(--r-full, 9999px);
+  backdrop-filter: blur(4px);
 }
 
 .badgeAvailable {
-  background: rgba(5, 150, 105, 0.15);
-  color: #34D399;
+  background: rgba(5, 150, 105, 0.85);
+  color: #ffffff;
+}
+
+.badgeWarn {
+  background: rgba(217, 119, 6, 0.85);
+  color: #ffffff;
 }
 
 .badgeOut {
-  background: rgba(220, 38, 38, 0.12);
-  color: #F87171;
+  background: rgba(220, 38, 38, 0.85);
+  color: #ffffff;
+}
+
+/* ── Card body ────────────────────────────────────── */
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px 18px;
+  flex: 1;
+}
+
+.cardCode {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.35);
+  font-family: ui-monospace, monospace;
 }
 
 .cardName {
@@ -153,7 +226,7 @@
   line-height: 1.35;
 }
 
-.cardCategory {
+.cardBrand {
   font-size: 0.82rem;
   color: rgba(255, 255, 255, 0.4);
 }
@@ -164,7 +237,7 @@
   justify-content: space-between;
   gap: 8px;
   margin-top: auto;
-  padding-top: 12px;
+  padding-top: 14px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
@@ -175,18 +248,29 @@
 }
 
 .cardCta {
-  padding: 7px 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
   border-radius: var(--r-sm, 6px);
-  background: rgba(249, 115, 22, 0.12);
-  color: #F97316;
-  font-size: 0.85rem;
+  background: #25D366;
+  color: #ffffff;
+  font-size: 0.82rem;
   font-weight: 700;
   text-decoration: none;
-  transition: background 0.15s;
+  white-space: nowrap;
+  transition: background 0.15s, transform 0.15s;
 }
 
 .cardCta:hover {
-  background: rgba(249, 115, 22, 0.22);
+  background: #1ebe5b;
+  transform: translateY(-1px);
+}
+
+.outLabel {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.3);
 }
 
 /* ── Empty state ──────────────────────────────────── */
@@ -239,6 +323,14 @@
 
 /* ── Responsive ───────────────────────────────────── */
 @media (max-width: 600px) {
+  .searchBar {
+    flex-direction: column;
+  }
+
+  .filterSelect {
+    width: 100%;
+  }
+
   .grid {
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   }

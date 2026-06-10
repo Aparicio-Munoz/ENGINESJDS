@@ -6,6 +6,7 @@ import { getInventory } from '../../services/inventoryService'
 import { getMotorcycles } from '../../services/motorcyclesService'
 import { getOrders } from '../../services/ordersService'
 import { getUsers } from '../../services/usersService'
+import { getAppointments } from '../../services/appointmentsService'
 import { useAuth } from '../../hooks/useAuth'
 import { ROUTES } from '../../utils/routes'
 import styles from './DashboardAdmin.module.css'
@@ -25,19 +26,38 @@ const KPI_CONFIG = [
   { label: 'Inventario',   detail: 'ítems registrados',     icon: '📦', accent: '#059669',  link: ROUTES.adminInventario },
   { label: 'Empleados',    detail: 'del taller',            icon: '🔧', accent: '#0891B2',  link: ROUTES.adminEmpleados },
   { label: 'Usuarios',     detail: 'del sistema',           icon: '🔑', accent: '#64748B',  link: `${ROUTES.admin}/usuarios` },
+  { label: 'Citas',        detail: 'agendadas',             icon: '📅', accent: '#D97706',  link: ROUTES.adminCitas },
 ]
+
+const APPT_STATUS_STYLES = {
+  Pendiente:  { bg: '#FEF3C7', color: '#D97706' },
+  Confirmada: { bg: '#DBEAFE', color: '#2563EB' },
+  Atendida:   { bg: '#D1FAE5', color: '#059669' },
+  Cancelada:  { bg: '#FEE2E2', color: '#DC2626' },
+}
 
 export function DashboardAdmin() {
   const { user } = useAuth()
 
-  const clients    = useMemo(() => getClients([]),    [])
-  const motorcycles = useMemo(() => getMotorcycles([]), [])
-  const orders     = useMemo(() => getOrders([]),     [])
-  const inventory  = useMemo(() => getInventory([]),  [])
-  const employees  = useMemo(() => getEmployees([]),  [])
-  const users      = useMemo(() => getUsers([]),      [])
+  const clients     = useMemo(() => getClients([]),      [])
+  const motorcycles = useMemo(() => getMotorcycles([]),  [])
+  const orders      = useMemo(() => getOrders([]),       [])
+  const inventory   = useMemo(() => getInventory([]),    [])
+  const employees   = useMemo(() => getEmployees([]),    [])
+  const users       = useMemo(() => getUsers([]),        [])
+  const appointments = useMemo(() => getAppointments([]), [])
 
-  const counts = [clients.length, motorcycles.length, orders.length, inventory.length, employees.length, users.length]
+  const counts = [clients.length, motorcycles.length, orders.length, inventory.length, employees.length, users.length, appointments.length]
+
+  const pendingAppointments = useMemo(
+    () => appointments.filter((a) => a.status === 'Pendiente' || a.status === 'Confirmada'),
+    [appointments],
+  )
+
+  const recentAppointments = useMemo(
+    () => [...appointments].reverse().slice(0, 5),
+    [appointments],
+  )
 
   const orderCounts = useMemo(
     () => ORDER_STATUSES.map((s) => ({
@@ -140,6 +160,44 @@ export function DashboardAdmin() {
                     }}
                   >
                     {o.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Upcoming appointments */}
+        <div className={styles.panel}>
+          <div className={styles.panelTitleRow}>
+            <h2 className={styles.panelTitle}>
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true">
+                <path fillRule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clipRule="evenodd" />
+              </svg>
+              Últimas citas
+            </h2>
+            {pendingAppointments.length > 0 ? (
+              <span className={styles.pendingBadge}>{pendingAppointments.length} pendiente{pendingAppointments.length > 1 ? 's' : ''}</span>
+            ) : null}
+          </div>
+          {recentAppointments.length === 0 ? (
+            <p className={styles.emptyHint}>No hay citas registradas aún.</p>
+          ) : (
+            <div className={styles.orderList}>
+              {recentAppointments.map((a) => (
+                <div key={a.id} className={styles.orderItem}>
+                  <div>
+                    <span className={styles.orderNumber}>{a.name}</span>
+                    <span className={styles.orderClient}>{a.service || a.date || '—'}</span>
+                  </div>
+                  <span
+                    className={styles.orderBadge}
+                    style={{
+                      background: (APPT_STATUS_STYLES[a.status] ?? {}).bg ?? '#F1F5F9',
+                      color: (APPT_STATUS_STYLES[a.status] ?? {}).color ?? '#64748B',
+                    }}
+                  >
+                    {a.status || 'Pendiente'}
                   </span>
                 </div>
               ))}

@@ -15,6 +15,7 @@ import { Reportes } from '../pages/admin/Reportes/Reportes'
 import { Usuarios } from '../pages/admin/Usuarios/Usuarios'
 import { Inventario } from '../pages/admin/Inventario/Inventario'
 import { OrdenesTrabajo } from '../pages/admin/OrdenesTrabajo/OrdenesTrabajo'
+import { Citas } from '../pages/admin/Citas/Citas'
 import { Register } from '../pages/Register/Register'
 import { ROUTES } from '../utils/routes'
 
@@ -72,6 +73,10 @@ const router = createBrowserRouter([
       {
         path: 'motocicletas',
         element: <Motocicletas />,
+      },
+      {
+        path: 'citas',
+        element: <Citas />,
       },
       {
         path: 'ordenes',

@@ -39,6 +39,7 @@ const initialFormData = {
   brand: '',
   quantity: '',
   price: '',
+  imageUrl: '',
 }
 
 function deriveStatus(quantity) {
@@ -141,6 +142,7 @@ export function Inventario() {
       quantity,
       price: formData.price.trim(),
       status: deriveStatus(quantity),
+      imageUrl: formData.imageUrl.trim(),
     }
 
     setItems((current) => [nextItem, ...current])
@@ -299,6 +301,17 @@ export function Inventario() {
                   placeholder="18000"
                 />
                 {errors.price ? <span>{errors.price}</span> : null}
+              </label>
+
+              <label className={`${styles.formField} ${styles.fullWidth}`}>
+                Imagen (URL opcional)
+                <input
+                  type="url"
+                  name="imageUrl"
+                  value={formData.imageUrl}
+                  onChange={handleInputChange}
+                  placeholder="https://ejemplo.com/imagen.jpg"
+                />
               </label>
 
               <div className={styles.formActions}>

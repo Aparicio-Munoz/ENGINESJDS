@@ -1,0 +1,339 @@
+.page {
+  display: grid;
+  gap: 24px;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  color: var(--accent, #F97316);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0 0 4px;
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-weight: 800;
+  color: var(--text, #0F172A);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--muted, #64748B);
+}
+
+.headerStats {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.statChip {
+  padding: 6px 14px;
+  border-radius: var(--r-full, 9999px);
+  background: var(--bg, #F1F5F9);
+  border: 1px solid var(--border, #E2E8F0);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted, #64748B);
+}
+
+.statChipWarning {
+  background: #FEF3C7;
+  border-color: #FDE68A;
+  color: #D97706;
+}
+
+/* ── Toolbar ──────────────────────────────────────── */
+.toolbar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.searchWrapper {
+  position: relative;
+  flex: 1;
+  min-width: 220px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--subtle, #94A3B8);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 10px 14px 10px 38px;
+  border-radius: var(--r-sm, 6px);
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #E2E8F0);
+  color: var(--text, #0F172A);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.searchInput:focus {
+  border-color: var(--accent, #F97316);
+}
+
+.filterSelect {
+  padding: 10px 14px;
+  border-radius: var(--r-sm, 6px);
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #E2E8F0);
+  color: var(--text, #0F172A);
+  font-size: 0.9rem;
+  font-weight: 500;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.filterSelect:focus {
+  border-color: var(--accent, #F97316);
+}
+
+/* ── Table ────────────────────────────────────────── */
+.tableWrapper {
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #E2E8F0);
+  border-radius: var(--r-md, 12px);
+  box-shadow: var(--shadow-card);
+  overflow: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted, #64748B);
+  background: var(--bg, #F8FAFC);
+  border-bottom: 1px solid var(--border, #E2E8F0);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border, #E2E8F0);
+  color: var(--text, #0F172A);
+  vertical-align: middle;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table tbody tr:hover {
+  background: rgba(249, 115, 22, 0.02);
+}
+
+.clientCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.clientPhone {
+  font-size: 0.78rem;
+  color: var(--muted, #64748B);
+}
+
+.motoCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.plate {
+  font-weight: 700;
+  font-family: ui-monospace, monospace;
+  color: var(--accent, #F97316);
+  font-size: 0.88rem;
+}
+
+.brand {
+  font-size: 0.78rem;
+  color: var(--muted, #64748B);
+}
+
+/* ── Status select ────────────────────────────────── */
+.statusSelect {
+  padding: 5px 10px;
+  border-radius: var(--r-full, 9999px);
+  border: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+}
+
+/* ── Actions ──────────────────────────────────────── */
+.actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.convertButton,
+.deleteButton {
+  padding: 6px 12px;
+  border-radius: var(--r-sm, 6px);
+  border: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.convertButton:hover,
+.deleteButton:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+
+.convertButton {
+  background: #DBEAFE;
+  color: #1D4ED8;
+}
+
+.deleteButton {
+  background: #FEE2E2;
+  color: #B42318;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--muted, #64748B);
+  font-size: 0.92rem;
+}
+
+/* ── Convert modal ────────────────────────────────── */
+.convertBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.54);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.convertModal {
+  width: min(520px, 100%);
+  background: #ffffff;
+  border-radius: var(--r-lg, 18px);
+  padding: 32px 28px 28px;
+  box-shadow: var(--shadow-modal);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.convertTitle {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text, #0F172A);
+}
+
+.convertDesc {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--muted, #64748B);
+  line-height: 1.65;
+}
+
+.convertActions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.cancelBtn {
+  padding: 10px 20px;
+  border-radius: var(--r-sm, 6px);
+  background: var(--bg, #F1F5F9);
+  border: 1px solid var(--border, #E2E8F0);
+  color: var(--text, #0F172A);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.cancelBtn:hover {
+  background: var(--border, #E2E8F0);
+}
+
+.confirmBtn {
+  padding: 10px 20px;
+  border-radius: var(--r-sm, 6px);
+  background: var(--accent, #F97316);
+  border: 0;
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.confirmBtn:hover {
+  background: var(--accent-hover, #EA580C);
+  transform: translateY(-1px);
+}
+
+/* ── Responsive ───────────────────────────────────── */
+@media (max-width: 768px) {
+  .table thead { display: none; }
+  .table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 0;
+    padding: 8px 16px;
+  }
+  .table td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    font-size: 0.78rem;
+    color: var(--muted, #64748B);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-right: 12px;
+  }
+  .table tbody tr {
+    display: block;
+    border-bottom: 1px solid var(--border, #E2E8F0);
+    padding: 8px 0;
+  }
+}

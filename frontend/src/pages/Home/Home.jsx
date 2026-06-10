@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ROUTES } from '../../utils/routes'
 import styles from './Home.module.css'
@@ -36,11 +37,53 @@ const SERVICES = [
 ]
 
 const STATS = [
-  { value: '500+', label: 'Motos atendidas' },
-  { value: '8+', label: 'Años de experiencia' },
-  { value: '98%', label: 'Clientes satisfechos' },
-  { value: '24h', label: 'Tiempo promedio de entrega' },
+  { end: 500, suffix: '+', label: 'Motos atendidas' },
+  { end: 8,   suffix: '+', label: 'Años de experiencia' },
+  { end: 98,  suffix: '%', label: 'Clientes satisfechos' },
+  { end: 24,  suffix: 'h', label: 'Tiempo promedio de entrega' },
 ]
+
+function useCountUp(target, duration = 1600) {
+  const [count, setCount] = useState(0)
+  const [started, setStarted] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    const node = ref.current
+    if (!node) return
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setStarted(true); observer.disconnect() } },
+      { threshold: 0.3 },
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!started) return
+    let start = null
+    const step = (ts) => {
+      if (!start) start = ts
+      const progress = Math.min((ts - start) / duration, 1)
+      const ease = 1 - Math.pow(1 - progress, 3)
+      setCount(Math.round(ease * target))
+      if (progress < 1) requestAnimationFrame(step)
+    }
+    requestAnimationFrame(step)
+  }, [started, target, duration])
+
+  return { count, ref }
+}
+
+function AnimatedStat({ end, suffix, label }) {
+  const { count, ref } = useCountUp(end)
+  return (
+    <div className={styles.statCard} ref={ref}>
+      <span className={styles.statValue}>{count}{suffix}</span>
+      <span className={styles.statLabel}>{label}</span>
+    </div>
+  )
+}
 
 export function Home() {
   return (
@@ -83,10 +126,7 @@ export function Home() {
         <div className={styles.container}>
           <div className={styles.statsGrid}>
             {STATS.map((s) => (
-              <div key={s.label} className={styles.statCard}>
-                <span className={styles.statValue}>{s.value}</span>
-                <span className={styles.statLabel}>{s.label}</span>
-              </div>
+              <AnimatedStat key={s.label} end={s.end} suffix={s.suffix} label={s.label} />
             ))}
           </div>
         </div>
