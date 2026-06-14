@@ -183,15 +183,105 @@
   color: var(--muted, #64748B);
 }
 
-/* ── Status select ────────────────────────────────── */
-.statusSelect {
+/* ── Loading / Error ──────────────────────────────── */
+.loadingState,
+.errorState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 60px 24px;
+  color: var(--muted, #64748B);
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #e5e7eb;
+  border-top-color: var(--accent, #F97316);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.retryButton {
+  padding: 10px 20px;
+  border: 0;
+  border-radius: var(--r-sm, 6px);
+  background: var(--accent, #F97316);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+/* ── Pagination ────────────────────────────────────── */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.paginationBtn {
+  padding: 8px 16px;
+  border: 1px solid var(--border, #E2E8F0);
+  border-radius: var(--r-sm, 6px);
+  background: var(--surface, #ffffff);
+  color: var(--text, #0F172A);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.paginationBtn:hover:not(:disabled) {
+  background: var(--bg, #F1F5F9);
+}
+
+.paginationBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pageInfo {
+  font-size: 0.88rem;
+  color: var(--muted, #64748B);
+}
+
+/* ── Filter date input ────────────────────────────── */
+.filterDate {
+  padding: 10px 14px;
+  border-radius: var(--r-sm, 6px);
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #E2E8F0);
+  color: var(--text, #0F172A);
+  font-size: 0.9rem;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.filterDate:focus {
+  border-color: var(--accent, #F97316);
+}
+
+/* ── Status badge (replaces statusSelect) ─────────── */
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
   padding: 5px 10px;
   border-radius: var(--r-full, 9999px);
-  border: 0;
   font-size: 0.8rem;
   font-weight: 700;
-  cursor: pointer;
-  outline: none;
+  white-space: nowrap;
 }
 
 /* ── Actions ──────────────────────────────────────── */
@@ -202,7 +292,9 @@
 }
 
 .convertButton,
-.deleteButton {
+.deleteButton,
+.confirmButton,
+.cancelApptButton {
   padding: 6px 12px;
   border-radius: var(--r-sm, 6px);
   border: 0;
@@ -213,7 +305,9 @@
 }
 
 .convertButton:hover,
-.deleteButton:hover {
+.deleteButton:hover,
+.confirmButton:hover,
+.cancelApptButton:hover {
   opacity: 0.85;
   transform: translateY(-1px);
 }
@@ -223,9 +317,28 @@
   color: #1D4ED8;
 }
 
+.confirmButton {
+  background: #D1FAE5;
+  color: #065F46;
+}
+
+.cancelApptButton {
+  background: #FEF3C7;
+  color: #92400E;
+}
+
 .deleteButton {
   background: #FEE2E2;
   color: #B42318;
+}
+
+.confirmButton:disabled,
+.cancelApptButton:disabled,
+.convertButton:disabled,
+.deleteButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .emptyState {
@@ -233,6 +346,121 @@
   padding: 48px 20px;
   color: var(--muted, #64748B);
   font-size: 0.92rem;
+}
+
+/* ── Eyebrow variants ─────────────────────────────── */
+.eyebrowDanger {
+  color: #B42318 !important;
+}
+
+.eyebrowWarning {
+  color: #D97706 !important;
+}
+
+/* ── Delete / Cancel modal extras ─────────────────── */
+.deleteLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text, #0F172A);
+}
+
+.textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--r-sm, 6px);
+  border: 1px solid var(--border, #E2E8F0);
+  background: var(--surface, #ffffff);
+  color: var(--text, #0F172A);
+  font-family: inherit;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.textarea:focus {
+  border-color: var(--accent, #F97316);
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+}
+
+.textareaError {
+  border-color: #DC2626 !important;
+}
+
+.dangerButton {
+  padding: 10px 20px;
+  border-radius: var(--r-sm, 6px);
+  border: 0;
+  background: #DC2626;
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.dangerButton:hover:not(:disabled) {
+  background: #B91C1C;
+}
+
+.dangerButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cancelApptConfirmBtn {
+  padding: 10px 20px;
+  border-radius: var(--r-sm, 6px);
+  border: 0;
+  background: #D97706;
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.cancelApptConfirmBtn:hover:not(:disabled) {
+  background: #B45309;
+}
+
+.cancelApptConfirmBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── "Crear orden" fields preview ─────────────────── */
+.convertFields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--bg, #F8FAFC);
+  border: 1px solid var(--border, #E2E8F0);
+  border-radius: var(--r-sm, 6px);
+  font-size: 0.88rem;
+}
+
+.convertFieldRow {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.convertFieldRow span {
+  color: var(--muted, #64748B);
+}
+
+.convertNotice {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted, #64748B);
+  font-style: italic;
 }
 
 /* ── Convert modal ────────────────────────────────── */
@@ -312,6 +540,193 @@
   transform: translateY(-1px);
 }
 
+/* ── Reschedule button ────────────────────────────── */
+.rescheduleButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: var(--r-sm, 6px);
+  border: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: #F0FDF4;
+  color: #15803D;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.rescheduleButton:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+
+/* ── Reschedule modal ─────────────────────────────── */
+.rescheduleModal {
+  width: min(600px, 100%);
+}
+
+.rescheduleHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.rescheduleEyebrow {
+  margin: 0 0 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #15803D;
+}
+
+.rescheduleTitle {
+  margin: 0 0 4px;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text, #0F172A);
+}
+
+.rescheduleSubtitle {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted, #64748B);
+}
+
+.closeBtn {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: var(--bg, #F1F5F9);
+  border-radius: var(--r-sm, 6px);
+  color: var(--muted, #64748B);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.closeBtn:hover {
+  background: var(--border, #E2E8F0);
+  color: var(--text, #0F172A);
+}
+
+.rescheduleForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rescheduleGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.rescheduleField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text, #0F172A);
+}
+
+.rescheduleField input {
+  padding: 10px 14px;
+  border-radius: var(--r-sm, 6px);
+  border: 1px solid var(--border, #E2E8F0);
+  background: var(--surface, #ffffff);
+  color: var(--text, #0F172A);
+  font-family: inherit;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.rescheduleField input:focus {
+  border-color: var(--accent, #F97316);
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+}
+
+.inputError {
+  border-color: #DC2626 !important;
+}
+
+.fieldError {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #DC2626;
+}
+
+.rescheduleTextarea {
+  padding: 10px 14px;
+  border-radius: var(--r-sm, 6px);
+  border: 1px solid var(--border, #E2E8F0);
+  background: var(--surface, #ffffff);
+  color: var(--text, #0F172A);
+  font-family: inherit;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.rescheduleTextarea:focus {
+  border-color: var(--accent, #F97316);
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+}
+
+/* ── Preset chips ─────────────────────────────────── */
+.presets {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.presetsLabel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--subtle, #94A3B8);
+}
+
+.presetsList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.presetChip {
+  padding: 5px 12px;
+  border-radius: var(--r-full, 9999px);
+  border: 1px solid var(--border, #E2E8F0);
+  background: var(--bg, #F1F5F9);
+  color: var(--muted, #64748B);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.presetChip:hover {
+  background: rgba(249, 115, 22, 0.08);
+  border-color: rgba(249, 115, 22, 0.3);
+  color: var(--accent, #F97316);
+}
+
+.required {
+  color: #DC2626;
+  font-weight: 800;
+  margin-left: 2px;
+}
+
 /* ── Responsive ───────────────────────────────────── */
 @media (max-width: 768px) {
   .table thead { display: none; }
@@ -335,5 +750,19 @@
     display: block;
     border-bottom: 1px solid var(--border, #E2E8F0);
     padding: 8px 0;
+  }
+
+  .rescheduleGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .convertActions {
+    flex-direction: column;
+  }
+
+  .cancelBtn,
+  .confirmBtn {
+    width: 100%;
+    text-align: center;
   }
 }

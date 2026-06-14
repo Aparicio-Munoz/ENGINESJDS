@@ -1,205 +1,215 @@
-import { useEffect, useMemo, useState } from 'react'
-import { getMotorcycles, saveMotorcycles } from '../../../services/motorcyclesService'
-import { ConfirmModal } from '../../../components/ConfirmModal/ConfirmModal'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { clientsApi, motorcyclesApi } from '../../../api'
+import { useToast } from '../../../hooks/useToast'
 import styles from './Motocicletas.module.css'
 
-const initialMotorcycles = [
-  {
-    id: 'moto-001',
-    plate: 'JDS12E',
-    brand: 'Yamaha',
-    model: 'FZ 2.0',
-    year: '2021',
-    engineSize: '150 cc',
-    ownerName: 'Carlos Ramirez',
-    ownerPhone: '3001234567',
-    status: 'Activa',
-  },
-  {
-    id: 'moto-002',
-    plate: 'KTM89F',
-    brand: 'KTM',
-    model: 'Duke',
-    year: '2020',
-    engineSize: '200 cc',
-    ownerName: 'Laura Gomez',
-    ownerPhone: '3109876543',
-    status: 'En servicio',
-  },
-  {
-    id: 'moto-003',
-    plate: 'HON45A',
-    brand: 'Honda',
-    model: 'CB 190R',
-    year: '2022',
-    engineSize: '190 cc',
-    ownerName: 'Andres Torres',
-    ownerPhone: '3154567890',
-    status: 'Activa',
-  },
-]
+const LIMIT = 20
+const CURRENT_YEAR = new Date().getFullYear()
 
-const initialFormData = {
+const EMPTY_FORM = {
+  client_id: '',
   plate: '',
   brand: '',
   model: '',
   year: '',
-  engineSize: '',
-  ownerName: '',
-  ownerPhone: '',
+  engine_cc: '',
+  color: '',
+  vin: '',
 }
 
-function normalizePlate(plate) {
-  return plate.trim().toUpperCase()
-}
-
-function validateMotorcycle(formData, motorcycles) {
+function validate(form) {
   const errors = {}
-  const plate = normalizePlate(formData.plate)
-  const year = Number(formData.year)
-
-  if (!plate) {
-    errors.plate = 'La placa es obligatoria.'
-  } else if (!/^[A-Z0-9]{5,7}$/.test(plate)) {
-    errors.plate = 'Usa entre 5 y 7 caracteres alfanumericos.'
-  } else if (motorcycles.some((motorcycle) => motorcycle.plate === plate)) {
-    errors.plate = 'Ya existe una motocicleta con esta placa.'
+  if (!form.client_id) errors.client_id = 'Selecciona un propietario.'
+  const plate = form.plate.trim().toUpperCase()
+  if (!plate) errors.plate = 'La placa es obligatoria.'
+  else if (!/^[A-Z0-9]{2,10}$/.test(plate)) errors.plate = 'Placa: 2–10 caracteres alfanuméricos.'
+  if (!form.brand.trim()) errors.brand = 'La marca es obligatoria.'
+  if (!form.model.trim()) errors.model = 'El modelo es obligatorio.'
+  const year = Number(form.year)
+  if (!form.year.trim()) errors.year = 'El año es obligatorio.'
+  else if (!Number.isInteger(year) || year < 1980 || year > CURRENT_YEAR + 1) {
+    errors.year = `Año válido: 1980–${CURRENT_YEAR + 1}.`
   }
-
-  if (!formData.brand.trim()) {
-    errors.brand = 'La marca es obligatoria.'
+  if (form.engine_cc && (isNaN(Number(form.engine_cc)) || Number(form.engine_cc) <= 0)) {
+    errors.engine_cc = 'Cilindraje inválido.'
   }
-
-  if (!formData.model.trim()) {
-    errors.model = 'El modelo es obligatorio.'
-  }
-
-  if (!formData.year.trim()) {
-    errors.year = 'El ano es obligatorio.'
-  } else if (!Number.isInteger(year) || year < 1990 || year > new Date().getFullYear() + 1) {
-    errors.year = 'Ingresa un ano valido.'
-  }
-
-  if (!formData.engineSize.trim()) {
-    errors.engineSize = 'El cilindraje es obligatorio.'
-  }
-
-  if (!formData.ownerName.trim()) {
-    errors.ownerName = 'El propietario es obligatorio.'
-  }
-
-  if (!formData.ownerPhone.trim()) {
-    errors.ownerPhone = 'El telefono es obligatorio.'
-  } else if (!/^\d{7,12}$/.test(formData.ownerPhone.trim())) {
-    errors.ownerPhone = 'Ingresa un telefono entre 7 y 12 digitos.'
-  }
-
   return errors
 }
 
 export function Motocicletas() {
-  const [motorcycles, setMotorcycles] = useState(() => getMotorcycles(initialMotorcycles))
-  const [formData, setFormData] = useState(initialFormData)
-  const [errors, setErrors] = useState({})
+  const toast = useToast()
+  const mountedRef = useRef(true)
+  const searchTimerRef = useRef(null)
+
+  // ── List state ───────────────────────────────────────
+  const [motorcycles, setMotorcycles] = useState([])
+  const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 })
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  // ── Clients for selector ──────────────────────────────
+  const [clients, setClients] = useState([])
+
+  // ── Create modal ──────────────────────────────────────
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [formData, setFormData] = useState(EMPTY_FORM)
+  const [formErrors, setFormErrors] = useState({})
+  const [submitting, setSubmitting] = useState(false)
+
+  // ── Delete modal ──────────────────────────────────────
   const [deleteTarget, setDeleteTarget] = useState(null)
-  const [searchQuery, setSearchQuery] = useState('')
+  const [deleteReason, setDeleteReason] = useState('')
+  const [deleteReasonError, setDeleteReasonError] = useState('')
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
-    saveMotorcycles(motorcycles)
-  }, [motorcycles])
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      clearTimeout(searchTimerRef.current)
+    }
+  }, [])
 
-  const totalInService = useMemo(
-    () => motorcycles.filter((motorcycle) => motorcycle.status === 'En servicio').length,
-    [motorcycles],
-  )
+  // Load client list once on mount for the selector
+  useEffect(() => {
+    clientsApi.getAll({ limit: 200 }).then((res) => {
+      if (mountedRef.current) setClients(res.data ?? [])
+    }).catch(() => {})
+  }, [])
 
-  const filteredMotorcycles = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim()
-    if (!q) return motorcycles
-    return motorcycles.filter(
-      (m) => m.plate.toLowerCase().includes(q) || m.brand.toLowerCase().includes(q),
-    )
-  }, [motorcycles, searchQuery])
+  const loadMotorcycles = useCallback(async (opts = {}) => {
+    const { silent = false, targetPage = page, q = search } = opts
+    if (!silent) setLoading(true)
+    setError(null)
+    try {
+      const res = await motorcyclesApi.getAll({
+        page: targetPage,
+        limit: LIMIT,
+        ...(q ? { search: q } : {}),
+      })
+      if (!mountedRef.current) return
+      setMotorcycles(res.data ?? [])
+      setPagination(res.pagination ?? { page: targetPage, totalPages: 1, total: res.data?.length ?? 0 })
+    } catch (err) {
+      if (!mountedRef.current) return
+      setError(err.message || 'Error al cargar motocicletas.')
+    } finally {
+      if (mountedRef.current) setLoading(false)
+    }
+  }, [page, search])
 
+  useEffect(() => {
+    loadMotorcycles()
+  }, [loadMotorcycles])
+
+  // ── Debounced search ───────────────────────────────────
+  function handleSearchChange(e) {
+    const value = e.target.value
+    setSearch(value)
+    setPage(1)
+    clearTimeout(searchTimerRef.current)
+    searchTimerRef.current = setTimeout(() => {
+      loadMotorcycles({ targetPage: 1, q: value })
+    }, 400)
+  }
+
+  // ── Create modal ───────────────────────────────────────
   function openModal() {
-    setErrors({})
-    setFormData(initialFormData)
+    setFormData(EMPTY_FORM)
+    setFormErrors({})
     setIsModalOpen(true)
   }
 
   function closeModal() {
     setIsModalOpen(false)
-    setErrors({})
+    setFormErrors({})
   }
 
-  function handleInputChange(event) {
-    const { name, value } = event.target
-
-    setFormData((currentFormData) => ({
-      ...currentFormData,
-      [name]: value,
-    }))
+  function handleInputChange(e) {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+    if (formErrors[name]) setFormErrors((prev) => ({ ...prev, [name]: undefined }))
   }
 
-  function handleCreateMotorcycle(event) {
-    event.preventDefault()
-
-    const validationErrors = validateMotorcycle(formData, motorcycles)
-
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors)
-      return
+  async function handleCreate(e) {
+    e.preventDefault()
+    const errs = validate(formData)
+    if (Object.keys(errs).length > 0) { setFormErrors(errs); return }
+    setSubmitting(true)
+    try {
+      const payload = {
+        client_id: Number(formData.client_id),
+        plate: formData.plate.trim().toUpperCase(),
+        brand: formData.brand.trim(),
+        model: formData.model.trim(),
+        year: Number(formData.year),
+        ...(formData.engine_cc ? { engine_cc: Number(formData.engine_cc) } : {}),
+        ...(formData.color.trim() ? { color: formData.color.trim() } : {}),
+        ...(formData.vin.trim() ? { vin: formData.vin.trim() } : {}),
+      }
+      await motorcyclesApi.create(payload)
+      toast.success(`Motocicleta ${payload.plate} registrada exitosamente`)
+      closeModal()
+      setPage(1)
+      await loadMotorcycles({ silent: true, targetPage: 1, q: search })
+    } catch (err) {
+      toast.error(err.message || 'Error al registrar la motocicleta.')
+    } finally {
+      if (mountedRef.current) setSubmitting(false)
     }
-
-    const nextMotorcycle = {
-      id: crypto.randomUUID(),
-      plate: normalizePlate(formData.plate),
-      brand: formData.brand.trim(),
-      model: formData.model.trim(),
-      year: formData.year.trim(),
-      engineSize: formData.engineSize.trim(),
-      ownerName: formData.ownerName.trim(),
-      ownerPhone: formData.ownerPhone.trim(),
-      status: 'Activa',
-    }
-
-    setMotorcycles((currentMotorcycles) => [nextMotorcycle, ...currentMotorcycles])
-    closeModal()
   }
 
-  function handleDeleteMotorcycle(motorcycleId, label) {
-    setDeleteTarget({ id: motorcycleId, label })
+  // ── Delete ─────────────────────────────────────────────
+  function handleDeleteClick(motorcycle) {
+    setDeleteTarget(motorcycle)
+    setDeleteReason('')
+    setDeleteReasonError('')
   }
 
-  function handleConfirmDelete() {
-    setMotorcycles((current) => current.filter((m) => m.id !== deleteTarget.id))
+  function handleCancelDelete() {
     setDeleteTarget(null)
+    setDeleteReason('')
+    setDeleteReasonError('')
   }
+
+  async function handleConfirmDelete() {
+    const reason = deleteReason.trim()
+    if (!reason) { setDeleteReasonError('El motivo de eliminación es obligatorio.'); return }
+    setDeleting(true)
+    try {
+      await motorcyclesApi.remove(deleteTarget.id, reason)
+      const label = `${deleteTarget.plate} — ${deleteTarget.brand} ${deleteTarget.model}`
+      toast.success(`Motocicleta ${label} eliminada exitosamente`)
+      setDeleteTarget(null)
+      await loadMotorcycles({ silent: true, targetPage: page, q: search })
+    } catch (err) {
+      toast.error(err.message || 'Error al eliminar la motocicleta.')
+    } finally {
+      if (mountedRef.current) setDeleting(false)
+    }
+  }
+
+  // ── Derived ────────────────────────────────────────────
+  const inService = motorcycles.filter((m) => m.status === 'En servicio').length
 
   return (
     <section className={styles.page}>
       <div className={styles.pageHeader}>
         <div>
-          <p className={styles.eyebrow}>Modulo administrativo</p>
+          <p className={styles.eyebrow}>Módulo administrativo</p>
           <h1>Motocicletas</h1>
-          <p>
-            Registro local de motocicletas preparado para conectarse con una API REST.
-          </p>
+          <p>Gestión de motocicletas registradas en el sistema.</p>
         </div>
-
-        <button className={styles.primaryButton} type="button" onClick={openModal}>
+        <button className={styles.primaryButton} type="button" onClick={openModal} disabled={loading}>
           Nueva motocicleta
         </button>
       </div>
 
       <div className={styles.summaryBar}>
-        <span>
-          {searchQuery
-            ? `${filteredMotorcycles.length} de ${motorcycles.length} motocicletas`
-            : `${motorcycles.length} motocicletas registradas`}
-        </span>
-        <span>{totalInService} en servicio</span>
+        <span>{loading ? '...' : `${pagination.total} motocicletas registradas`}</span>
+        {!loading && <span>{inService} en servicio</span>}
       </div>
 
       <div className={styles.searchBar}>
@@ -207,69 +217,111 @@ export function Motocicletas() {
           className={styles.searchInput}
           type="search"
           placeholder="Buscar por placa o marca..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          value={search}
+          onChange={handleSearchChange}
         />
       </div>
 
-      <div className={styles.tableWrapper}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Placa</th>
-              <th>Marca</th>
-              <th>Modelo</th>
-              <th>Cilindraje</th>
-              <th>Propietario</th>
-              <th>Estado</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredMotorcycles.map((motorcycle) => (
-              <tr key={motorcycle.id}>
-                <td data-label="Placa">{motorcycle.plate}</td>
-                <td data-label="Marca">{motorcycle.brand}</td>
-                <td data-label="Modelo">
-                  {motorcycle.model} {motorcycle.year}
-                </td>
-                <td data-label="Cilindraje">{motorcycle.engineSize}</td>
-                <td data-label="Propietario">
-                  <span className={styles.ownerName}>{motorcycle.ownerName}</span>
-                  <span className={styles.ownerPhone}>{motorcycle.ownerPhone}</span>
-                </td>
-                <td data-label="Estado">
-                  <span className={styles.statusBadge}>{motorcycle.status}</span>
-                </td>
-                <td data-label="Acciones">
-                  <button
-                    className={styles.deleteButton}
-                    type="button"
-                    onClick={() =>
-                      handleDeleteMotorcycle(
-                        motorcycle.id,
-                        `${motorcycle.plate} — ${motorcycle.brand} ${motorcycle.model}`,
-                      )
-                    }
-                  >
-                    Eliminar
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {filteredMotorcycles.length === 0 ? (
-              <tr>
-                <td colSpan={7} className={styles.emptyState}>
-                  {searchQuery
-                    ? `Sin resultados para "${searchQuery.trim()}"`
-                    : 'No hay motocicletas registradas aún'}
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
+      {/* ── Loading ──────────────────────────────────────── */}
+      {loading ? (
+        <div className={styles.loadingState}>
+          <div className={styles.spinner} aria-hidden="true" />
+          <p>Cargando motocicletas...</p>
+        </div>
+      ) : error ? (
+        /* ── Error ───────────────────────────────────────── */
+        <div className={styles.errorState}>
+          <p>{error}</p>
+          <button className={styles.primaryButton} type="button" onClick={() => loadMotorcycles()}>
+            Reintentar
+          </button>
+        </div>
+      ) : (
+        /* ── Table ───────────────────────────────────────── */
+        <>
+          <div className={styles.tableWrapper}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Placa</th>
+                  <th>Marca</th>
+                  <th>Modelo</th>
+                  <th>Año</th>
+                  <th>Cliente</th>
+                  <th>Teléfono</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {motorcycles.map((m) => (
+                  <tr key={m.id}>
+                    <td data-label="Placa">{m.plate}</td>
+                    <td data-label="Marca">{m.brand}</td>
+                    <td data-label="Modelo">{m.model}</td>
+                    <td data-label="Año">{m.year}</td>
+                    <td data-label="Cliente">
+                      <span className={styles.ownerName}>
+                        {m.client_name} {m.client_last_name}
+                      </span>
+                    </td>
+                    <td data-label="Teléfono">
+                      <span className={styles.ownerPhone}>{m.client_phone ?? '—'}</span>
+                    </td>
+                    <td data-label="Estado">
+                      <span className={styles.statusBadge}>{m.status}</span>
+                    </td>
+                    <td data-label="Acciones">
+                      <button
+                        className={styles.deleteButton}
+                        type="button"
+                        disabled={deleting && deleteTarget?.id === m.id}
+                        onClick={() => handleDeleteClick(m)}
+                      >
+                        Eliminar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {motorcycles.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className={styles.emptyState}>
+                      {search
+                        ? `Sin resultados para "${search.trim()}"`
+                        : 'No hay motocicletas registradas aún'}
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
 
+          {/* ── Pagination ────────────────────────────────── */}
+          {pagination.totalPages > 1 ? (
+            <div className={styles.pagination}>
+              <button
+                className={styles.secondaryButton}
+                type="button"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+              >
+                Anterior
+              </button>
+              <span>Página {page} de {pagination.totalPages}</span>
+              <button
+                className={styles.secondaryButton}
+                type="button"
+                disabled={page >= pagination.totalPages}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Siguiente
+              </button>
+            </div>
+          ) : null}
+        </>
+      )}
+
+      {/* ── Create modal ──────────────────────────────────── */}
       {isModalOpen ? (
         <div className={styles.modalBackdrop} role="presentation">
           <section
@@ -283,97 +335,128 @@ export function Motocicletas() {
                 <p className={styles.eyebrow}>Registro</p>
                 <h2 id="motorcycle-modal-title">Nueva motocicleta</h2>
               </div>
-              <button className={styles.iconButton} type="button" onClick={closeModal}>
-                X
+              <button
+                className={styles.iconButton}
+                type="button"
+                onClick={closeModal}
+                aria-label="Cerrar"
+                disabled={submitting}
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true">
+                  <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                </svg>
               </button>
             </div>
 
-            <form className={styles.form} onSubmit={handleCreateMotorcycle}>
+            <form className={styles.form} onSubmit={handleCreate}>
+              <label className={`${styles.formField} ${styles.fullWidth}`}>
+                Propietario *
+                <select name="client_id" value={formData.client_id} onChange={handleInputChange}>
+                  <option value="">Seleccionar cliente...</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} {c.last_name} — {c.document}
+                    </option>
+                  ))}
+                </select>
+                {formErrors.client_id ? <span>{formErrors.client_id}</span> : null}
+              </label>
+
               <label className={styles.formField}>
-                Placa
+                Placa *
                 <input
                   name="plate"
                   value={formData.plate}
                   onChange={handleInputChange}
                   placeholder="ABC12D"
+                  disabled={submitting}
                 />
-                {errors.plate ? <span>{errors.plate}</span> : null}
+                {formErrors.plate ? <span>{formErrors.plate}</span> : null}
               </label>
 
               <label className={styles.formField}>
-                Marca
+                Marca *
                 <input
                   name="brand"
                   value={formData.brand}
                   onChange={handleInputChange}
                   placeholder="Yamaha"
+                  disabled={submitting}
                 />
-                {errors.brand ? <span>{errors.brand}</span> : null}
+                {formErrors.brand ? <span>{formErrors.brand}</span> : null}
               </label>
 
               <label className={styles.formField}>
-                Modelo
+                Modelo *
                 <input
                   name="model"
                   value={formData.model}
                   onChange={handleInputChange}
                   placeholder="FZ 2.0"
+                  disabled={submitting}
                 />
-                {errors.model ? <span>{errors.model}</span> : null}
+                {formErrors.model ? <span>{formErrors.model}</span> : null}
               </label>
 
               <label className={styles.formField}>
-                Ano
+                Año *
                 <input
                   inputMode="numeric"
                   name="year"
                   value={formData.year}
                   onChange={handleInputChange}
-                  placeholder="2024"
+                  placeholder={String(CURRENT_YEAR)}
+                  disabled={submitting}
                 />
-                {errors.year ? <span>{errors.year}</span> : null}
+                {formErrors.year ? <span>{formErrors.year}</span> : null}
               </label>
 
               <label className={styles.formField}>
-                Cilindraje
+                Cilindraje (cc)
                 <input
-                  name="engineSize"
-                  value={formData.engineSize}
+                  inputMode="numeric"
+                  name="engine_cc"
+                  value={formData.engine_cc}
                   onChange={handleInputChange}
-                  placeholder="150 cc"
+                  placeholder="150"
+                  disabled={submitting}
                 />
-                {errors.engineSize ? <span>{errors.engineSize}</span> : null}
+                {formErrors.engine_cc ? <span>{formErrors.engine_cc}</span> : null}
               </label>
 
               <label className={styles.formField}>
-                Propietario
+                Color
                 <input
-                  name="ownerName"
-                  value={formData.ownerName}
+                  name="color"
+                  value={formData.color}
                   onChange={handleInputChange}
-                  placeholder="Nombre completo"
+                  placeholder="Negro"
+                  disabled={submitting}
                 />
-                {errors.ownerName ? <span>{errors.ownerName}</span> : null}
               </label>
 
               <label className={styles.formField}>
-                Telefono
+                VIN / Chasis
                 <input
-                  inputMode="tel"
-                  name="ownerPhone"
-                  value={formData.ownerPhone}
+                  name="vin"
+                  value={formData.vin}
                   onChange={handleInputChange}
-                  placeholder="3001234567"
+                  placeholder="Número de chasis"
+                  disabled={submitting}
                 />
-                {errors.ownerPhone ? <span>{errors.ownerPhone}</span> : null}
               </label>
 
               <div className={styles.formActions}>
-                <button className={styles.secondaryButton} type="button" onClick={closeModal}>
+                <button
+                  className={styles.secondaryButton}
+                  type="button"
+                  onClick={closeModal}
+                  disabled={submitting}
+                >
                   Cancelar
                 </button>
-                <button className={styles.primaryButton} type="submit">
-                  Guardar motocicleta
+                <button className={styles.primaryButton} type="submit" disabled={submitting}>
+                  {submitting ? 'Guardando...' : 'Guardar motocicleta'}
                 </button>
               </div>
             </form>
@@ -381,12 +464,79 @@ export function Motocicletas() {
         </div>
       ) : null}
 
-      <ConfirmModal
-        isOpen={Boolean(deleteTarget)}
-        entityLabel={deleteTarget?.label ?? ''}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setDeleteTarget(null)}
-      />
+      {/* ── Delete with reason modal ───────────────────────── */}
+      {deleteTarget ? (
+        <div className={styles.modalBackdrop} role="presentation">
+          <section
+            className={styles.modal}
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-moto-title"
+            aria-describedby="delete-moto-desc"
+          >
+            <div className={styles.modalHeader}>
+              <div>
+                <p className={`${styles.eyebrow} ${styles.eyebrowDanger}`}>Acción irreversible</p>
+                <h2 id="delete-moto-title">Eliminar motocicleta</h2>
+              </div>
+              <button
+                className={styles.iconButton}
+                type="button"
+                onClick={handleCancelDelete}
+                aria-label="Cerrar"
+                disabled={deleting}
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true">
+                  <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                </svg>
+              </button>
+            </div>
+
+            <p id="delete-moto-desc" className={styles.deleteDesc}>
+              Estás a punto de eliminar{' '}
+              <strong>
+                &ldquo;{deleteTarget.plate} — {deleteTarget.brand} {deleteTarget.model}&rdquo;
+              </strong>
+              . Esta acción no se puede deshacer.
+            </p>
+
+            <label className={`${styles.formField} ${styles.fullWidth}`}>
+              Motivo de eliminación <span className={styles.required}>*</span>
+              <textarea
+                className={`${styles.textarea} ${deleteReasonError ? styles.textareaError : ''}`}
+                rows={4}
+                placeholder="Describe el motivo por el que se elimina esta motocicleta..."
+                value={deleteReason}
+                disabled={deleting}
+                onChange={(e) => {
+                  setDeleteReason(e.target.value)
+                  if (e.target.value.trim()) setDeleteReasonError('')
+                }}
+              />
+              {deleteReasonError ? <span>{deleteReasonError}</span> : null}
+            </label>
+
+            <div className={styles.formActions}>
+              <button
+                className={styles.secondaryButton}
+                type="button"
+                onClick={handleCancelDelete}
+                disabled={deleting}
+              >
+                Cancelar
+              </button>
+              <button
+                className={styles.dangerButton}
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+              >
+                {deleting ? 'Eliminando...' : 'Confirmar eliminación'}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </section>
   )
 }

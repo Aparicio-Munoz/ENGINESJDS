@@ -5,8 +5,8 @@ import { authService } from '../services/authService'
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(() => authService.getSession())
 
-  const login = useCallback((credentials) => {
-    const nextSession = authService.login(credentials)
+  const login = useCallback(async (credentials) => {
+    const nextSession = await authService.login(credentials)
     setSession(nextSession)
     return nextSession
   }, [])

@@ -17,15 +17,15 @@ export function Login() {
     if (error) setError('')
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
     setError('')
     setLoading(true)
     try {
-      login(formData)
+      await login(formData)
       navigate(ROUTES.admin, { replace: true })
     } catch (loginError) {
-      setError(loginError.message)
+      setError(loginError.message || 'Credenciales incorrectas. Verifica tu correo y contraseña.')
       setLoading(false)
     }
   }
@@ -121,7 +121,7 @@ export function Login() {
             ) : null}
 
             <button className={styles.submitButton} type="submit" disabled={loading}>
-              {loading ? 'Ingresando...' : 'Iniciar sesión'}
+              {loading ? 'Verificando...' : 'Iniciar sesión'}
             </button>
           </form>
         </div>

@@ -1,213 +1,590 @@
-import { useEffect, useMemo, useState } from 'react'
-import { getEmployees, saveEmployees } from '../../../services/employeesService'
-import { ConfirmModal } from '../../../components/ConfirmModal/ConfirmModal'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { employeesApi, reportsApi } from '../../../api'
+import { useToast } from '../../../hooks/useToast'
 import styles from './Empleados.module.css'
 
+const LIMIT = 20
+const DOCUMENT_TYPES = ['CC', 'CE', 'Pasaporte']
 const STATUSES = ['Activo', 'Inactivo', 'Vacaciones']
 
-const initialEmployees = [
-  {
-    id: 'emp-001',
-    document: '80123456',
-    name: 'Jorge Perez',
-    phone: '3001112233',
-    email: 'jorge.perez@enginesjds.com',
-    specialty: 'Mecánica general',
-    status: 'Activo',
-  },
-  {
-    id: 'emp-002',
-    document: '52345678',
-    name: 'Maria Lopez',
-    phone: '3114445566',
-    email: 'maria.lopez@enginesjds.com',
-    specialty: 'Electricidad',
-    status: 'Activo',
-  },
-  {
-    id: 'emp-003',
-    document: '43210987',
-    name: 'Luis Hernandez',
-    phone: '3207778899',
-    email: 'luis.hernandez@enginesjds.com',
-    specialty: 'Diagnóstico',
-    status: 'Vacaciones',
-  },
-]
-
-const initialFormData = {
-  document: '',
-  name: '',
-  phone: '',
-  email: '',
-  specialty: '',
-  status: 'Activo',
+function todayISO() {
+  return new Date().toISOString().slice(0, 10)
 }
 
-function validateEmployee(formData, employees) {
+function emptyForm() {
+  return {
+    document_type: 'CC',
+    document: '',
+    name: '',
+    last_name: '',
+    phone: '',
+    email: '',
+    specialty: '',
+    daily_rate: '',
+    status: 'Activo',
+    hire_date: todayISO(),
+  }
+}
+
+function validate(form) {
   const errors = {}
-  const document = formData.document.trim()
+  const doc = form.document.trim()
+  if (!doc) errors.document = 'El documento es obligatorio.'
+  else if (doc.length < 5 || doc.length > 20) errors.document = 'Entre 5 y 20 caracteres.'
 
-  if (!document) {
-    errors.document = 'El documento es obligatorio.'
-  } else if (!/^\d{6,12}$/.test(document)) {
-    errors.document = 'Ingresa entre 6 y 12 digitos.'
-  } else if (employees.some((emp) => emp.document === document)) {
-    errors.document = 'Ya existe un empleado con este documento.'
+  if (!form.name.trim()) errors.name = 'El nombre es obligatorio.'
+  if (!form.last_name.trim()) errors.last_name = 'El apellido es obligatorio.'
+  if (!form.phone.trim()) errors.phone = 'El teléfono es obligatorio.'
+  if (!form.specialty.trim()) errors.specialty = 'La especialidad es obligatoria.'
+  if (!form.hire_date) errors.hire_date = 'La fecha de contratación es obligatoria.'
+
+  if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+    errors.email = 'Correo electrónico inválido.'
   }
-
-  if (!formData.name.trim()) {
-    errors.name = 'El nombre es obligatorio.'
+  if (form.daily_rate && (isNaN(Number(form.daily_rate)) || Number(form.daily_rate) < 0)) {
+    errors.daily_rate = 'Tarifa inválida.'
   }
-
-  if (!formData.phone.trim()) {
-    errors.phone = 'El telefono es obligatorio.'
-  } else if (!/^\d{7,12}$/.test(formData.phone.trim())) {
-    errors.phone = 'Ingresa un telefono entre 7 y 12 digitos.'
-  }
-
-  if (!formData.email.trim()) {
-    errors.email = 'El correo es obligatorio.'
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
-    errors.email = 'Ingresa un correo valido.'
-  }
-
-  if (!formData.specialty.trim()) {
-    errors.specialty = 'La especialidad es obligatoria.'
-  }
-
   return errors
 }
 
+function fmtCOP(n) {
+  return `$${Math.round(Number(n)).toLocaleString('es-CO')}`
+}
+
+function initials(fullName = '') {
+  return fullName.split(' ').map((w) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase()
+}
+
+function EarningsTab({ label, value }) {
+  return (
+    <div className={styles.earningTab}>
+      <span className={styles.earningValue}>{value}</span>
+      <span className={styles.earningLabel}>{label}</span>
+    </div>
+  )
+}
+
 export function Empleados() {
-  const [employees, setEmployees] = useState(() => getEmployees(initialEmployees))
-  const [formData, setFormData] = useState(initialFormData)
-  const [errors, setErrors] = useState({})
+  const toast = useToast()
+  const mountedRef = useRef(true)
+  const searchTimerRef = useRef(null)
+
+  // ── List state ────────────────────────────────────────
+  const [employees, setEmployees] = useState([])
+  const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [page, setPage] = useState(1)
+
+  // ── Filters ───────────────────────────────────────────
+  const [searchInput, setSearchInput] = useState('')
+  const [searchApplied, setSearchApplied] = useState('')
+  const [filterSpecialty, setFilterSpecialty] = useState('')
+  const [filterStatus, setFilterStatus] = useState('')
+  const [specialties, setSpecialties] = useState([])
+
+  // ── Performance stats ─────────────────────────────────
+  const [stats, setStats] = useState([])
+  const [statsLoading, setStatsLoading] = useState(true)
+  const [activeStatTab, setActiveStatTab] = useState('ordenes')
+
+  // ── Create modal ──────────────────────────────────────
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [formData, setFormData] = useState(emptyForm)
+  const [formErrors, setFormErrors] = useState({})
+  const [submitting, setSubmitting] = useState(false)
+
+  // ── Delete modal ──────────────────────────────────────
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleteReason, setDeleteReason] = useState('')
+  const [deleteReasonError, setDeleteReasonError] = useState('')
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
-    saveEmployees(employees)
-  }, [employees])
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      clearTimeout(searchTimerRef.current)
+    }
+  }, [])
 
-  const activeCount = useMemo(
-    () => employees.filter((emp) => emp.status === 'Activo').length,
-    [employees],
-  )
+  // Load specialties once for the filter dropdown
+  useEffect(() => {
+    employeesApi.getSpecialties()
+      .then((data) => { if (mountedRef.current) setSpecialties(data ?? []) })
+      .catch(() => {})
+  }, [])
 
+  // Load performance stats (refreshed after mutations)
+  const loadStats = useCallback(() => {
+    setStatsLoading(true)
+    reportsApi.getEmployeeStats()
+      .then((data) => {
+        if (!mountedRef.current) return
+        setStats(Array.isArray(data) ? data : [])
+      })
+      .catch(() => { if (mountedRef.current) setStats([]) })
+      .finally(() => { if (mountedRef.current) setStatsLoading(false) })
+  }, [])
+
+  useEffect(() => { loadStats() }, [loadStats])
+
+  // Load employees (re-runs when page or applied filters change)
+  const loadEmployees = useCallback(async (opts = {}) => {
+    const { silent = false, targetPage = page } = opts
+    if (!silent) setLoading(true)
+    setError(null)
+    try {
+      const res = await employeesApi.getAll({
+        page: targetPage,
+        limit: LIMIT,
+        ...(searchApplied ? { search: searchApplied } : {}),
+        ...(filterSpecialty ? { specialty: filterSpecialty } : {}),
+        ...(filterStatus ? { status: filterStatus } : {}),
+      })
+      if (!mountedRef.current) return
+      setEmployees(res.data ?? [])
+      setPagination(res.pagination ?? { page: targetPage, totalPages: 1, total: res.data?.length ?? 0 })
+    } catch (err) {
+      if (!mountedRef.current) return
+      setError(err.message || 'Error al cargar empleados.')
+    } finally {
+      if (mountedRef.current) setLoading(false)
+    }
+  }, [page, searchApplied, filterSpecialty, filterStatus])
+
+  useEffect(() => { loadEmployees() }, [loadEmployees])
+
+  // ── Debounced search ───────────────────────────────────
+  function handleSearchChange(e) {
+    const value = e.target.value
+    setSearchInput(value)
+    clearTimeout(searchTimerRef.current)
+    searchTimerRef.current = setTimeout(() => {
+      setPage(1)
+      setSearchApplied(value)
+    }, 400)
+  }
+
+  function handleFilterChange(setter) {
+    return (e) => { setter(e.target.value); setPage(1) }
+  }
+
+  // ── Create modal ───────────────────────────────────────
   function openModal() {
-    setErrors({})
-    setFormData(initialFormData)
+    setFormData(emptyForm())
+    setFormErrors({})
     setIsModalOpen(true)
   }
 
   function closeModal() {
     setIsModalOpen(false)
-    setErrors({})
+    setFormErrors({})
   }
 
-  function handleInputChange(event) {
-    const { name, value } = event.target
-    setFormData((current) => ({ ...current, [name]: value }))
+  function handleInputChange(e) {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+    if (formErrors[name]) setFormErrors((prev) => ({ ...prev, [name]: undefined }))
   }
 
-  function handleCreateEmployee(event) {
-    event.preventDefault()
-
-    const validationErrors = validateEmployee(formData, employees)
-
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors)
-      return
+  async function handleCreate(e) {
+    e.preventDefault()
+    const errs = validate(formData)
+    if (Object.keys(errs).length > 0) { setFormErrors(errs); return }
+    setSubmitting(true)
+    try {
+      await employeesApi.create({
+        document_type: formData.document_type,
+        document: formData.document.trim(),
+        name: formData.name.trim(),
+        last_name: formData.last_name.trim(),
+        phone: formData.phone.trim(),
+        ...(formData.email.trim() ? { email: formData.email.trim() } : {}),
+        specialty: formData.specialty.trim(),
+        ...(formData.daily_rate ? { daily_rate: Number(formData.daily_rate) } : {}),
+        status: formData.status,
+        hire_date: formData.hire_date,
+      })
+      toast.success(`Empleado ${formData.name.trim()} ${formData.last_name.trim()} registrado exitosamente`)
+      closeModal()
+      await loadEmployees({ silent: true, targetPage: 1 })
+      setPage(1)
+      loadStats()
+    } catch (err) {
+      toast.error(err.message || 'Error al registrar el empleado.')
+    } finally {
+      if (mountedRef.current) setSubmitting(false)
     }
-
-    const nextEmployee = {
-      id: crypto.randomUUID(),
-      document: formData.document.trim(),
-      name: formData.name.trim(),
-      phone: formData.phone.trim(),
-      email: formData.email.trim(),
-      specialty: formData.specialty.trim(),
-      status: formData.status,
-    }
-
-    setEmployees((current) => [nextEmployee, ...current])
-    closeModal()
   }
 
-  function handleDeleteEmployee(employeeId, label) {
-    setDeleteTarget({ id: employeeId, label })
+  // ── Delete ─────────────────────────────────────────────
+  function handleDeleteClick(emp) {
+    setDeleteTarget(emp)
+    setDeleteReason('')
+    setDeleteReasonError('')
   }
 
-  function handleConfirmDelete() {
-    setEmployees((current) => current.filter((emp) => emp.id !== deleteTarget.id))
+  function handleCancelDelete() {
     setDeleteTarget(null)
+    setDeleteReason('')
+    setDeleteReasonError('')
   }
 
+  async function handleConfirmDelete() {
+    const reason = deleteReason.trim()
+    if (!reason) { setDeleteReasonError('El motivo de eliminación es obligatorio.'); return }
+    setDeleting(true)
+    try {
+      await employeesApi.remove(deleteTarget.id, reason)
+      toast.success(`Empleado ${deleteTarget.name} ${deleteTarget.last_name} eliminado exitosamente`)
+      setDeleteTarget(null)
+      await loadEmployees({ silent: true, targetPage: page })
+      loadStats()
+    } catch (err) {
+      toast.error(err.message || 'Error al eliminar el empleado.')
+    } finally {
+      if (mountedRef.current) setDeleting(false)
+    }
+  }
+
+  // ── Derived ────────────────────────────────────────────
+  const activeCount = employees.filter((e) => e.status === 'Activo').length
+  const topEmployee = stats[0] ?? null
+  const hasFilters = searchInput || filterSpecialty || filterStatus
+
+  // ── Render ─────────────────────────────────────────────
   return (
     <section className={styles.page}>
+      {/* ── Header ──────────────────────────────────────── */}
       <div className={styles.pageHeader}>
         <div>
-          <p className={styles.eyebrow}>Modulo administrativo</p>
+          <p className={styles.eyebrow}>Módulo administrativo</p>
           <h1>Empleados</h1>
-          <p>Registro local de empleados preparado para conectarse con una API REST.</p>
+          <p>Gestión del personal técnico y administrativo del taller.</p>
         </div>
-
-        <button className={styles.primaryButton} type="button" onClick={openModal}>
+        <button className={styles.primaryButton} type="button" onClick={openModal} disabled={loading}>
           Nuevo empleado
         </button>
       </div>
 
+      {/* ── Summary bar ─────────────────────────────────── */}
       <div className={styles.summaryBar}>
-        <span>{employees.length} empleados registrados</span>
+        <span>{loading ? '...' : `${pagination.total} empleados registrados`}</span>
         <span>{activeCount} activos</span>
       </div>
 
-      <div className={styles.tableWrapper}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Documento</th>
-              <th>Nombre</th>
-              <th>Teléfono</th>
-              <th>Correo</th>
-              <th>Especialidad</th>
-              <th>Estado</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {employees.map((emp) => (
-              <tr key={emp.id}>
-                <td data-label="Documento">
-                  <span className={styles.documentCode}>{emp.document}</span>
-                </td>
-                <td data-label="Nombre">
-                  <span className={styles.employeeName}>{emp.name}</span>
-                </td>
-                <td data-label="Teléfono">{emp.phone}</td>
-                <td data-label="Correo">{emp.email}</td>
-                <td data-label="Especialidad">{emp.specialty}</td>
-                <td data-label="Estado">
-                  <span className={styles.statusBadge} data-status={emp.status}>
-                    {emp.status}
-                  </span>
-                </td>
-                <td data-label="Acciones">
-                  <button
-                    className={styles.deleteButton}
-                    type="button"
-                    onClick={() => handleDeleteEmployee(emp.id, emp.name)}
-                  >
-                    Eliminar
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* ── Filter bar ──────────────────────────────────── */}
+      <div className={styles.filterBar}>
+        <div className={styles.searchWrapper}>
+          <span className={styles.searchIcon}>
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true">
+              <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clipRule="evenodd" />
+            </svg>
+          </span>
+          <input
+            className={styles.searchInput}
+            type="search"
+            placeholder="Buscar por nombre, documento, especialidad..."
+            value={searchInput}
+            onChange={handleSearchChange}
+            aria-label="Buscar empleado"
+          />
+        </div>
+
+        <select
+          className={styles.filterSelect}
+          value={filterSpecialty}
+          onChange={handleFilterChange(setFilterSpecialty)}
+          aria-label="Filtrar por especialidad"
+        >
+          <option value="">Todas las especialidades</option>
+          {specialties.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+
+        <select
+          className={styles.filterSelect}
+          value={filterStatus}
+          onChange={handleFilterChange(setFilterStatus)}
+          aria-label="Filtrar por estado"
+        >
+          <option value="">Todos los estados</option>
+          {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
       </div>
 
+      {/* ── Loading ──────────────────────────────────────── */}
+      {loading ? (
+        <div className={styles.loadingState}>
+          <div className={styles.spinner} aria-hidden="true" />
+          <p>Cargando empleados...</p>
+        </div>
+      ) : error ? (
+        /* ── Error ───────────────────────────────────────── */
+        <div className={styles.errorState}>
+          <p>{error}</p>
+          <button className={styles.primaryButton} type="button" onClick={() => loadEmployees()}>
+            Reintentar
+          </button>
+        </div>
+      ) : (
+        /* ── Table ───────────────────────────────────────── */
+        <>
+          <div className={styles.tableWrapper}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Documento</th>
+                  <th>Nombre</th>
+                  <th>Apellido</th>
+                  <th>Teléfono</th>
+                  <th>Correo</th>
+                  <th>Especialidad</th>
+                  <th>Estado</th>
+                  <th>Tarifa diaria</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {employees.map((emp) => (
+                  <tr key={emp.id}>
+                    <td data-label="Documento">
+                      <span className={styles.documentCode}>{emp.document}</span>
+                    </td>
+                    <td data-label="Nombre">
+                      <span className={styles.employeeName}>{emp.name}</span>
+                    </td>
+                    <td data-label="Apellido">{emp.last_name}</td>
+                    <td data-label="Teléfono">{emp.phone}</td>
+                    <td data-label="Correo">{emp.email ?? '—'}</td>
+                    <td data-label="Especialidad">{emp.specialty}</td>
+                    <td data-label="Estado">
+                      <span className={styles.statusBadge} data-status={emp.status}>{emp.status}</span>
+                    </td>
+                    <td data-label="Tarifa diaria">
+                      {emp.daily_rate ? fmtCOP(emp.daily_rate) : '—'}
+                    </td>
+                    <td data-label="Acciones">
+                      <button
+                        className={styles.deleteButton}
+                        type="button"
+                        disabled={deleting && deleteTarget?.id === emp.id}
+                        onClick={() => handleDeleteClick(emp)}
+                      >
+                        Eliminar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {employees.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className={styles.emptyState}>
+                      {hasFilters
+                        ? 'Sin resultados para los filtros aplicados.'
+                        : 'No hay empleados registrados aún.'}
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+
+          {/* ── Pagination ────────────────────────────────── */}
+          {pagination.totalPages > 1 ? (
+            <div className={styles.pagination}>
+              <button
+                className={styles.secondaryButton}
+                type="button"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+              >
+                Anterior
+              </button>
+              <span>Página {page} de {pagination.totalPages}</span>
+              <button
+                className={styles.secondaryButton}
+                type="button"
+                disabled={page >= pagination.totalPages}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Siguiente
+              </button>
+            </div>
+          ) : null}
+        </>
+      )}
+
+      {/* ── Productivity section ─────────────────────────── */}
+      <div className={styles.productivitySection}>
+        <div className={styles.productivityHeader}>
+          <div>
+            <h2 className={styles.sectionTitle}>Productividad del equipo</h2>
+            <p className={styles.sectionSub}>Métricas en tiempo real basadas en órdenes de trabajo asignadas.</p>
+          </div>
+          <div className={styles.statTabs}>
+            {['ordenes', 'ganancias'].map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                className={`${styles.statTab} ${activeStatTab === tab ? styles.statTabActive : ''}`}
+                onClick={() => setActiveStatTab(tab)}
+              >
+                {tab === 'ordenes' ? 'Órdenes' : 'Ganancias'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {statsLoading ? (
+          <div className={styles.loadingState}>
+            <div className={styles.spinner} aria-hidden="true" />
+            <p>Cargando estadísticas...</p>
+          </div>
+        ) : (
+          <>
+            {/* Employee of the month */}
+            {topEmployee && topEmployee.completed_orders > 0 ? (
+              <div className={styles.eomBanner}>
+                <div className={styles.eomLeft}>
+                  <span className={styles.eomTrophy} aria-hidden="true">🏆</span>
+                  <div>
+                    <p className={styles.eomLabel}>Empleado del mes</p>
+                    <p className={styles.eomName}>{topEmployee.employee_name}</p>
+                    <p className={styles.eomSpec}>{topEmployee.specialty}</p>
+                  </div>
+                </div>
+                <div className={styles.eomStats}>
+                  <div className={styles.eomStat}>
+                    <strong>{topEmployee.completed_orders}</strong>
+                    <span>Completadas</span>
+                  </div>
+                  <div className={styles.eomStat}>
+                    <strong>{topEmployee.total_orders}</strong>
+                    <span>Total órdenes</span>
+                  </div>
+                  <div className={styles.eomStat}>
+                    <strong>{fmtCOP(topEmployee.services_revenue)}</strong>
+                    <span>Ingresos generados</span>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Stats grid */}
+            {stats.length > 0 ? (
+              <div className={styles.statsGrid}>
+                {stats.map((emp, idx) => {
+                  const productivity = emp.total_orders > 0
+                    ? Math.round((emp.completed_orders / emp.total_orders) * 100)
+                    : 0
+                  const inProcess = emp.total_orders - emp.completed_orders
+                  const isTop = idx === 0 && emp.completed_orders > 0
+
+                  return (
+                    <div
+                      key={emp.employee_id}
+                      className={`${styles.statCard} ${isTop ? styles.statCardTop : ''}`}
+                    >
+                      <div className={styles.statCardHeader}>
+                        <div className={styles.statAvatar} aria-hidden="true">
+                          {initials(emp.employee_name)}
+                        </div>
+                        <div className={styles.statMeta}>
+                          <span className={styles.statName}>{emp.employee_name}</span>
+                          <span className={styles.statSpec}>{emp.specialty}</span>
+                        </div>
+                        <span
+                          className={styles.statusBadge}
+                          data-status={emp.employee_status}
+                          style={{ marginLeft: 'auto' }}
+                        >
+                          {emp.employee_status}
+                        </span>
+                      </div>
+
+                      {isTop ? (
+                        <div className={styles.topBadge}>🥇 Mejor rendimiento</div>
+                      ) : null}
+
+                      {activeStatTab === 'ordenes' ? (
+                        <>
+                          <div className={styles.orderStats}>
+                            <div className={styles.orderStat}>
+                              <strong
+                                className={styles.orderStatValue}
+                                style={{ color: '#059669' }}
+                              >
+                                {emp.completed_orders}
+                              </strong>
+                              <span className={styles.orderStatLabel}>Completadas</span>
+                            </div>
+                            <div className={styles.orderStat}>
+                              <strong
+                                className={styles.orderStatValue}
+                                style={{ color: '#EA580C' }}
+                              >
+                                {inProcess}
+                              </strong>
+                              <span className={styles.orderStatLabel}>En proceso</span>
+                            </div>
+                            <div className={styles.orderStat}>
+                              <strong className={styles.orderStatValue}>{emp.total_orders}</strong>
+                              <span className={styles.orderStatLabel}>Total</span>
+                            </div>
+                          </div>
+                          <div className={styles.progressSection}>
+                            <div className={styles.progressHeader}>
+                              <span className={styles.progressLabel}>Efectividad</span>
+                              <span className={styles.progressPct}>{productivity}%</span>
+                            </div>
+                            <div className={styles.progressTrack}>
+                              <div
+                                className={styles.progressFill}
+                                style={{
+                                  width: `${productivity}%`,
+                                  background: productivity >= 70
+                                    ? '#059669'
+                                    : productivity >= 40
+                                      ? '#D97706'
+                                      : '#DC2626',
+                                }}
+                                role="progressbar"
+                                aria-valuenow={productivity}
+                                aria-valuemin={0}
+                                aria-valuemax={100}
+                              />
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div className={styles.earningsTabs}>
+                          <EarningsTab label="Ganancias hoy" value={fmtCOP(emp.daily_earnings)} />
+                          <EarningsTab label="Últimos 15 días" value={fmtCOP(emp.biweekly_earnings)} />
+                          <EarningsTab label="Este mes" value={fmtCOP(emp.monthly_earnings)} />
+                          {emp.services_revenue > 0 ? (
+                            <div className={styles.revenueRow}>
+                              <span className={styles.revenueLabel}>Ingresos totales</span>
+                              <span className={styles.revenueValue}>{fmtCOP(emp.services_revenue)}</span>
+                            </div>
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className={styles.emptyHint}>
+                {employees.length === 0
+                  ? 'Registra empleados para ver estadísticas de productividad.'
+                  : 'No hay datos de rendimiento disponibles aún.'}
+              </p>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* ── Create modal ──────────────────────────────────── */}
       {isModalOpen ? (
         <div className={styles.modalBackdrop} role="presentation">
           <section
@@ -221,87 +598,145 @@ export function Empleados() {
                 <p className={styles.eyebrow}>Registro</p>
                 <h2 id="employee-modal-title">Nuevo empleado</h2>
               </div>
-              <button className={styles.iconButton} type="button" onClick={closeModal}>
-                X
+              <button
+                className={styles.iconButton}
+                type="button"
+                onClick={closeModal}
+                aria-label="Cerrar"
+                disabled={submitting}
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true">
+                  <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                </svg>
               </button>
             </div>
 
-            <form className={styles.form} onSubmit={handleCreateEmployee}>
+            <form className={styles.form} onSubmit={handleCreate}>
               <label className={styles.formField}>
-                Documento
+                Tipo de documento *
+                <select name="document_type" value={formData.document_type} onChange={handleInputChange} disabled={submitting}>
+                  {DOCUMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </label>
+
+              <label className={styles.formField}>
+                Documento *
                 <input
-                  inputMode="numeric"
+                  inputMode="text"
                   name="document"
                   value={formData.document}
                   onChange={handleInputChange}
                   placeholder="80123456"
+                  disabled={submitting}
                 />
-                {errors.document ? <span>{errors.document}</span> : null}
+                {formErrors.document ? <span>{formErrors.document}</span> : null}
               </label>
 
               <label className={styles.formField}>
-                Nombre completo
+                Nombre *
                 <input
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  placeholder="Jorge Perez"
+                  placeholder="Jorge"
+                  disabled={submitting}
                 />
-                {errors.name ? <span>{errors.name}</span> : null}
+                {formErrors.name ? <span>{formErrors.name}</span> : null}
               </label>
 
               <label className={styles.formField}>
-                Teléfono
+                Apellido *
+                <input
+                  name="last_name"
+                  value={formData.last_name}
+                  onChange={handleInputChange}
+                  placeholder="Pérez"
+                  disabled={submitting}
+                />
+                {formErrors.last_name ? <span>{formErrors.last_name}</span> : null}
+              </label>
+
+              <label className={styles.formField}>
+                Teléfono *
                 <input
                   inputMode="tel"
                   name="phone"
                   value={formData.phone}
                   onChange={handleInputChange}
                   placeholder="3001112233"
+                  disabled={submitting}
                 />
-                {errors.phone ? <span>{errors.phone}</span> : null}
+                {formErrors.phone ? <span>{formErrors.phone}</span> : null}
               </label>
 
               <label className={styles.formField}>
-                Correo electronico
+                Correo electrónico
                 <input
                   inputMode="email"
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
                   placeholder="empleado@enginesjds.com"
+                  disabled={submitting}
                 />
-                {errors.email ? <span>{errors.email}</span> : null}
+                {formErrors.email ? <span>{formErrors.email}</span> : null}
               </label>
 
-              <label className={styles.formField}>
-                Especialidad
+              <label className={`${styles.formField} ${styles.fullWidth}`}>
+                Especialidad *
                 <input
                   name="specialty"
                   value={formData.specialty}
                   onChange={handleInputChange}
                   placeholder="Mecánica general"
+                  disabled={submitting}
                 />
-                {errors.specialty ? <span>{errors.specialty}</span> : null}
+                {formErrors.specialty ? <span>{formErrors.specialty}</span> : null}
+              </label>
+
+              <label className={styles.formField}>
+                Tarifa diaria (COP)
+                <input
+                  inputMode="decimal"
+                  name="daily_rate"
+                  value={formData.daily_rate}
+                  onChange={handleInputChange}
+                  placeholder="80000"
+                  disabled={submitting}
+                />
+                {formErrors.daily_rate ? <span>{formErrors.daily_rate}</span> : null}
               </label>
 
               <label className={styles.formField}>
                 Estado
-                <select name="status" value={formData.status} onChange={handleInputChange}>
-                  {STATUSES.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
+                <select name="status" value={formData.status} onChange={handleInputChange} disabled={submitting}>
+                  {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </label>
 
+              <label className={`${styles.formField} ${styles.fullWidth}`}>
+                Fecha de contratación *
+                <input
+                  type="date"
+                  name="hire_date"
+                  value={formData.hire_date}
+                  onChange={handleInputChange}
+                  disabled={submitting}
+                />
+                {formErrors.hire_date ? <span>{formErrors.hire_date}</span> : null}
+              </label>
+
               <div className={styles.formActions}>
-                <button className={styles.secondaryButton} type="button" onClick={closeModal}>
+                <button
+                  className={styles.secondaryButton}
+                  type="button"
+                  onClick={closeModal}
+                  disabled={submitting}
+                >
                   Cancelar
                 </button>
-                <button className={styles.primaryButton} type="submit">
-                  Guardar empleado
+                <button className={styles.primaryButton} type="submit" disabled={submitting}>
+                  {submitting ? 'Guardando...' : 'Guardar empleado'}
                 </button>
               </div>
             </form>
@@ -309,12 +744,77 @@ export function Empleados() {
         </div>
       ) : null}
 
-      <ConfirmModal
-        isOpen={Boolean(deleteTarget)}
-        entityLabel={deleteTarget?.label ?? ''}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setDeleteTarget(null)}
-      />
+      {/* ── Delete with reason modal ───────────────────────── */}
+      {deleteTarget ? (
+        <div className={styles.modalBackdrop} role="presentation">
+          <section
+            className={styles.modal}
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-emp-title"
+            aria-describedby="delete-emp-desc"
+          >
+            <div className={styles.modalHeader}>
+              <div>
+                <p className={`${styles.eyebrow} ${styles.eyebrowDanger}`}>Acción irreversible</p>
+                <h2 id="delete-emp-title">Eliminar empleado</h2>
+              </div>
+              <button
+                className={styles.iconButton}
+                type="button"
+                onClick={handleCancelDelete}
+                aria-label="Cerrar"
+                disabled={deleting}
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true">
+                  <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                </svg>
+              </button>
+            </div>
+
+            <p id="delete-emp-desc" className={styles.deleteDesc}>
+              Estás a punto de eliminar al empleado{' '}
+              <strong>&ldquo;{deleteTarget.name} {deleteTarget.last_name}&rdquo;</strong>.
+              Esta acción aplica una baja lógica y no puede deshacerse.
+            </p>
+
+            <label className={`${styles.formField} ${styles.fullWidth}`}>
+              Motivo de eliminación <span className={styles.required}>*</span>
+              <textarea
+                className={`${styles.textarea} ${deleteReasonError ? styles.textareaError : ''}`}
+                rows={4}
+                placeholder="Describe el motivo por el que se da de baja a este empleado..."
+                value={deleteReason}
+                disabled={deleting}
+                onChange={(e) => {
+                  setDeleteReason(e.target.value)
+                  if (e.target.value.trim()) setDeleteReasonError('')
+                }}
+              />
+              {deleteReasonError ? <span>{deleteReasonError}</span> : null}
+            </label>
+
+            <div className={styles.formActions}>
+              <button
+                className={styles.secondaryButton}
+                type="button"
+                onClick={handleCancelDelete}
+                disabled={deleting}
+              >
+                Cancelar
+              </button>
+              <button
+                className={styles.dangerButton}
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+              >
+                {deleting ? 'Eliminando...' : 'Confirmar eliminación'}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </section>
   )
 }

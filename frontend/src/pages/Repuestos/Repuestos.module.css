@@ -1,8 +1,9 @@
+/* ── Page wrapper ─────────────────────────────────── */
 .page {
   background: var(--dark-900, #0A0F1E);
   color: #ffffff;
   min-height: 100vh;
-  padding: 64px 0 80px;
+  padding: 64px 0 96px;
 }
 
 .container {
@@ -13,7 +14,7 @@
 /* ── Header ───────────────────────────────────────── */
 .header {
   text-align: center;
-  max-width: 580px;
+  max-width: 620px;
   margin: 0 auto 48px;
 }
 
@@ -23,108 +24,73 @@
   border-radius: var(--r-full, 9999px);
   background: rgba(249, 115, 22, 0.12);
   color: #F97316;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .title {
   margin: 0 0 16px;
-  font-size: clamp(2rem, 4vw, 3rem);
+  font-size: clamp(2rem, 4vw, 2.9rem);
   font-weight: 800;
-  line-height: 1.1;
+  line-height: 1.15;
+}
+
+.titleAccent {
+  color: #F97316;
 }
 
 .subtitle {
   margin: 0;
   font-size: 1.05rem;
-  color: rgba(255, 255, 255, 0.55);
-  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.75;
 }
 
-/* ── Search + filter bar ──────────────────────────── */
-.searchBar {
+/* ── Filter nav ───────────────────────────────────── */
+.filterNav {
   display: flex;
-  gap: 12px;
-  max-width: 680px;
-  margin: 0 auto 32px;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 40px;
 }
 
-.searchWrapper {
-  position: relative;
-  flex: 1;
-}
-
-.searchIcon {
-  position: absolute;
-  left: 16px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: rgba(255, 255, 255, 0.3);
-  pointer-events: none;
-}
-
-.searchInput {
-  width: 100%;
-  padding: 13px 16px 13px 46px;
+.filterTab {
+  padding: 8px 18px;
   border-radius: var(--r-full, 9999px);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #ffffff;
-  font-size: 0.95rem;
-  outline: none;
-  transition: border-color 0.15s, background 0.15s;
-}
-
-.searchInput::placeholder {
-  color: rgba(255, 255, 255, 0.3);
-}
-
-.searchInput:focus {
-  border-color: #F97316;
-  background: rgba(249, 115, 22, 0.05);
-}
-
-.filterSelect {
-  padding: 12px 16px;
-  border-radius: var(--r-full, 9999px);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #ffffff;
-  font-size: 0.9rem;
-  font-weight: 500;
-  outline: none;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: border-color 0.15s;
-}
-
-.filterSelect:focus {
-  border-color: #F97316;
-}
-
-.filterSelect option {
-  background: #1E293B;
-  color: #ffffff;
-}
-
-/* ── Results count ────────────────────────────────── */
-.resultCount {
-  margin: 0 0 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.55);
   font-size: 0.88rem;
-  color: rgba(255, 255, 255, 0.4);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--t-fast, 0.15s ease), border-color var(--t-fast, 0.15s ease), color var(--t-fast, 0.15s ease);
+  white-space: nowrap;
+}
+
+.filterTab:hover {
+  background: rgba(249, 115, 22, 0.1);
+  border-color: rgba(249, 115, 22, 0.35);
+  color: #F97316;
+}
+
+.filterTabActive {
+  background: rgba(249, 115, 22, 0.15);
+  border-color: rgba(249, 115, 22, 0.6);
+  color: #F97316;
 }
 
 /* ── Grid ─────────────────────────────────────────── */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
 }
 
-/* ── Card ─────────────────────────────────────────── */
+/* ── Category card ────────────────────────────────── */
 .card {
   border-radius: var(--r-lg, 18px);
   background: rgba(255, 255, 255, 0.04);
@@ -132,206 +98,283 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+  transition: background var(--t-base, 0.2s ease), border-color var(--t-base, 0.2s ease), transform var(--t-base, 0.2s ease), box-shadow var(--t-base, 0.2s ease);
 }
 
 .card:hover {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(249, 115, 22, 0.3);
-  transform: translateY(-4px);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+  background: rgba(255, 255, 255, 0.065);
+  border-color: rgba(249, 115, 22, 0.28);
+  transform: translateY(-5px);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
 }
 
-.cardOut {
-  opacity: 0.65;
-}
-
-/* ── Card image ───────────────────────────────────── */
-.cardImage {
-  position: relative;
-  aspect-ratio: 16/10;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.productImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  transition: transform 0.4s ease;
-}
-
-.card:hover .productImg {
-  transform: scale(1.04);
-}
-
-.imgPlaceholder {
-  width: 100%;
-  height: 100%;
+/* ── Icon area ────────────────────────────────────── */
+.cardIconWrap {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.03);
+  padding: 32px 24px 24px;
+  background: radial-gradient(
+    circle at 50% 0%,
+    color-mix(in srgb, var(--cat-color) 12%, transparent),
+    transparent 70%
+  );
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.cardBadge {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  font-size: 0.74rem;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: var(--r-full, 9999px);
-  backdrop-filter: blur(4px);
+.cardIcon {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--r-lg, 18px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--cat-color, #F97316) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cat-color, #F97316) 30%, transparent);
+  transition: transform var(--t-base, 0.2s ease);
 }
 
-.badgeAvailable {
-  background: rgba(5, 150, 105, 0.85);
-  color: #ffffff;
-}
-
-.badgeWarn {
-  background: rgba(217, 119, 6, 0.85);
-  color: #ffffff;
-}
-
-.badgeOut {
-  background: rgba(220, 38, 38, 0.85);
-  color: #ffffff;
+.card:hover .cardIcon {
+  transform: scale(1.08);
 }
 
 /* ── Card body ────────────────────────────────────── */
 .cardBody {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 16px 18px 18px;
+  gap: 12px;
+  padding: 20px 22px 22px;
   flex: 1;
-}
-
-.cardCode {
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: rgba(255, 255, 255, 0.35);
-  font-family: ui-monospace, monospace;
 }
 
 .cardName {
   margin: 0;
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: 1.1rem;
+  font-weight: 800;
   color: #ffffff;
-  line-height: 1.35;
+  line-height: 1.2;
 }
 
-.cardBrand {
-  font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.4);
+.cardDesc {
+  margin: 0;
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.45);
+  line-height: 1.65;
+  flex: 1;
 }
 
+/* ── Brands ───────────────────────────────────────── */
+.brandsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.brandsLabel {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.brandsList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.brandPill {
+  padding: 3px 10px;
+  border-radius: var(--r-full, 9999px);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+  transition: background var(--t-fast, 0.15s ease), color var(--t-fast, 0.15s ease);
+}
+
+.card:hover .brandPill {
+  background: rgba(255, 255, 255, 0.09);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* ── Card footer ──────────────────────────────────── */
 .cardFooter {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-top: auto;
   padding-top: 14px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: auto;
 }
 
-.cardPrice {
-  font-size: 1.1rem;
+.priceFrom {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.priceLabel {
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.priceValue {
+  font-size: 1.15rem;
   font-weight: 800;
   color: #F97316;
 }
 
-.cardCta {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  border-radius: var(--r-sm, 6px);
-  background: #25D366;
-  color: #ffffff;
-  font-size: 0.82rem;
-  font-weight: 700;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: background 0.15s, transform 0.15s;
-}
-
-.cardCta:hover {
-  background: #1ebe5b;
-  transform: translateY(-1px);
-}
-
-.outLabel {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.3);
-}
-
-/* ── Empty state ──────────────────────────────────── */
-.emptyState {
+.availableDot {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  text-align: center;
-  gap: 16px;
-  padding: 80px 40px;
-  max-width: 480px;
-  margin: 0 auto;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(16, 185, 129, 0.85);
 }
 
-.emptyIcon {
-  font-size: 4rem;
-  opacity: 0.6;
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10B981;
+  flex-shrink: 0;
+  animation: pulse 2.4s ease-in-out infinite;
 }
 
-.emptyTitle {
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.75); }
+}
+
+/* ── CTA Banner ───────────────────────────────────── */
+.ctaBanner {
+  margin-top: 64px;
+  padding: 40px 48px;
+  border-radius: var(--r-xl, 24px);
+  background: linear-gradient(
+    135deg,
+    rgba(249, 115, 22, 0.1) 0%,
+    rgba(37, 99, 235, 0.08) 100%
+  );
+  border: 1px solid rgba(249, 115, 22, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+}
+
+.ctaContent {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.ctaIcon {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--r-md, 12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(249, 115, 22, 0.15);
+  border: 1px solid rgba(249, 115, 22, 0.3);
+  color: #F97316;
+  margin-top: 2px;
+}
+
+.ctaText {
+  flex: 1;
+}
+
+.ctaTitle {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.25;
+}
+
+.ctaDesc {
   margin: 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-}
-
-.emptyDesc {
-  margin: 0;
-  font-size: 1rem;
+  font-size: 0.92rem;
   color: rgba(255, 255, 255, 0.5);
-  line-height: 1.7;
+  line-height: 1.65;
+  max-width: 480px;
 }
 
-.emptyWhatsapp {
+.ctaButton {
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 24px;
+  padding: 13px 24px;
   border-radius: var(--r-md, 12px);
-  background: #25D366;
+  background: #F97316;
   color: #ffffff;
   font-size: 0.95rem;
   font-weight: 700;
   text-decoration: none;
-  transition: background 0.15s;
+  white-space: nowrap;
+  transition: background var(--t-fast, 0.15s ease), transform var(--t-fast, 0.15s ease), box-shadow var(--t-fast, 0.15s ease);
 }
 
-.emptyWhatsapp:hover {
-  background: #1ebe5b;
+.ctaButton:hover {
+  background: #EA580C;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(249, 115, 22, 0.35);
 }
 
 /* ── Responsive ───────────────────────────────────── */
-@media (max-width: 600px) {
-  .searchBar {
-    flex-direction: column;
-  }
-
-  .filterSelect {
-    width: 100%;
-  }
-
+@media (max-width: 1024px) {
   .grid {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .ctaBanner {
+    flex-direction: column;
+    padding: 28px 24px;
+    align-items: flex-start;
+  }
+
+  .ctaButton {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 540px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filterNav {
+    gap: 6px;
+  }
+
+  .filterTab {
+    padding: 7px 14px;
+    font-size: 0.82rem;
+  }
+
+  .ctaContent {
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .ctaIcon {
+    width: 44px;
+    height: 44px;
   }
 }

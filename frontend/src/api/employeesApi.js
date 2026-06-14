@@ -1,25 +1,38 @@
-import { getEmployees, saveEmployees } from '../services/employeesService'
+import { apiClient } from './apiClient'
 
 export const employeesApi = {
-  getAll() {
-    return Promise.resolve(getEmployees([]))
+  // GET /employees?search=&specialty=&status=&sort=&page=&limit=
+  getAll(params = {}) {
+    return apiClient.get('/employees', { params }).then((r) => r.data)
   },
+
+  // GET /employees/specialties → string[]
+  getSpecialties() {
+    return apiClient.get('/employees/specialties').then((r) => r.data.data)
+  },
+
+  // GET /employees/:id
   getById(id) {
-    return Promise.resolve(getEmployees([]).find((e) => e.id === id) ?? null)
+    return apiClient.get(`/employees/${id}`).then((r) => r.data.data)
   },
+
+  // GET /employees/:id/performance
+  getPerformance(id) {
+    return apiClient.get(`/employees/${id}/performance`).then((r) => r.data.data)
+  },
+
+  // POST /employees — requires: document_type, document, hire_date, name, last_name, specialty, phone
   create(data) {
-    const items = getEmployees([])
-    const item = { id: crypto.randomUUID(), ...data }
-    saveEmployees([item, ...items])
-    return Promise.resolve(item)
+    return apiClient.post('/employees', data).then((r) => r.data.data)
   },
+
+  // PUT /employees/:id
   update(id, data) {
-    const items = getEmployees([]).map((e) => (e.id === id ? { ...e, ...data } : e))
-    saveEmployees(items)
-    return Promise.resolve(items.find((e) => e.id === id) ?? null)
+    return apiClient.put(`/employees/${id}`, data).then((r) => r.data.data)
   },
-  remove(id) {
-    saveEmployees(getEmployees([]).filter((e) => e.id !== id))
-    return Promise.resolve()
+
+  // DELETE /employees/:id (soft delete) — requires body { reason }
+  remove(id, reason) {
+    return apiClient.delete(`/employees/${id}`, { data: { reason } }).then((r) => r.data)
   },
 }

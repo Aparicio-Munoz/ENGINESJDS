@@ -1,25 +1,29 @@
-import { getClients, saveClients } from '../services/clientsService'
+import { apiClient } from './apiClient'
 
 export const clientsApi = {
-  getAll() {
-    return Promise.resolve(getClients([]))
+  // GET /clients?search=&page=&limit=&sort=
+  // Returns { data: [...], pagination: {...} }
+  getAll(params = {}) {
+    return apiClient.get('/clients', { params }).then((r) => r.data)
   },
+
+  // GET /clients/:id
   getById(id) {
-    return Promise.resolve(getClients([]).find((c) => c.id === id) ?? null)
+    return apiClient.get(`/clients/${id}`).then((r) => r.data.data)
   },
+
+  // POST /clients
   create(data) {
-    const items = getClients([])
-    const item = { id: crypto.randomUUID(), ...data }
-    saveClients([item, ...items])
-    return Promise.resolve(item)
+    return apiClient.post('/clients', data).then((r) => r.data.data)
   },
+
+  // PUT /clients/:id
   update(id, data) {
-    const items = getClients([]).map((c) => (c.id === id ? { ...c, ...data } : c))
-    saveClients(items)
-    return Promise.resolve(items.find((c) => c.id === id) ?? null)
+    return apiClient.put(`/clients/${id}`, data).then((r) => r.data.data)
   },
+
+  // DELETE /clients/:id (soft delete)
   remove(id) {
-    saveClients(getClients([]).filter((c) => c.id !== id))
-    return Promise.resolve()
+    return apiClient.delete(`/clients/${id}`).then((r) => r.data)
   },
 }

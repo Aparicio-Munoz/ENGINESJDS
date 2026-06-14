@@ -1,0 +1,314 @@
+.page {
+  display: grid;
+  gap: 24px;
+}
+
+/* ── Header ─────────────────────────────────────── */
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  color: #F97316;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0 0 4px;
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-weight: 800;
+  color: #101828;
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #667085;
+}
+
+/* ── Layout ──────────────────────────────────────── */
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* ── Sections ────────────────────────────────────── */
+.section {
+  background: #ffffff;
+  border: 1px solid #d9e1ec;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sectionHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sectionTitleRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.sectionIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.sectionTitle {
+  margin: 0 0 2px;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #101828;
+}
+
+.sectionSub {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #667085;
+  line-height: 1.4;
+}
+
+/* ── Forms ───────────────────────────────────────── */
+.form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldFull {
+  grid-column: 1 / -1;
+}
+
+.label {
+  font-size: 0.83rem;
+  font-weight: 700;
+  color: #344054;
+}
+
+.input {
+  width: 100%;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #101828;
+  background: #ffffff;
+  font-family: inherit;
+  font-size: 0.92rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  border-color: #2563eb;
+  outline: 3px solid #bfdbfe;
+}
+
+.fieldHint {
+  font-size: 0.77rem;
+  color: #98a2b3;
+  line-height: 1.4;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  grid-column: 1 / -1;
+  padding-top: 4px;
+}
+
+/* ── Horario preview ─────────────────────────────── */
+.horarioPreview {
+  grid-column: 1 / -1;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.horarioText {
+  font-size: 0.88rem;
+  color: #344054;
+}
+
+/* ── Buttons ─────────────────────────────────────── */
+.primaryButton {
+  padding: 10px 20px;
+  border: 0;
+  border-radius: 8px;
+  background: #1d4ed8;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+  white-space: nowrap;
+}
+
+.primaryButton:hover {
+  background: #1e40af;
+  transform: translateY(-1px);
+}
+
+/* ── Users list ──────────────────────────────────── */
+.userList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid #eef2f6;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.userRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #eef2f6;
+  transition: background 0.12s;
+}
+
+.userRow:last-child {
+  border-bottom: 0;
+}
+
+.userRow:hover {
+  background: #f8fafc;
+}
+
+.userAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.userName {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #101828;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.userEmail {
+  font-size: 0.78rem;
+  color: #667085;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.userMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.userRole {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #344054;
+  white-space: nowrap;
+}
+
+.userStatus {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.userStatus[data-status="Activo"] {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.userStatus[data-status="Inactivo"] {
+  background: #fee4e2;
+  color: #b42318;
+}
+
+.userStatus[data-status="Vacaciones"] {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.usersHint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #98a2b3;
+}
+
+/* ── Responsive ──────────────────────────────────── */
+@media (max-width: 1100px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .form {
+    grid-template-columns: 1fr;
+  }
+
+  .fieldFull {
+    grid-column: 1;
+  }
+
+  .formActions {
+    flex-direction: column;
+  }
+
+  .primaryButton {
+    width: 100%;
+  }
+}

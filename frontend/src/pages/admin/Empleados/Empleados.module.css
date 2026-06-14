@@ -250,6 +250,545 @@
   margin-top: 8px;
 }
 
+/* ── Loading / Error / Pagination ─────────────────── */
+.loadingState,
+.errorState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 60px 24px;
+  color: #475467;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #1d4ed8;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 4px 0;
+  color: #344054;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+/* ── Filter bar ───────────────────────────────────── */
+.filterBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.searchWrapper {
+  position: relative;
+  flex: 1;
+  min-width: 220px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #98a2b3;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  padding: 10px 14px 10px 38px;
+  color: #101828;
+  background: #ffffff;
+  font-family: inherit;
+  font-size: 0.9rem;
+  box-sizing: border-box;
+}
+
+.searchInput:focus {
+  border-color: #2563eb;
+  outline: 3px solid #bfdbfe;
+}
+
+.filterSelect {
+  height: 40px;
+  padding: 0 32px 0 12px;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  background: #ffffff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 20 20' fill='%2398a2b3'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E") no-repeat right 10px center;
+  appearance: none;
+  color: #344054;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.filterSelect:focus {
+  border-color: #2563eb;
+  outline: 3px solid #bfdbfe;
+}
+
+/* ── Delete modal extras ──────────────────────────── */
+.eyebrowDanger {
+  color: #b42318;
+}
+
+.deleteDesc {
+  margin: 0 0 20px;
+  font-size: 0.95rem;
+  color: #344054;
+  line-height: 1.6;
+}
+
+.required {
+  color: #b42318;
+  font-weight: 800;
+  margin-left: 2px;
+}
+
+.textarea {
+  width: 100%;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: #101828;
+  background: #ffffff;
+  font-family: inherit;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  resize: vertical;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.textarea:focus {
+  border-color: #2563eb;
+  outline: 3px solid #bfdbfe;
+}
+
+.textareaError {
+  border-color: #b42318;
+}
+
+.dangerButton {
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 8px;
+  font-family: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  color: #ffffff;
+  background: #dc2626;
+  transition: background 0.15s;
+}
+
+.dangerButton:hover {
+  background: #b91c1c;
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
+/* ── Productivity section ─────────────────────────── */
+.productivitySection {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.productivityHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sectionTitle {
+  margin: 0 0 4px;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #101828;
+}
+
+.sectionSub {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #475467;
+}
+
+.statTabs {
+  display: flex;
+  gap: 6px;
+}
+
+.statTab {
+  padding: 7px 16px;
+  border-radius: 9999px;
+  border: 1px solid #d0d5dd;
+  background: #ffffff;
+  color: #344054;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.statTab:hover {
+  border-color: #1d4ed8;
+  color: #1d4ed8;
+}
+
+.statTabActive {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #ffffff;
+}
+
+.emptyHint {
+  padding: 20px;
+  font-size: 0.88rem;
+  color: #667085;
+  text-align: center;
+}
+
+/* ── Employee of the month ────────────────────────── */
+.eomBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px 28px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%);
+  border: 2px solid #FDE68A;
+  flex-wrap: wrap;
+}
+
+.eomLeft {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.eomTrophy {
+  font-size: 2.6rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.eomLabel {
+  margin: 0 0 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #92400E;
+}
+
+.eomName {
+  margin: 0 0 2px;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #78350F;
+}
+
+.eomSpec {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #92400E;
+}
+
+.eomStats {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.eomStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.eomStat strong {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #78350F;
+  line-height: 1;
+}
+
+.eomStat span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #92400E;
+}
+
+/* ── Stats grid ───────────────────────────────────── */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.statCard {
+  background: #ffffff;
+  border: 1px solid #d9e1ec;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.statCard:hover {
+  border-color: #1d4ed8;
+  box-shadow: 0 4px 16px rgba(29, 78, 216, 0.08);
+}
+
+.statCardTop {
+  border-color: #FDE68A;
+  background: linear-gradient(to bottom, #FFFBEB, #ffffff);
+}
+
+.statCardTop:hover {
+  border-color: #F59E0B;
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.12);
+}
+
+.statCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.statAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.statMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.statName {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #101828;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.statSpec {
+  font-size: 0.75rem;
+  color: #667085;
+}
+
+.topBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: #FEF3C7;
+  color: #92400E;
+  font-size: 0.75rem;
+  font-weight: 700;
+  align-self: flex-start;
+}
+
+/* ── Order stats ──────────────────────────────────── */
+.orderStats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.orderStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.orderStatValue {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #101828;
+  line-height: 1;
+}
+
+.orderStatLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #667085;
+  text-align: center;
+}
+
+/* ── Progress ─────────────────────────────────────── */
+.progressSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.progressHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.progressLabel {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #344054;
+}
+
+.progressPct {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #101828;
+}
+
+.progressTrack {
+  height: 8px;
+  border-radius: 99px;
+  background: #eef2f6;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.6s ease;
+  min-width: 2px;
+}
+
+/* ── Earnings ─────────────────────────────────────── */
+.earningsTabs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.earningTab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.earningValue {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #101828;
+}
+
+.earningLabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475467;
+}
+
+.earningSub {
+  font-size: 0.72rem;
+  color: #667085;
+}
+
+.revenueRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #d1fae5;
+  border-radius: 8px;
+  border: 1px solid #a7f3d0;
+}
+
+.revenueLabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #065f46;
+}
+
+.revenueValue {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #059669;
+}
+
+.emptyState {
+  padding: 40px 16px;
+  text-align: center;
+  color: #667085;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 1100px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .eomBanner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .eomStats {
+    gap: 16px;
+  }
+}
+
 @media (max-width: 760px) {
   .pageHeader {
     flex-direction: column;

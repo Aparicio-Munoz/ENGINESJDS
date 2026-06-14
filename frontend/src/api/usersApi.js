@@ -1,25 +1,33 @@
-import { getUsers, saveUsers } from '../services/usersService'
+import { apiClient } from './apiClient'
 
 export const usersApi = {
-  getAll() {
-    return Promise.resolve(getUsers([]))
+  // GET /users?search=&role=&status=&page=&limit=
+  getAll(params = {}) {
+    return apiClient.get('/users', { params }).then((r) => r.data)
   },
+
+  // GET /users/:id
   getById(id) {
-    return Promise.resolve(getUsers([]).find((u) => u.id === id) ?? null)
+    return apiClient.get(`/users/${id}`).then((r) => r.data.data)
   },
+
+  // POST /users — requires: username, email, password, role_id
   create(data) {
-    const items = getUsers([])
-    const item = { id: crypto.randomUUID(), ...data }
-    saveUsers([item, ...items])
-    return Promise.resolve(item)
+    return apiClient.post('/users', data).then((r) => r.data.data)
   },
+
+  // PUT /users/:id
   update(id, data) {
-    const items = getUsers([]).map((u) => (u.id === id ? { ...u, ...data } : u))
-    saveUsers(items)
-    return Promise.resolve(items.find((u) => u.id === id) ?? null)
+    return apiClient.put(`/users/${id}`, data).then((r) => r.data.data)
   },
-  remove(id) {
-    saveUsers(getUsers([]).filter((u) => u.id !== id))
-    return Promise.resolve()
+
+  // DELETE /users/:id — requires body { reason }
+  remove(id, reason) {
+    return apiClient.delete(`/users/${id}`, { data: { reason } }).then((r) => r.data)
+  },
+
+  // PUT /users/:id/toggle-status
+  toggleStatus(id, data) {
+    return apiClient.put(`/users/${id}/toggle-status`, data).then((r) => r.data.data)
   },
 }

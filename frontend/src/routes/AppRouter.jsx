@@ -3,6 +3,8 @@ import { DashboardLayout } from '../layouts/DashboardLayout/DashboardLayout'
 import { MainLayout } from '../layouts/MainLayout'
 import { AdminSectionPlaceholder } from '../pages/DashboardAdmin/AdminSectionPlaceholder'
 import { DashboardAdmin } from '../pages/DashboardAdmin/DashboardAdmin'
+import { Perfil } from '../pages/admin/Perfil/Perfil'
+import { Configuracion } from '../pages/admin/Configuracion/Configuracion'
 import { Home } from '../pages/Home/Home'
 import { Login } from '../pages/Login/Login'
 import { AgendarCita } from '../pages/AgendarCita/AgendarCita'
@@ -92,8 +94,12 @@ const router = createBrowserRouter([
         element: <Reportes />,
       },
       {
+        path: 'perfil',
+        element: <Perfil />,
+      },
+      {
         path: 'configuracion',
-        element: <AdminSectionPlaceholder title="Configuracion" />,
+        element: <Configuracion />,
       },
     ],
   },

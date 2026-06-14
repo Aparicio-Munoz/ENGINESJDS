@@ -12,4 +12,6 @@ export const ROUTES = {
   adminEmpleados: '/admin/empleados',
   adminUsuarios: '/admin/usuarios',
   adminReportes: '/admin/reportes',
+  adminPerfil: '/admin/perfil',
+  adminConfiguracion: '/admin/configuracion',
 }

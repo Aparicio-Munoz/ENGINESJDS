@@ -1,25 +1,13 @@
+import { authApi } from '../api/authApi'
+
 const AUTH_STORAGE_KEY = 'engines-jds-auth'
 
-function createMockToken(email) {
-  return `mock-jwt-${btoa(`${email}:${Date.now()}`)}`
-}
-
 export const authService = {
-  login({ email, password }) {
-    if (!email || !password) {
-      throw new Error('Ingresa email y contrasena para continuar.')
-    }
-
-    const user = {
-      id: crypto.randomUUID(),
-      name: email.split('@')[0],
-      email,
-    }
-    const token = createMockToken(email)
+  async login(credentials) {
+    // Calls POST /auth/login → { token, user }
+    const { token, user } = await authApi.login(credentials)
     const session = { user, token }
-
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session))
-
     return session
   },
 
@@ -28,14 +16,9 @@ export const authService = {
   },
 
   getSession() {
-    const storedSession = localStorage.getItem(AUTH_STORAGE_KEY)
-
-    if (!storedSession) {
-      return { user: null, token: null }
-    }
-
     try {
-      return JSON.parse(storedSession)
+      const stored = localStorage.getItem(AUTH_STORAGE_KEY)
+      return stored ? JSON.parse(stored) : { user: null, token: null }
     } catch {
       localStorage.removeItem(AUTH_STORAGE_KEY)
       return { user: null, token: null }
