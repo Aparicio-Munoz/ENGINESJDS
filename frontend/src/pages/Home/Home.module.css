@@ -1,5 +1,5 @@
 .page {
-  background: var(--dark-900, #0A0F1E);
+  background: #050816;
   color: #ffffff;
 }
 
@@ -44,33 +44,46 @@
 }
 
 /* ── Hero ─────────────────────────────────────────── */
+
+/* Section = full viewport width — fondo edge-to-edge */
 .hero {
   position: relative;
   overflow: hidden;
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+}
+
+/* Grid de contenido — centrado dentro del hero full-bleed */
+.heroGrid {
+  position: relative;
+  z-index: 1;
+  width: min(1280px, calc(100% - clamp(48px, 8vw, 160px)));
+  margin: 0 auto;
   display: grid;
   grid-template-columns: 1fr 1fr;
   align-items: center;
-  gap: 40px;
-  min-height: min(90vh, 700px);
+  gap: 48px;
   padding: 80px 0;
-  width: min(1200px, calc(100% - 40px));
-  margin: 0 auto;
 }
 
+/* Ambient orange blob — top left */
 .heroGlow {
   position: absolute;
-  top: -200px;
-  left: -200px;
-  width: 600px;
-  height: 600px;
+  top: -180px;
+  left: -120px;
+  width: 640px;
+  height: 640px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(249, 115, 22, 0.18) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(249, 115, 22, 0.16) 0%, transparent 68%);
+  filter: blur(40px);
   pointer-events: none;
+  z-index: 0;
 }
 
 .heroContent {
-  position: relative;
-  z-index: 1;
+  animation: heroFadeIn 0.75s ease-out both;
 }
 
 .heroBadge {
@@ -159,103 +172,88 @@
   background: rgba(255, 255, 255, 0.06);
 }
 
-.heroVisual {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 480px;
+@keyframes heroFadeIn {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Diffused color halo (blurred color wash behind the bike) ── */
-.heroHalo {
-  position: absolute;
-  inset: -60px;
-  border-radius: 50%;
-  background:
-    radial-gradient(ellipse 80% 55% at 58% 50%, rgba(0, 212, 255, 0.22) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 55% at 42% 50%, rgba(249, 115, 22, 0.20) 0%, transparent 55%),
-    radial-gradient(ellipse 50% 70% at 50% 50%, rgba(200, 40, 255, 0.10) 0%, transparent 60%);
-  filter: blur(36px);
-  animation: haloPulse 5s ease-in-out infinite;
-  pointer-events: none;
-}
-
-@keyframes haloPulse {
-  0%, 100% { opacity: 0.75; transform: scale(1); }
-  50%       { opacity: 1;    transform: scale(1.08); }
-}
-
-/* ── Crisp luminous ring ── */
-.heroHaloRing {
-  position: absolute;
-  width: 520px;
-  height: 520px;
-  border-radius: 50%;
-  border: 1px solid rgba(249, 115, 22, 0.18);
-  box-shadow:
-    inset 0 0 60px rgba(249, 115, 22, 0.07),
-    0 0 50px rgba(0, 212, 255, 0.08);
-  animation: ringPulse 5s ease-in-out infinite;
-  pointer-events: none;
-}
-
-@keyframes ringPulse {
-  0%, 100% { transform: scale(1);    opacity: 1; }
-  50%       { transform: scale(1.04); opacity: 0.7; }
-}
-
-/* ── Bike container — square → circular clip, floats ── */
-.heroBikeWrapper {
-  position: relative;
-  z-index: 2;
-  width: 500px;
-  height: 500px;
-  border-radius: 50%;
-  overflow: hidden;
-  animation: bikeFloat 4s ease-in-out infinite;
-}
-
-@keyframes bikeFloat {
+@keyframes emblemFloat {
   0%, 100% { transform: translateY(0); }
   50%       { transform: translateY(-14px); }
 }
 
-/* ── Actual motorcycle image ── */
-.heroBikeImg {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+/* ── Right column: circular premium emblem ── */
+
+/* Outer wrapper handles float + fade — keeps emblem free of stacking context */
+.heroEmblemOuter {
+  justify-self: center;
+  animation: emblemFloat 5s ease-in-out infinite, heroFadeIn 0.75s ease-out 0.2s both;
+}
+
+.heroEmblem {
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(
+    circle,
+    rgba(255, 120, 0, 0.10) 0%,
+    rgba(255, 120, 0, 0.05) 40%,
+    transparent 75%
+  );
+  box-shadow:
+    0 0 60px rgba(255, 120, 0, 0.30),
+    0 0 140px rgba(255, 120, 0, 0.15);
+}
+
+.heroPistonsImg {
+  width: 70%;
+  height: auto;
   display: block;
-  mix-blend-mode: screen;
+  object-fit: contain;
   filter:
-    drop-shadow(0 0 20px rgba(0, 212, 255, 0.60))
-    drop-shadow(0 0 48px rgba(249, 115, 22, 0.28))
-    drop-shadow(0 0 10px rgba(200, 40, 255, 0.35));
+    drop-shadow(0 0 10px rgba(255, 120, 0, 0.50))
+    drop-shadow(0 0 24px rgba(255, 120, 0, 0.25));
   user-select: none;
   -webkit-user-drag: none;
   pointer-events: none;
 }
 
-/* ── Ground reflection glow ── */
-.heroGroundGlow {
-  position: absolute;
-  bottom: 12px;
-  left: 50%;
-  width: 65%;
-  height: 28px;
-  border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(0, 212, 255, 0.32) 0%, rgba(249, 115, 22, 0.14) 40%, transparent 70%);
-  filter: blur(14px);
-  pointer-events: none;
-  z-index: 1;
-  animation: glowFloat 4s ease-in-out infinite reverse;
+/* ── Feature bullets ─────────────────────────────── */
+.heroFeatures {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-@keyframes glowFloat {
-  0%, 100% { transform: translateX(-50%) translateY(0); }
-  50%       { transform: translateX(-50%) translateY(-10px); }
+.heroFeatureItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.heroFeatureCheck {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(249, 115, 22, 0.14);
+  border: 1px solid rgba(249, 115, 22, 0.45);
+  color: #F97316;
+  font-size: 0.72rem;
+  font-weight: 800;
+  flex-shrink: 0;
 }
 
 /* ── Stats ────────────────────────────────────────── */
@@ -535,6 +533,15 @@
 
 /* ── Responsive ───────────────────────────────────── */
 @media (max-width: 1024px) {
+  .heroGrid {
+    gap: 32px;
+  }
+
+  .heroEmblem {
+    width: 380px;
+    height: 380px;
+  }
+
   .servicesGrid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -542,32 +549,30 @@
 
 @media (max-width: 768px) {
   .hero {
-    grid-template-columns: 1fr;
     min-height: auto;
-    padding: 60px 0 40px;
-    text-align: center;
   }
 
-  .heroSubtitle {
-    max-width: 100%;
+  .heroGrid {
+    grid-template-columns: 1fr;
+    padding: 72px 0 48px;
+    text-align: center;
   }
 
   .heroActions {
     justify-content: center;
   }
 
-  .heroVisual {
-    height: 300px;
+  .heroFeatures {
+    align-items: center;
   }
 
-  .heroBikeWrapper {
+  .heroEmblemOuter {
+    justify-self: center;
+  }
+
+  .heroEmblem {
     width: 260px;
     height: 260px;
-  }
-
-  .heroHaloRing {
-    width: 280px;
-    height: 280px;
   }
 
   .statsGrid {
@@ -603,11 +608,23 @@
     font-size: 2rem;
   }
 
+  .heroEmblem {
+    width: 220px;
+    height: 220px;
+  }
+
   .statsGrid {
     grid-template-columns: repeat(2, 1fr);
   }
 
   .statValue {
     font-size: 1.9rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .heroEmblem {
+    width: 190px;
+    height: 190px;
   }
 }

@@ -34,15 +34,6 @@ export function Navbar() {
           </NavLink>
         </div>
 
-        <div className={styles.desktopActions}>
-          <Link to={ROUTES.login} className={styles.ctaButton}>
-            Acceder
-            <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true">
-              <path fillRule="evenodd" d="M3 10a.75.75 0 0 1 .75-.75h10.638L10.23 5.29a.75.75 0 1 1 1.04-1.08l5.5 5.25a.75.75 0 0 1 0 1.08l-5.5 5.25a.75.75 0 1 1-1.04-1.08l4.158-3.96H3.75A.75.75 0 0 1 3 10Z" clipRule="evenodd" />
-            </svg>
-          </Link>
-        </div>
-
         <button
           className={styles.menuToggle}
           type="button"
@@ -65,9 +56,6 @@ export function Navbar() {
           <NavLink to={ROUTES.agendarCita} className={styles.mobileLink} onClick={closeMenu}>
             Agendar cita
           </NavLink>
-          <Link to={ROUTES.login} className={styles.mobileCta} onClick={closeMenu}>
-            Acceder al panel
-          </Link>
         </div>
       ) : null}
     </header>

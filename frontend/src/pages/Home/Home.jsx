@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import heroBike from '../../assets/images/hero-bike.png'
+import heroPistons from '../../assets/images/Adobe Express - file.png'
 import { ROUTES } from '../../utils/routes'
 import styles from './Home.module.css'
 
@@ -21,9 +21,9 @@ const SERVICES = [
     description: 'Reparación de motor, frenos, transmisión y suspensión con repuestos de calidad.',
   },
   {
-    icon: '🎨',
-    title: 'Latonería y pintura',
-    description: 'Corrección de carrocería, pintura y acabados para devolver el brillo original a tu moto.',
+    icon: '🔌',
+    title: 'Servicio eléctrico',
+    description: 'Diagnóstico y reparación de sistemas eléctricos, luces, batería, arranque, reguladores y cableado especializado para motocicletas.',
   },
   {
     icon: '🛡️',
@@ -92,42 +92,55 @@ export function Home() {
       {/* ── Hero ─────────────────────────────────────── */}
       <section className={styles.hero} aria-labelledby="hero-heading">
         <div className={styles.heroGlow} aria-hidden="true" />
-        <div className={styles.heroContent}>
-          <span className={styles.heroBadge}>Taller especializado en motocicletas</span>
-          <h1 id="hero-heading" className={styles.heroTitle}>
-            Tu motocicleta en
-            <br />
-            <span className={styles.heroAccent}>las mejores manos</span>
-          </h1>
-          <p className={styles.heroSubtitle}>
-            En ENGINES JDS combinamos experiencia, tecnología y pasión para mantener
-            tu moto lista para el camino. Diagnóstico preciso, repuestos de calidad,
-            resultados que se notan.
-          </p>
-          <div className={styles.heroActions}>
-            <Link to={ROUTES.agendarCita} className={styles.heroCta}>
-              Agendar cita ahora
-              <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18" aria-hidden="true">
-                <path fillRule="evenodd" d="M3 10a.75.75 0 0 1 .75-.75h10.638L10.23 5.29a.75.75 0 1 1 1.04-1.08l5.5 5.25a.75.75 0 0 1 0 1.08l-5.5 5.25a.75.75 0 1 1-1.04-1.08l4.158-3.96H3.75A.75.75 0 0 1 3 10Z" clipRule="evenodd" />
-              </svg>
-            </Link>
-            <a href="/#servicios" className={styles.heroSecondary}>
-              Ver servicios
-            </a>
+
+        <div className={styles.heroGrid}>
+          {/* Left column: text */}
+          <div className={styles.heroContent}>
+            <span className={styles.heroBadge}>Taller especializado en motocicletas</span>
+            <h1 id="hero-heading" className={styles.heroTitle}>
+              Tu motocicleta en
+              <br />
+              <span className={styles.heroAccent}>las mejores manos</span>
+            </h1>
+            <ul className={styles.heroFeatures}>
+              <li className={styles.heroFeatureItem}>
+                <span className={styles.heroFeatureCheck} aria-hidden="true">✓</span>
+                Gestión de clientes y motocicletas
+              </li>
+              <li className={styles.heroFeatureItem}>
+                <span className={styles.heroFeatureCheck} aria-hidden="true">✓</span>
+                Control de órdenes de trabajo
+              </li>
+              <li className={styles.heroFeatureItem}>
+                <span className={styles.heroFeatureCheck} aria-hidden="true">✓</span>
+                Inventario y repuestos en tiempo real
+              </li>
+            </ul>
+            <div className={styles.heroActions}>
+              <Link to={ROUTES.agendarCita} className={styles.heroCta}>
+                Agendar cita ahora
+                <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18" aria-hidden="true">
+                  <path fillRule="evenodd" d="M3 10a.75.75 0 0 1 .75-.75h10.638L10.23 5.29a.75.75 0 1 1 1.04-1.08l5.5 5.25a.75.75 0 0 1 0 1.08l-5.5 5.25a.75.75 0 1 1-1.04-1.08l4.158-3.96H3.75A.75.75 0 0 1 3 10Z" clipRule="evenodd" />
+                </svg>
+              </Link>
+              <a href="/#servicios" className={styles.heroSecondary}>
+                Ver servicios
+              </a>
+            </div>
           </div>
-        </div>
-        <div className={styles.heroVisual} aria-hidden="true">
-          <div className={styles.heroHalo} />
-          <div className={styles.heroHaloRing} />
-          <div className={styles.heroBikeWrapper}>
-            <img
-              src={heroBike}
-              alt="Motocicleta deportiva ENGINES JDS"
-              className={styles.heroBikeImg}
-              draggable={false}
-            />
+
+          {/* Right column: circular emblem */}
+          <div className={styles.heroEmblemOuter} aria-hidden="true">
+            <div className={styles.heroEmblem}>
+              <img
+                src={heroPistons}
+                alt=""
+                className={styles.heroPistonsImg}
+                draggable={false}
+                loading="eager"
+              />
+            </div>
           </div>
-          <div className={styles.heroGroundGlow} />
         </div>
       </section>
 
