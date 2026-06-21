@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { appointmentsApi } from '../../../api'
+import { useNavigate } from 'react-router-dom'
+import { appointmentsApi, ordersApi } from '../../../api'
+import { Pagination } from '../../../components/Pagination/Pagination'
 import { useToast } from '../../../hooks/useToast'
+import { ROUTES } from '../../../utils/routes'
 import styles from './Citas.module.css'
 
 // Statuses that allow forward transitions
@@ -41,6 +44,7 @@ function emptyReschedule() {
 
 export function Citas() {
   const toast = useToast()
+  const navigate = useNavigate()
   const mountedRef = useRef(true)
 
   // ── List state ─────────────────────────────────────────────
@@ -79,12 +83,12 @@ export function Citas() {
   const [rescheduleErrors, setRescheduleErrors] = useState({})
   const [rescheduling, setRescheduling]         = useState(false)
 
-  // ── "Crear orden" preview modal ────────────────────────────
-  // Muestra los datos que se enviarán al módulo de Órdenes de Trabajo
-  // cuando esté integrado. Actualmente no llama ningún endpoint.
-  const [convertTarget, setConvertTarget] = useState(null)
+  // ── "Crear orden" modal ────────────────────────────────────
+  const [convertTarget, setConvertTarget]       = useState(null)
+  const [convertSubmitting, setConvertSubmitting] = useState(false)
 
   useEffect(() => {
+    mountedRef.current = true
     return () => { mountedRef.current = false }
   }, [])
 
@@ -97,7 +101,7 @@ export function Citas() {
         search:      searchApplied || undefined,
         status:      filterStatus  || undefined,
         date:        filterDate    || undefined,
-        sort:        'date',
+        sort:        filterDate ? 'date' : 'created_at',
         page,
         limit:       20,
       })
@@ -203,6 +207,33 @@ export function Citas() {
       toast.error(err?.response?.data?.message ?? 'No se pudo eliminar la cita')
     } finally {
       if (mountedRef.current) setDeleting(false)
+    }
+  }
+
+  // ── Convert cita → OT ─────────────────────────────────────
+  async function handleConvertConfirm() {
+    if (!convertTarget) return
+    if (!convertTarget.client_id || !convertTarget.motorcycle_id) {
+      toast.error('Esta cita no tiene cliente o motocicleta registrados en el sistema.')
+      return
+    }
+    setConvertSubmitting(true)
+    try {
+      await ordersApi.create({
+        client_id:     convertTarget.client_id,
+        motorcycle_id: convertTarget.motorcycle_id,
+        appointment_id: convertTarget.id,
+        problem_description: convertTarget.notes || convertTarget.service_type || '',
+      })
+      await appointmentsApi.attend(convertTarget.id)
+      toast.success(`Orden de trabajo creada para "${convertTarget.client_name}"`)
+      setConvertTarget(null)
+      loadAppointments({ silent: true })
+      navigate(ROUTES.adminOrdenes)
+    } catch (err) {
+      toast.error(err?.response?.data?.message ?? err.message ?? 'No se pudo crear la orden de trabajo')
+    } finally {
+      if (mountedRef.current) setConvertSubmitting(false)
     }
   }
 
@@ -468,29 +499,13 @@ export function Citas() {
           </div>
 
           {/* Pagination */}
-          {pagination && pagination.totalPages > 1 ? (
-            <div className={styles.pagination}>
-              <button
-                className={styles.paginationBtn}
-                type="button"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                ← Anterior
-              </button>
-              <span className={styles.pageInfo}>
-                Página {pagination.page} de {pagination.totalPages}
-              </span>
-              <button
-                className={styles.paginationBtn}
-                type="button"
-                disabled={page >= pagination.totalPages}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Siguiente →
-              </button>
-            </div>
-          ) : null}
+          <Pagination
+            page={page}
+            totalPages={pagination?.totalPages}
+            total={pagination?.total}
+            onPageChange={setPage}
+            disabled={loading}
+          />
         </>
       )}
 
@@ -615,8 +630,7 @@ export function Citas() {
           >
             <h2 id="convert-title" className={styles.convertTitle}>Crear orden de trabajo</h2>
             <p className={styles.convertDesc}>
-              Cuando el módulo de <strong>Órdenes de Trabajo</strong> esté conectado,
-              esta acción creará una OT con estado <strong>Recibida</strong> con los siguientes datos:
+              Se creará una orden de trabajo con estado <strong>Pendiente</strong> y la cita quedará marcada como <strong>Atendida</strong>.
             </p>
             <div className={styles.convertFields}>
               <div className={styles.convertFieldRow}>
@@ -641,33 +655,29 @@ export function Citas() {
                   <strong>{convertTarget.notes}</strong>
                 </div>
               ) : null}
-              {convertTarget.client_id ? (
+              {!convertTarget.client_id || !convertTarget.motorcycle_id ? (
                 <div className={styles.convertFieldRow}>
-                  <span>client_id</span>
-                  <strong>{convertTarget.client_id}</strong>
+                  <span style={{ color: '#F87171' }}>Advertencia</span>
+                  <strong style={{ color: '#F87171' }}>La cita no tiene cliente o moto registrados en el sistema.</strong>
                 </div>
               ) : null}
-              {convertTarget.motorcycle_id ? (
-                <div className={styles.convertFieldRow}>
-                  <span>motorcycle_id</span>
-                  <strong>{convertTarget.motorcycle_id}</strong>
-                </div>
-              ) : null}
-              <div className={styles.convertFieldRow}>
-                <span>appointment_id</span>
-                <strong>{convertTarget.id}</strong>
-              </div>
             </div>
-            <p className={styles.convertNotice}>
-              Esta función estará disponible tras integrar el módulo de Órdenes de Trabajo con la API real.
-            </p>
             <div className={styles.convertActions}>
               <button
                 type="button"
-                className={styles.confirmBtn}
+                className={styles.cancelBtn}
                 onClick={() => setConvertTarget(null)}
+                disabled={convertSubmitting}
               >
-                Entendido
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className={styles.confirmBtn}
+                onClick={handleConvertConfirm}
+                disabled={convertSubmitting || !convertTarget.client_id || !convertTarget.motorcycle_id}
+              >
+                {convertSubmitting ? 'Creando...' : 'Crear orden de trabajo'}
               </button>
             </div>
           </section>

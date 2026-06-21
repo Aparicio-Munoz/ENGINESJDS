@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { inventoryApi } from '../../../api'
+import { Pagination } from '../../../components/Pagination/Pagination'
 import { useToast } from '../../../hooks/useToast'
 import styles from './Inventario.module.css'
 
@@ -114,6 +115,14 @@ export function Inventario() {
   const [deleteReason, setDeleteReason] = useState('')
   const [deleteReasonError, setDeleteReasonError] = useState('')
   const [deleting, setDeleting] = useState(false)
+
+  // ── Stock modal ───────────────────────────────────────
+  const [stockTarget, setStockTarget] = useState(null)
+  const [stockAction, setStockAction] = useState('entrada')
+  const [stockQty, setStockQty] = useState('')
+  const [stockNotes, setStockNotes] = useState('')
+  const [stockErrors, setStockErrors] = useState({})
+  const [stockSubmitting, setStockSubmitting] = useState(false)
 
   useEffect(() => {
     mountedRef.current = true
@@ -277,6 +286,62 @@ export function Inventario() {
       toast.error(err.message || 'Error al eliminar el repuesto.')
     } finally {
       if (mountedRef.current) setDeleting(false)
+    }
+  }
+
+  // ── Stock handlers ────────────────────────────────────
+  function openStockModal(item) {
+    setStockTarget(item)
+    setStockAction('entrada')
+    setStockQty('')
+    setStockNotes('')
+    setStockErrors({})
+  }
+
+  function closeStockModal() {
+    setStockTarget(null)
+    setStockQty('')
+    setStockNotes('')
+    setStockErrors({})
+  }
+
+  async function handleStockSubmit(e) {
+    e.preventDefault()
+    const errs = {}
+    const qty = Number(stockQty)
+    if (!stockQty || isNaN(qty) || !Number.isInteger(qty) || qty <= 0) {
+      errs.qty = 'Ingresa una cantidad entera mayor a 0.'
+    }
+    if (stockAction === 'salida' && qty > stockTarget.quantity) {
+      errs.qty = `No puedes retirar más de ${stockTarget.quantity} unidades disponibles.`
+    }
+    if (stockAction === 'ajuste' && qty < 0) {
+      errs.qty = 'La cantidad de ajuste no puede ser negativa.'
+    }
+    if (!stockNotes.trim()) {
+      errs.notes = 'El motivo es obligatorio.'
+    }
+    if (Object.keys(errs).length > 0) { setStockErrors(errs); return }
+
+    setStockSubmitting(true)
+    try {
+      if (stockAction === 'entrada') {
+        await inventoryApi.recordEntry(stockTarget.id, { qty, notes: stockNotes.trim() })
+        toast.success(`Entrada de ${qty} unidad(es) registrada para "${stockTarget.name}"`)
+      } else if (stockAction === 'salida') {
+        await inventoryApi.recordOutput(stockTarget.id, { qty, notes: stockNotes.trim() })
+        toast.success(`Salida de ${qty} unidad(es) registrada para "${stockTarget.name}"`)
+      } else {
+        await inventoryApi.recordAdjustment(stockTarget.id, { quantity: qty, notes: stockNotes.trim() })
+        toast.success(`Stock de "${stockTarget.name}" ajustado a ${qty} unidad(es)`)
+      }
+      closeStockModal()
+      await loadItems({ silent: true, targetPage: page })
+      loadAlerts()
+    } catch (err) {
+      toast.error(err.message || 'Error al actualizar el stock.')
+    } finally {
+      if (mountedRef.current) setStockSubmitting(false)
     }
   }
 
@@ -469,14 +534,23 @@ export function Inventario() {
                         </span>
                       </td>
                       <td data-label="Acciones">
-                        <button
-                          className={styles.deleteButton}
-                          type="button"
-                          disabled={deleting && deleteTarget?.id === item.id}
-                          onClick={() => handleDeleteClick(item)}
-                        >
-                          Eliminar
-                        </button>
+                        <div className={styles.actionGroup}>
+                          <button
+                            className={styles.stockButton}
+                            type="button"
+                            onClick={() => openStockModal(item)}
+                          >
+                            Editar stock
+                          </button>
+                          <button
+                            className={styles.deleteButton}
+                            type="button"
+                            disabled={deleting && deleteTarget?.id === item.id}
+                            onClick={() => handleDeleteClick(item)}
+                          >
+                            Eliminar
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -486,27 +560,13 @@ export function Inventario() {
           </div>
 
           {/* ── Pagination ────────────────────────────────── */}
-          {pagination.totalPages > 1 ? (
-            <div className={styles.pagination}>
-              <button
-                className={styles.secondaryButton}
-                type="button"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                Anterior
-              </button>
-              <span>Página {page} de {pagination.totalPages}</span>
-              <button
-                className={styles.secondaryButton}
-                type="button"
-                disabled={page >= pagination.totalPages}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Siguiente
-              </button>
-            </div>
-          ) : null}
+          <Pagination
+            page={page}
+            totalPages={pagination.totalPages}
+            total={pagination.total}
+            onPageChange={setPage}
+            disabled={loading}
+          />
         </>
       )}
 
@@ -729,6 +789,101 @@ export function Inventario() {
                 {deleting ? 'Eliminando...' : 'Confirmar eliminación'}
               </button>
             </div>
+          </section>
+        </div>
+      ) : null}
+
+      {/* ── Stock modal ───────────────────────────────────── */}
+      {stockTarget ? (
+        <div className={styles.modalBackdrop} role="presentation">
+          <section
+            className={styles.modal}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="stock-modal-title"
+          >
+            <div className={styles.modalHeader}>
+              <div>
+                <p className={styles.eyebrow}>Gestión de stock</p>
+                <h2 id="stock-modal-title">{stockTarget.name}</h2>
+              </div>
+              <button
+                className={styles.iconButton}
+                type="button"
+                onClick={closeStockModal}
+                aria-label="Cerrar"
+                disabled={stockSubmitting}
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true">
+                  <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                </svg>
+              </button>
+            </div>
+
+            <p className={styles.stockCurrentQty}>
+              Stock actual: <strong>{stockTarget.quantity}</strong> unidades
+              {stockTarget.min_stock ? ` (mínimo: ${stockTarget.min_stock})` : ''}
+            </p>
+
+            <form className={styles.form} onSubmit={handleStockSubmit}>
+              <label className={`${styles.formField} ${styles.fullWidth}`}>
+                Tipo de movimiento *
+                <select
+                  value={stockAction}
+                  onChange={(e) => { setStockAction(e.target.value); setStockErrors({}) }}
+                  disabled={stockSubmitting}
+                >
+                  <option value="entrada">Aumentar — entrada de stock</option>
+                  <option value="salida">Reducir — salida de stock</option>
+                  <option value="ajuste">Corrección — ajuste de inventario</option>
+                </select>
+              </label>
+
+              <label className={styles.formField}>
+                {stockAction === 'ajuste' ? 'Nueva cantidad total *' : 'Cantidad *'}
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={stockAction === 'ajuste' ? '0' : '1'}
+                  value={stockQty}
+                  onChange={(e) => { setStockQty(e.target.value); setStockErrors((p) => ({ ...p, qty: undefined })) }}
+                  placeholder={stockAction === 'ajuste' ? 'Ej. 50' : 'Ej. 10'}
+                  disabled={stockSubmitting}
+                />
+                {stockErrors.qty ? <span>{stockErrors.qty}</span> : null}
+              </label>
+
+              <label className={`${styles.formField} ${styles.fullWidth}`}>
+                Motivo / observación *
+                <textarea
+                  className={`${styles.textarea} ${stockErrors.notes ? styles.textareaError : ''}`}
+                  rows={3}
+                  placeholder="Ej. Compra proveedor, uso en orden OT-001, corrección por conteo físico..."
+                  value={stockNotes}
+                  onChange={(e) => { setStockNotes(e.target.value); setStockErrors((p) => ({ ...p, notes: undefined })) }}
+                  disabled={stockSubmitting}
+                />
+                {stockErrors.notes ? <span>{stockErrors.notes}</span> : null}
+              </label>
+
+              <div className={styles.formActions}>
+                <button
+                  className={styles.secondaryButton}
+                  type="button"
+                  onClick={closeStockModal}
+                  disabled={stockSubmitting}
+                >
+                  Cancelar
+                </button>
+                <button
+                  className={styles.primaryButton}
+                  type="submit"
+                  disabled={stockSubmitting}
+                >
+                  {stockSubmitting ? 'Guardando...' : 'Registrar movimiento'}
+                </button>
+              </div>
+            </form>
           </section>
         </div>
       ) : null}

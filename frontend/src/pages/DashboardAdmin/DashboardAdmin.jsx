@@ -9,10 +9,13 @@ import styles from './DashboardAdmin.module.css'
 
 // ── Constantes ─────────────────────────────────────────────────
 const ORDER_STATUS_MAP = {
-  Pendiente:    { color: '#2563EB', bg: '#DBEAFE' },
-  'En proceso': { color: '#EA580C', bg: '#FFEDD5' },
-  Listo:        { color: '#7C3AED', bg: '#EDE9FE' },
-  Entregada:    { color: '#059669', bg: '#D1FAE5' },
+  Pendiente:            { color: '#2563EB', bg: '#DBEAFE' },
+  'En proceso':         { color: '#EA580C', bg: '#FFEDD5' },
+  'En reparación':      { color: '#EA580C', bg: '#FFEDD5' },
+  'Esperando repuesto': { color: '#92400E', bg: '#FEF3C7' },
+  Listo:                { color: '#7C3AED', bg: '#EDE9FE' },
+  'Lista para entrega': { color: '#7C3AED', bg: '#EDE9FE' },
+  Entregada:            { color: '#059669', bg: '#D1FAE5' },
 }
 
 const QUICK_LINKS = [
@@ -167,11 +170,14 @@ export function DashboardAdmin() {
   }, [activeOrders, pendingAppointments])
 
   const lowStockItems = inventoryAlerts?.items?.slice(0, 3) ?? []
-  const listoOrders   = activeOrders.filter((o) => o.status === 'Listo').slice(0, 2)
+  const listoOrders   = activeOrders.filter((o) => o.status === 'Listo' || o.status === 'Lista para entrega').slice(0, 2)
   const totalAlerts   = lowStockItems.length + listoOrders.length + Math.min(pendingAppointments.length, 2)
 
   const ordersByStatus = useMemo(() => {
-    const counts = { Pendiente: 0, 'En proceso': 0, Listo: 0 }
+    const counts = {
+      Pendiente: 0, 'En proceso': 0, 'En reparación': 0,
+      'Esperando repuesto': 0, Listo: 0, 'Lista para entrega': 0,
+    }
     activeOrders.forEach((o) => {
       if (o.status in counts) counts[o.status]++
     })

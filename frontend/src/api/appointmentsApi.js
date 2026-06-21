@@ -50,4 +50,9 @@ export const appointmentsApi = {
   reschedule(id, data) {
     return apiClient.post(`/appointments/${id}/reschedule`, data).then((r) => r.data.data)
   },
+
+  // POST /appointments/:id/attend — marca la cita como Atendida al crear una OT
+  attend(id) {
+    return apiClient.post(`/appointments/${id}/attend`).then((r) => r.data.data)
+  },
 }

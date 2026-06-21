@@ -129,6 +129,54 @@
   color: #92400e;
 }
 
+.actionGroup {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.statusButton {
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 8px;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+  color: #1d4ed8;
+  background: #dbeafe;
+  font-size: 0.85rem;
+}
+
+.statusButton:hover {
+  background: #bfdbfe;
+}
+
+.statusOptions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.statusOption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.statusOption:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.statusOption input[type="radio"] {
+  accent-color: #f97316;
+}
+
 .primaryButton,
 .secondaryButton,
 .deleteButton,

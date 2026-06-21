@@ -1,22 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../../hooks/useAuth'
 import { useToast } from '../../../hooks/useToast'
+import { authApi } from '../../../api/authApi'
+import { usersApi } from '../../../api/usersApi'
 import styles from './Perfil.module.css'
 
-const PROFILE_KEY = 'engines_jds_profile'
-const PWD_KEY = 'engines_jds_profile_pwd'
-
-function getProfile() {
-  try {
-    const s = localStorage.getItem(PROFILE_KEY)
-    return s ? JSON.parse(s) : {}
-  } catch { return {} }
-}
-
-function saveProfile(data) {
-  localStorage.setItem(PROFILE_KEY, JSON.stringify(data))
-}
-
+// ── Iconos ────────────────────────────────────────────────
 function ClockIcon() {
   return (
     <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18" aria-hidden="true">
@@ -41,73 +30,136 @@ function ShieldIcon() {
   )
 }
 
+function EyeIcon({ open }) {
+  return open ? (
+    <svg viewBox="0 0 20 20" fill="currentColor" width="17" height="17" aria-hidden="true">
+      <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+      <path fillRule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41ZM14 10a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" clipRule="evenodd" />
+    </svg>
+  ) : (
+    <svg viewBox="0 0 20 20" fill="currentColor" width="17" height="17" aria-hidden="true">
+      <path fillRule="evenodd" d="M3.28 2.22a.75.75 0 0 0-1.06 1.06l14.5 14.5a.75.75 0 1 0 1.06-1.06l-1.745-1.745a10.029 10.029 0 0 0 3.3-4.38 1.651 1.651 0 0 0 0-1.185A10.004 10.004 0 0 0 9.999 3a9.956 9.956 0 0 0-4.744 1.194L3.28 2.22ZM7.752 6.69l1.092 1.092a2.5 2.5 0 0 1 3.374 3.373l1.091 1.092a4 4 0 0 0-5.557-5.557Z" clipRule="evenodd" />
+      <path d="M10.748 13.93l2.523 2.523a10.065 10.065 0 0 1-3.27.547c-4.258 0-7.894-2.66-9.337-6.41a1.651 1.651 0 0 1 0-1.186A10.007 10.007 0 0 1 2.839 6.02L6.07 9.252a4 4 0 0 0 4.678 4.678Z" />
+    </svg>
+  )
+}
+
+// ── Helpers ───────────────────────────────────────────────
+function PwdInput({ id, value, onChange, placeholder, autoComplete, hasError }) {
+  const [show, setShow] = useState(false)
+  return (
+    <div className={styles.pwdWrapper}>
+      <input
+        id={id}
+        type={show ? 'text' : 'password'}
+        className={`${styles.input} ${hasError ? styles.inputError : ''}`}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+      />
+      <button
+        type="button"
+        className={styles.eyeBtn}
+        onClick={() => setShow((v) => !v)}
+        aria-label={show ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+      >
+        <EyeIcon open={show} />
+      </button>
+    </div>
+  )
+}
+
+// ── Componente principal ─────────────────────────────────
 export function Perfil() {
-  const { user } = useAuth()
+  const { user, refreshUser } = useAuth()
   const toast = useToast()
 
-  const [profile, setProfile] = useState(() => getProfile())
-  const [info, setInfo] = useState({
-    displayName: '',
-    phone: '',
-  })
+  // ── Info personal ────────────────────────────────────
+  const [info, setInfo] = useState({ username: '', email: '' })
   const [infoErrors, setInfoErrors] = useState({})
+  const [savingInfo, setSavingInfo] = useState(false)
+  const [lastAccess, setLastAccess] = useState('')
 
+  // ── Cambio de contraseña ──────────────────────────────
   const [pwd, setPwd] = useState({ current: '', newPwd: '', confirm: '' })
   const [pwdErrors, setPwdErrors] = useState({})
+  const [savingPwd, setSavingPwd] = useState(false)
 
   useEffect(() => {
-    const p = getProfile()
-    const now = new Date().toLocaleString('es-CO', { dateStyle: 'long', timeStyle: 'short' })
-    if (!p.createdAt) {
-      p.createdAt = now
+    if (user) {
+      setInfo({ username: user.username ?? '', email: user.email ?? '' })
     }
-    p.lastAccess = now
-    saveProfile(p)
-    setProfile(p)
-    setInfo({
-      displayName: p.displayName || user?.name || '',
-      phone: p.phone || '',
-    })
-  }, [user?.name])
+    setLastAccess(new Date().toLocaleString('es-CO', { dateStyle: 'long', timeStyle: 'short' }))
+  }, [user])
 
-  const initials = ((info.displayName || user?.name || user?.email || 'U'))
+  const initials = (user?.username || user?.email || 'U')
     .split(' ')
     .slice(0, 2)
     .map((w) => w[0])
     .join('')
     .toUpperCase()
 
-  function handleSaveInfo(e) {
+  // ── Guardar información personal ──────────────────────
+  const handleSaveInfo = useCallback(async (e) => {
     e.preventDefault()
     const errors = {}
-    if (!info.displayName.trim()) errors.displayName = 'El nombre es requerido'
+    if (!info.username.trim()) errors.username = 'El nombre de usuario es requerido'
+    else if (info.username.trim().length < 3) errors.username = 'Mínimo 3 caracteres'
+    if (!info.email.trim()) errors.email = 'El correo electrónico es requerido'
     if (Object.keys(errors).length) { setInfoErrors(errors); return }
     setInfoErrors({})
-    const updated = { ...profile, displayName: info.displayName.trim(), phone: info.phone.trim() }
-    saveProfile(updated)
-    setProfile(updated)
-    toast.success('Información personal guardada exitosamente')
-  }
+    setSavingInfo(true)
+    try {
+      await usersApi.update(user.id, {
+        username: info.username.trim(),
+        email:    info.email.trim(),
+      })
+      await refreshUser()
+      toast.success('Información personal actualizada correctamente')
+    } catch (err) {
+      const msg = err.message || 'Error al actualizar la información'
+      if (msg.toLowerCase().includes('correo') || msg.toLowerCase().includes('email')) {
+        setInfoErrors({ email: msg })
+      } else if (msg.toLowerCase().includes('usuario') || msg.toLowerCase().includes('username')) {
+        setInfoErrors({ username: msg })
+      } else {
+        toast.error(msg)
+      }
+    } finally {
+      setSavingInfo(false)
+    }
+  }, [info, user, refreshUser, toast])
 
-  function handleSavePwd(e) {
+  // ── Cambiar contraseña ────────────────────────────────
+  const handleSavePwd = useCallback(async (e) => {
     e.preventDefault()
-    const storedPwd = localStorage.getItem(PWD_KEY)
     const errors = {}
-    if (storedPwd && pwd.current !== storedPwd) {
-      errors.current = 'Contraseña actual incorrecta'
-    }
-    if (pwd.newPwd.length < 6) {
-      errors.newPwd = 'La contraseña debe tener al menos 6 caracteres'
-    }
-    if (pwd.newPwd !== pwd.confirm) {
-      errors.confirm = 'Las contraseñas no coinciden'
-    }
+    if (!pwd.current.trim()) errors.current = 'Ingresa tu contraseña actual'
+    if (pwd.newPwd.length < 6) errors.newPwd = 'Mínimo 6 caracteres'
+    if (pwd.newPwd !== pwd.confirm) errors.confirm = 'Las contraseñas no coinciden'
     if (Object.keys(errors).length) { setPwdErrors(errors); return }
     setPwdErrors({})
-    localStorage.setItem(PWD_KEY, pwd.newPwd)
-    setPwd({ current: '', newPwd: '', confirm: '' })
-    toast.success('Contraseña actualizada exitosamente')
-  }
+    setSavingPwd(true)
+    try {
+      await authApi.changePassword({
+        currentPassword:  pwd.current,
+        newPassword:      pwd.newPwd,
+        confirmPassword:  pwd.confirm,
+      })
+      setPwd({ current: '', newPwd: '', confirm: '' })
+      toast.success('Contraseña actualizada correctamente')
+    } catch (err) {
+      const msg = err.message || 'Error al cambiar la contraseña'
+      if (msg.toLowerCase().includes('actual') || msg.toLowerCase().includes('incorrecta')) {
+        setPwdErrors({ current: msg })
+      } else {
+        toast.error(msg)
+      }
+    } finally {
+      setSavingPwd(false)
+    }
+  }, [pwd, toast])
 
   return (
     <div className={styles.page}>
@@ -122,54 +174,59 @@ export function Perfil() {
       <div className={styles.avatarCard}>
         <div className={styles.avatar}>{initials}</div>
         <div className={styles.avatarInfo}>
-          <h2 className={styles.avatarName}>{info.displayName || user?.name || 'Usuario'}</h2>
+          <h2 className={styles.avatarName}>{user?.username || 'Usuario'}</h2>
           <p className={styles.avatarEmail}>{user?.email}</p>
-          <span className={styles.roleBadge}>Administrador</span>
+          <span className={styles.roleBadge}>{user?.role || 'Administrador'}</span>
         </div>
       </div>
 
       <div className={styles.grid}>
+        {/* ── Información Personal ─────────────────────── */}
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>Información Personal</h2>
-            <p className={styles.sectionSub}>Actualiza tu nombre de usuario y datos de contacto</p>
+            <p className={styles.sectionSub}>Actualiza tu nombre de usuario y correo electrónico</p>
           </div>
           <form onSubmit={handleSaveInfo} className={styles.form}>
             <div className={styles.field}>
-              <label className={styles.label}>Nombre para mostrar</label>
+              <label className={styles.label} htmlFor="username">Nombre de usuario</label>
               <input
-                className={`${styles.input} ${infoErrors.displayName ? styles.inputError : ''}`}
-                value={info.displayName}
-                onChange={(e) => setInfo((p) => ({ ...p, displayName: e.target.value }))}
-                placeholder="Tu nombre completo"
+                id="username"
+                className={`${styles.input} ${infoErrors.username ? styles.inputError : ''}`}
+                value={info.username}
+                onChange={(e) => setInfo((p) => ({ ...p, username: e.target.value }))}
+                placeholder="tu_usuario"
+                autoComplete="username"
               />
-              {infoErrors.displayName && <span className={styles.fieldError}>{infoErrors.displayName}</span>}
+              {infoErrors.username && <span className={styles.fieldError}>{infoErrors.username}</span>}
             </div>
             <div className={styles.field}>
-              <label className={styles.label}>Correo electrónico</label>
-              <input className={`${styles.input} ${styles.inputDisabled}`} value={user?.email || ''} disabled />
-              <span className={styles.fieldHint}>El correo electrónico no se puede cambiar</span>
+              <label className={styles.label} htmlFor="email">Correo electrónico</label>
+              <input
+                id="email"
+                type="email"
+                className={`${styles.input} ${infoErrors.email ? styles.inputError : ''}`}
+                value={info.email}
+                onChange={(e) => setInfo((p) => ({ ...p, email: e.target.value }))}
+                placeholder="correo@dominio.com"
+                autoComplete="email"
+              />
+              {infoErrors.email && <span className={styles.fieldError}>{infoErrors.email}</span>}
             </div>
             <div className={styles.field}>
               <label className={styles.label}>Cargo / Rol</label>
-              <input className={`${styles.input} ${styles.inputDisabled}`} value="Administrador" disabled />
-            </div>
-            <div className={styles.field}>
-              <label className={styles.label}>Teléfono de contacto</label>
-              <input
-                className={styles.input}
-                value={info.phone}
-                onChange={(e) => setInfo((p) => ({ ...p, phone: e.target.value }))}
-                placeholder="+57 300 000 0000"
-              />
+              <input className={`${styles.input} ${styles.inputDisabled}`} value={user?.role || 'Administrador'} disabled />
             </div>
             <div className={styles.formActions}>
-              <button type="submit" className={styles.primaryButton}>Guardar información</button>
+              <button type="submit" className={styles.primaryButton} disabled={savingInfo}>
+                {savingInfo ? 'Guardando…' : 'Guardar información'}
+              </button>
             </div>
           </form>
         </section>
 
         <div className={styles.rightCol}>
+          {/* ── Seguridad ───────────────────────────────── */}
           <section className={styles.section}>
             <div className={styles.sectionHeader}>
               <div className={styles.sectionTitleRow}>
@@ -180,47 +237,50 @@ export function Perfil() {
             </div>
             <form onSubmit={handleSavePwd} className={styles.formCol}>
               <div className={styles.field}>
-                <label className={styles.label}>Contraseña actual</label>
-                <input
-                  type="password"
-                  className={`${styles.input} ${pwdErrors.current ? styles.inputError : ''}`}
+                <label className={styles.label} htmlFor="currentPwd">Contraseña actual</label>
+                <PwdInput
+                  id="currentPwd"
                   value={pwd.current}
                   onChange={(e) => setPwd((p) => ({ ...p, current: e.target.value }))}
                   placeholder="Contraseña actual"
                   autoComplete="current-password"
+                  hasError={Boolean(pwdErrors.current)}
                 />
                 {pwdErrors.current && <span className={styles.fieldError}>{pwdErrors.current}</span>}
               </div>
               <div className={styles.field}>
-                <label className={styles.label}>Nueva contraseña</label>
-                <input
-                  type="password"
-                  className={`${styles.input} ${pwdErrors.newPwd ? styles.inputError : ''}`}
+                <label className={styles.label} htmlFor="newPwd">Nueva contraseña</label>
+                <PwdInput
+                  id="newPwd"
                   value={pwd.newPwd}
                   onChange={(e) => setPwd((p) => ({ ...p, newPwd: e.target.value }))}
                   placeholder="Mínimo 6 caracteres"
                   autoComplete="new-password"
+                  hasError={Boolean(pwdErrors.newPwd)}
                 />
                 {pwdErrors.newPwd && <span className={styles.fieldError}>{pwdErrors.newPwd}</span>}
               </div>
               <div className={styles.field}>
-                <label className={styles.label}>Confirmar nueva contraseña</label>
-                <input
-                  type="password"
-                  className={`${styles.input} ${pwdErrors.confirm ? styles.inputError : ''}`}
+                <label className={styles.label} htmlFor="confirmPwd">Confirmar nueva contraseña</label>
+                <PwdInput
+                  id="confirmPwd"
                   value={pwd.confirm}
                   onChange={(e) => setPwd((p) => ({ ...p, confirm: e.target.value }))}
                   placeholder="Repite la nueva contraseña"
                   autoComplete="new-password"
+                  hasError={Boolean(pwdErrors.confirm)}
                 />
                 {pwdErrors.confirm && <span className={styles.fieldError}>{pwdErrors.confirm}</span>}
               </div>
               <div className={styles.formActions}>
-                <button type="submit" className={styles.primaryButton}>Cambiar contraseña</button>
+                <button type="submit" className={styles.primaryButton} disabled={savingPwd}>
+                  {savingPwd ? 'Cambiando…' : 'Cambiar contraseña'}
+                </button>
               </div>
             </form>
           </section>
 
+          {/* ── Actividad ────────────────────────────────── */}
           <section className={styles.section}>
             <div className={styles.sectionHeader}>
               <h2 className={styles.sectionTitle}>Actividad de la Cuenta</h2>
@@ -232,7 +292,7 @@ export function Perfil() {
                 </div>
                 <div>
                   <p className={styles.activityLabel}>Último acceso</p>
-                  <p className={styles.activityValue}>{profile.lastAccess || '—'}</p>
+                  <p className={styles.activityValue}>{lastAccess || '—'}</p>
                 </div>
               </div>
               <div className={styles.activityRow}>
@@ -240,8 +300,12 @@ export function Perfil() {
                   <CalendarIcon />
                 </div>
                 <div>
-                  <p className={styles.activityLabel}>Cuenta creada</p>
-                  <p className={styles.activityValue}>{profile.createdAt || '—'}</p>
+                  <p className={styles.activityLabel}>Miembro desde</p>
+                  <p className={styles.activityValue}>
+                    {user?.created_at
+                      ? new Date(user.created_at).toLocaleDateString('es-CO', { dateStyle: 'long' })
+                      : '—'}
+                  </p>
                 </div>
               </div>
             </div>

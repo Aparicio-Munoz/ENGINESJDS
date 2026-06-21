@@ -1,84 +1,106 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getInventory } from '../../services/inventoryService'
-import { getOrders } from '../../services/ordersService'
-import { getAppointments } from '../../services/appointmentsService'
+import { inventoryApi, appointmentsApi, ordersApi } from '../../api'
 import { ROUTES } from '../../utils/routes'
 import styles from './NotificationCenter.module.css'
 
-function buildNotifications() {
+const PENDING_STATUSES = ['Pendiente', 'Confirmada', 'Reprogramada']
+
+async function fetchNotifications() {
+  const [alerts, appts, orders] = await Promise.all([
+    inventoryApi.getAlerts().catch(() => []),
+    appointmentsApi.getAll({ limit: 200 }).catch(() => ({ data: [] })),
+    ordersApi.getAll({ limit: 50 }).catch(() => ({ data: [] })),
+  ])
+
   const list = []
 
-  const inventory = getInventory([])
-  const outOfStock = inventory.filter((i) => i.status === 'Agotado')
-  const lowStock = inventory.filter((i) => i.status === 'Stock bajo')
-
-  outOfStock.forEach((item) => {
-    list.push({
+  const alertList = Array.isArray(alerts) ? alerts : []
+  alertList
+    .filter((i) => i.status === 'Agotado')
+    .forEach((item) => list.push({
       id: `inv-out-${item.id}`,
       type: 'danger',
       title: 'Repuesto agotado',
       message: `${item.code} — ${item.name}`,
       link: ROUTES.adminInventario,
-    })
-  })
+    }))
 
-  lowStock.forEach((item) => {
-    list.push({
+  alertList
+    .filter((i) => i.status === 'Stock bajo')
+    .forEach((item) => list.push({
       id: `inv-low-${item.id}`,
       type: 'warning',
       title: 'Stock bajo',
       message: `${item.code} — ${item.name}`,
       link: ROUTES.adminInventario,
-    })
-  })
+    }))
 
-  const orders = getOrders([])
-  orders
-    .filter((o) => o.status === 'Lista para entrega')
-    .forEach((o) => {
-      list.push({
-        id: `ord-ready-${o.id}`,
-        type: 'success',
-        title: 'Lista para entrega',
-        message: `${o.orderNumber} — ${o.clientName}`,
-        link: ROUTES.adminOrdenes,
-      })
-    })
-
-  orders
-    .filter((o) => o.status === 'En reparación')
-    .slice(0, 3)
-    .forEach((o) => {
-      list.push({
-        id: `ord-repair-${o.id}`,
-        type: 'info',
-        title: 'En reparación',
-        message: `${o.orderNumber} — ${o.clientName}`,
-        link: ROUTES.adminOrdenes,
-      })
-    })
-
-  const appointments = getAppointments([])
-  const pending = appointments.filter((a) => a.status === 'Pendiente')
-  if (pending.length > 0) {
+  const apptData = appts?.data ?? []
+  const pendingAppts = apptData.filter((a) => PENDING_STATUSES.includes(a.status))
+  if (pendingAppts.length > 0) {
     list.push({
       id: 'appts-pending',
       type: 'warning',
-      title: 'Citas pendientes',
-      message: `${pending.length} cita${pending.length > 1 ? 's' : ''} sin confirmar`,
+      title: 'Citas activas',
+      message: `${pendingAppts.length} cita${pendingAppts.length > 1 ? 's' : ''} pendientes o por atender`,
       link: ROUTES.adminCitas,
     })
   }
+
+  const orderData = orders?.data ?? []
+  orderData
+    .filter((o) => o.status === 'Listo')
+    .forEach((o) => list.push({
+      id: `ord-ready-${o.id}`,
+      type: 'success',
+      title: 'Lista para entrega',
+      message: o.client_name ? `Orden #${o.id} — ${o.client_name}` : `Orden #${o.id}`,
+      link: ROUTES.adminOrdenes,
+    }))
+
+  orderData
+    .filter((o) => o.status === 'En proceso')
+    .slice(0, 3)
+    .forEach((o) => list.push({
+      id: `ord-proc-${o.id}`,
+      type: 'info',
+      title: 'En proceso',
+      message: o.client_name ? `Orden #${o.id} — ${o.client_name}` : `Orden #${o.id}`,
+      link: ROUTES.adminOrdenes,
+    }))
 
   return list
 }
 
 export function NotificationCenter() {
   const [open, setOpen] = useState(false)
-  const [notifications] = useState(() => buildNotifications())
+  const [notifications, setNotifications] = useState([])
+  const [loading, setLoading] = useState(false)
   const wrapperRef = useRef(null)
   const navigate = useNavigate()
+
+  const loadNotifications = useCallback(async () => {
+    setLoading(true)
+    try {
+      const list = await fetchNotifications()
+      setNotifications(list)
+    } catch {
+      // silently fail — notifications are non-critical
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // Load once on mount
+  useEffect(() => {
+    loadNotifications()
+  }, [loadNotifications])
+
+  // Reload whenever the panel opens
+  useEffect(() => {
+    if (open) loadNotifications()
+  }, [open, loadNotifications])
 
   useEffect(() => {
     function handleClick(e) {
@@ -123,7 +145,9 @@ export function NotificationCenter() {
             {count > 0 ? <span className={styles.countChip}>{count}</span> : null}
           </div>
 
-          {notifications.length === 0 ? (
+          {loading ? (
+            <p className={styles.empty}>Cargando...</p>
+          ) : notifications.length === 0 ? (
             <p className={styles.empty}>Sin alertas activas</p>
           ) : (
             <div className={styles.list}>

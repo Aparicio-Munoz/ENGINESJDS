@@ -1,18 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ordersApi, clientsApi, motorcyclesApi, employeesApi, inventoryApi } from '../../../api'
+import { Pagination } from '../../../components/Pagination/Pagination'
 import { useToast } from '../../../hooks/useToast'
 import styles from './OrdenesTrabajo.module.css'
 
-const VALID_STATUSES    = ['Pendiente', 'En proceso', 'Listo', 'Entregada']
-const CHANGEABLE        = ['Pendiente', 'En proceso', 'Listo']
+const TRACKING_BASE_URL = 'https://enginesjds.com/tracking'
+const WHATSAPP_NUMBER   = '573000000000'
+
+const VALID_STATUSES    = ['Pendiente', 'En proceso', 'En reparación', 'Esperando repuesto', 'Listo', 'Lista para entrega', 'Entregada']
+const CHANGEABLE        = ['Pendiente', 'En proceso', 'En reparación', 'Esperando repuesto', 'Listo', 'Lista para entrega']
 const PAYMENT_METHODS   = ['Efectivo', 'Transferencia', 'Tarjeta', 'Nequi', 'Daviplata', 'Otro']
 const PAYMENT_STATUSES  = ['Pagado', 'Pendiente', 'Parcial']
 
 const STATUS_STYLES = {
-  'Pendiente':  { background: '#dbeafe', color: '#1d4ed8' },
-  'En proceso': { background: '#ffedd5', color: '#9a3412' },
-  'Listo':      { background: '#ede9fe', color: '#6d28d9' },
-  'Entregada':  { background: '#d1fae5', color: '#047857' },
+  'Pendiente':           { background: '#dbeafe', color: '#1d4ed8' },
+  'En proceso':          { background: '#ffedd5', color: '#9a3412' },
+  'En reparación':       { background: '#ffedd5', color: '#9a3412' },
+  'Esperando repuesto':  { background: '#fef3c7', color: '#92400e' },
+  'Listo':               { background: '#ede9fe', color: '#6d28d9' },
+  'Lista para entrega':  { background: '#ede9fe', color: '#6d28d9' },
+  'Entregada':           { background: '#d1fae5', color: '#047857' },
 }
 
 function formatDate(d) {
@@ -23,6 +30,30 @@ function formatDate(d) {
 function formatCurrency(n) {
   if (n === null || n === undefined || n === '') return '—'
   return `$ ${Number(n).toLocaleString('es-CO')}`
+}
+
+function buildWhatsAppUrl(order) {
+  const trackingLink = `${TRACKING_BASE_URL}/${order.tracking_token}`
+  const clientName = order.client_name || order.client_last_name
+    ? `${order.client_name || ''} ${order.client_last_name || ''}`.trim()
+    : 'Cliente'
+  const brand = order.motorcycle_brand || ''
+  const plate = order.motorcycle_plate || ''
+  const phone = (order.client_phone || '').replace(/\D/g, '')
+  const target = phone.startsWith('57') ? phone : `57${phone}`
+
+  const msg = [
+    `Hola ${clientName} `,
+    '',
+    `Tu motocicleta ${brand} ${plate} fue recibida correctamente en ENGINES JDS.`,
+    '',
+    'Puedes consultar el estado de tu moto aquí:',
+    trackingLink,
+    '',
+    'Gracias por tu confianza.',
+  ].join('\n')
+
+  return `https://wa.me/${target}?text=${encodeURIComponent(msg)}`
 }
 
 function emptyCreate() {
@@ -104,6 +135,7 @@ export function OrdenesTrabajo() {
   const [addPartOpen, setAddPartOpen]   = useState(false)
   const [inventoryItems, setInventoryItems] = useState([])
   const [partForm, setPartForm]         = useState({ inventory_id: '', quantity: '1' })
+  const [partSearch, setPartSearch]     = useState('')
   const [partErrors, setPartErrors]     = useState({})
   const [addingPart, setAddingPart]     = useState(false)
 
@@ -112,13 +144,16 @@ export function OrdenesTrabajo() {
   const [closeForm, setCloseForm]     = useState({ payment_method: '', payment_status: 'Pagado', notes: '' })
   const [closing, setClosing]         = useState(false)
 
+  // ── WhatsApp confirmation after create ─────────────────
+  const [whatsappOrder, setWhatsappOrder]       = useState(null)
+
   // ── Delete ────────────────────────────────────────────────
   const [deleteTarget, setDeleteTarget]         = useState(null)
   const [deleteReason, setDeleteReason]         = useState('')
   const [deleteReasonError, setDeleteReasonError] = useState('')
   const [deleting, setDeleting]                 = useState(false)
 
-  useEffect(() => { return () => { mountedRef.current = false } }, [])
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false } }, [])
 
   // ── Load orders ───────────────────────────────────────────
   const loadOrders = useCallback(async (opts = {}) => {
@@ -198,7 +233,7 @@ export function OrdenesTrabajo() {
 
     setCreating(true)
     try {
-      await ordersApi.create({
+      const newOrder = await ordersApi.create({
         client_id:              Number(createForm.client_id),
         motorcycle_id:          Number(createForm.motorcycle_id),
         problem_description:    createForm.problem_description.trim(),
@@ -211,6 +246,9 @@ export function OrdenesTrabajo() {
       toast.success('Orden de trabajo creada exitosamente')
       setCreateOpen(false)
       loadOrders({ silent: true })
+      if (newOrder?.tracking_token && newOrder?.client_phone) {
+        setWhatsappOrder(newOrder)
+      }
     } catch (err) {
       if (!mountedRef.current) return
       toast.error(err?.response?.data?.message ?? 'No se pudo crear la orden')
@@ -374,6 +412,7 @@ export function OrdenesTrabajo() {
   async function handleOpenAddPart() {
     setAddPartOpen(true)
     setPartForm({ inventory_id: '', quantity: '1' })
+    setPartSearch('')
     setPartErrors({})
     if (!inventoryItems.length) {
       try {
@@ -398,7 +437,9 @@ export function OrdenesTrabajo() {
       })
       if (!mountedRef.current) return
       toast.success('Repuesto agregado')
-      setAddPartOpen(false)
+      setPartForm({ inventory_id: '', quantity: '1' })
+      setPartSearch('')
+      setPartErrors({})
       loadDetail(detailTarget.id)
       loadOrders({ silent: true })
     } catch (err) {
@@ -567,7 +608,7 @@ export function OrdenesTrabajo() {
                 {orders.map((order) => {
                   const isChanging  = changingStatusId === order.id
                   const isEntregada = order.status === 'Entregada'
-                  const canClose    = order.status === 'Listo'
+                  const canClose    = order.status === 'Listo' || order.status === 'Lista para entrega'
 
                   return (
                     <tr key={order.id}>
@@ -613,6 +654,17 @@ export function OrdenesTrabajo() {
                           >
                             Ver
                           </button>
+                          {order.tracking_token && order.client_phone ? (
+                            <a
+                              className={styles.whatsappButton}
+                              href={buildWhatsAppUrl(order)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Enviar por WhatsApp"
+                            >
+                              <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+                            </a>
+                          ) : null}
                           {!isEntregada ? (
                             <button
                               className={styles.editButton}
@@ -658,29 +710,13 @@ export function OrdenesTrabajo() {
             </table>
           </div>
 
-          {pagination && pagination.totalPages > 1 ? (
-            <div className={styles.pagination}>
-              <button
-                className={styles.paginationBtn}
-                type="button"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                ← Anterior
-              </button>
-              <span className={styles.pageInfo}>
-                Página {pagination.page} de {pagination.totalPages}
-              </span>
-              <button
-                className={styles.paginationBtn}
-                type="button"
-                disabled={page >= pagination.totalPages}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Siguiente →
-              </button>
-            </div>
-          ) : null}
+          <Pagination
+            page={page}
+            totalPages={pagination?.totalPages}
+            total={pagination?.total}
+            onPageChange={setPage}
+            disabled={loading}
+          />
         </>
       )}
 
@@ -912,7 +948,20 @@ export function OrdenesTrabajo() {
                 </h2>
                 <p>{detailTarget.client_name} — {detailTarget.motorcycle_plate} {detailTarget.motorcycle_brand}</p>
               </div>
-              <button className={styles.iconButton} type="button" onClick={closeDetail}>×</button>
+              <div className={styles.modalHeaderActions}>
+                {detailTarget.tracking_token && detailTarget.client_phone ? (
+                  <a
+                    className={styles.whatsappButtonLg}
+                    href={buildWhatsAppUrl(detailTarget)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+                    Enviar por WhatsApp
+                  </a>
+                ) : null}
+                <button className={styles.iconButton} type="button" onClick={closeDetail}>×</button>
+              </div>
             </div>
 
             {detailLoading ? (
@@ -1148,25 +1197,76 @@ export function OrdenesTrabajo() {
                     <form className={styles.addItemForm} onSubmit={handleAddPart}>
                       <p className={styles.addFormTitle}>Agregar repuesto</p>
                       <div className={styles.addFormGrid}>
-                        <label className={`${styles.addFormField} ${styles.addFormFieldWide}`}>
-                          Repuesto <span className={styles.required}>*</span>
-                          <select
-                            value={partForm.inventory_id}
-                            onChange={(e) => setPartForm((p) => ({ ...p, inventory_id: e.target.value }))}
-                          >
-                            <option value="">Selecciona un repuesto…</option>
-                            {inventoryItems
-                              .filter((i) => i.status !== 'Agotado')
-                              .map((item) => (
-                                <option key={item.id} value={item.id}>
-                                  {item.code} — {item.name} (stock: {item.quantity}) — {formatCurrency(item.sale_price)}
-                                </option>
-                              ))}
-                          </select>
+                        <div className={`${styles.addFormField} ${styles.addFormFieldWide}`}>
+                          <span className={styles.addFormLabel}>
+                            Repuesto <span className={styles.required}>*</span>
+                          </span>
+                          {partForm.inventory_id ? (
+                            <div className={styles.partSelected}>
+                              {(() => {
+                                const sel = inventoryItems.find((i) => String(i.id) === String(partForm.inventory_id))
+                                return sel ? (
+                                  <span>{sel.code} — {sel.name} (stock: {sel.quantity}) — {formatCurrency(sel.sale_price)}</span>
+                                ) : null
+                              })()}
+                              <button
+                                type="button"
+                                className={styles.partClearBtn}
+                                onClick={() => { setPartForm((p) => ({ ...p, inventory_id: '' })); setPartSearch('') }}
+                              >
+                                Cambiar
+                              </button>
+                            </div>
+                          ) : (
+                            <div className={styles.partAutocomplete}>
+                              <input
+                                type="search"
+                                className={styles.partSearchInput}
+                                placeholder="Buscar por código o nombre…"
+                                value={partSearch}
+                                onChange={(e) => setPartSearch(e.target.value)}
+                                autoComplete="off"
+                              />
+                              {partSearch.trim().length > 0 && (
+                                <ul className={styles.partDropdown}>
+                                  {inventoryItems
+                                    .filter((i) => i.status !== 'Agotado')
+                                    .filter((i) => {
+                                      const q = partSearch.toLowerCase()
+                                      return i.code.toLowerCase().includes(q) || i.name.toLowerCase().includes(q)
+                                    })
+                                    .slice(0, 10)
+                                    .map((item) => (
+                                      <li key={item.id}>
+                                        <button
+                                          type="button"
+                                          className={styles.partDropdownItem}
+                                          onClick={() => {
+                                            setPartForm((p) => ({ ...p, inventory_id: String(item.id) }))
+                                            setPartSearch('')
+                                          }}
+                                        >
+                                          <strong>{item.code}</strong> — {item.name}
+                                          <span className={styles.partMeta}>Stock: {item.quantity} · {formatCurrency(item.sale_price)}</span>
+                                        </button>
+                                      </li>
+                                    ))}
+                                  {inventoryItems
+                                    .filter((i) => i.status !== 'Agotado')
+                                    .filter((i) => {
+                                      const q = partSearch.toLowerCase()
+                                      return i.code.toLowerCase().includes(q) || i.name.toLowerCase().includes(q)
+                                    }).length === 0 && (
+                                    <li className={styles.partNoResults}>Sin resultados</li>
+                                  )}
+                                </ul>
+                              )}
+                            </div>
+                          )}
                           {partErrors.inventory_id
                             ? <span className={styles.fieldError}>{partErrors.inventory_id}</span>
                             : null}
-                        </label>
+                        </div>
 
                         <label className={styles.addFormField}>
                           Cantidad <span className={styles.required}>*</span>
@@ -1188,14 +1288,14 @@ export function OrdenesTrabajo() {
                           className={styles.secondaryButton}
                           onClick={() => setAddPartOpen(false)}
                         >
-                          Cancelar
+                          Cerrar
                         </button>
                         <button
                           type="submit"
                           className={styles.primaryButton}
                           disabled={addingPart}
                         >
-                          {addingPart ? 'Agregando…' : 'Agregar'}
+                          {addingPart ? 'Agregando…' : 'Agregar repuesto'}
                         </button>
                       </div>
                     </form>
@@ -1271,7 +1371,7 @@ export function OrdenesTrabajo() {
                 ) : null}
 
                 {/* Close action (Listo status only) */}
-                {detailHistory.order.status === 'Listo' ? (
+                {(detailHistory.order.status === 'Listo' || detailHistory.order.status === 'Lista para entrega') ? (
                   <div className={styles.detailActions}>
                     <button
                       className={styles.closeOrderBtn}
@@ -1409,6 +1509,56 @@ export function OrdenesTrabajo() {
               >
                 {deleting ? 'Eliminando…' : 'Eliminar permanentemente'}
               </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {/* ── WhatsApp confirmation after create ───────────── */}
+      {whatsappOrder ? (
+        <div className={styles.modalBackdrop} role="presentation">
+          <section className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="wa-title">
+            <div className={styles.modalHeader}>
+              <div>
+                <p className={styles.eyebrow}>Orden creada</p>
+                <h2 id="wa-title">{whatsappOrder.order_number}</h2>
+              </div>
+              <button className={styles.iconButton} type="button" onClick={() => setWhatsappOrder(null)}>×</button>
+            </div>
+            <div className={styles.waBody}>
+              <div className={styles.waCheck}>
+                <svg viewBox="0 0 20 20" fill="currentColor" width="32" height="32">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <p className={styles.waText}>
+                La orden para <strong>{whatsappOrder.motorcycle_brand} {whatsappOrder.motorcycle_plate}</strong> fue creada exitosamente.
+              </p>
+              <p className={styles.waSubtext}>
+                ¿Deseas notificar al cliente <strong>{whatsappOrder.client_name}</strong> por WhatsApp con el enlace de seguimiento?
+              </p>
+              <div className={styles.waTrackingUrl}>
+                {TRACKING_BASE_URL}/{whatsappOrder.tracking_token}
+              </div>
+            </div>
+            <div className={styles.waActions}>
+              <button
+                className={styles.secondaryButton}
+                type="button"
+                onClick={() => setWhatsappOrder(null)}
+              >
+                Omitir
+              </button>
+              <a
+                className={styles.waButton}
+                href={buildWhatsAppUrl(whatsappOrder)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setWhatsappOrder(null)}
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+                Enviar por WhatsApp
+              </a>
             </div>
           </section>
         </div>

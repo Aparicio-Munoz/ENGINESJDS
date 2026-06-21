@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { clientsApi } from '../../../api/clientsApi'
 import { ConfirmModal } from '../../../components/ConfirmModal/ConfirmModal'
+import { Pagination } from '../../../components/Pagination/Pagination'
 import { useToast } from '../../../hooks/useToast'
 import styles from './Clientes.module.css'
 
 // ── Constantes ──────────────────────────────────────────────────
-const DOCUMENT_TYPES = ['CC', 'NIT', 'CE', 'PP', 'Otro']
+const DOCUMENT_TYPES = ['CC', 'CE', 'NIT', 'Pasaporte']
 
 const ITEMS_PER_PAGE = 20
 
@@ -19,24 +20,38 @@ const INITIAL_FORM = {
   address:       '',
 }
 
-// ── Validación client-side (campos básicos) ──────────────────────
 function validate(form) {
   const errors = {}
-  if (!form.name.trim())      errors.name      = 'El nombre es obligatorio.'
+  if (!form.name.trim()) errors.name = 'El nombre es obligatorio.'
+  else if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñüÜ\s]+$/.test(form.name.trim())) errors.name = 'Solo letras y espacios.'
   if (!form.last_name.trim()) errors.last_name = 'El apellido es obligatorio.'
-  if (!form.document_type)    errors.document_type = 'Selecciona el tipo de documento.'
+  else if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñüÜ\s]+$/.test(form.last_name.trim())) errors.last_name = 'Solo letras y espacios.'
+  if (!form.document_type) errors.document_type = 'Selecciona el tipo de documento.'
 
   const doc = form.document.trim()
-  if (!doc)                          errors.document = 'El documento es obligatorio.'
-  else if (!/^[A-Za-z0-9-]{5,15}$/.test(doc)) errors.document = 'Entre 5 y 15 caracteres alfanuméricos.'
+  if (!doc) errors.document = 'El documento es obligatorio.'
+  else if (!/^[A-Za-z0-9-]{5,20}$/.test(doc)) errors.document = 'Entre 5 y 20 caracteres alfanuméricos.'
 
-  if (form.phone.trim() && !/^\d{7,15}$/.test(form.phone.trim()))
-    errors.phone = 'Teléfono: entre 7 y 15 dígitos.'
+  const phone = form.phone.trim()
+  if (!phone) errors.phone = 'El teléfono es obligatorio.'
+  else if (!/^\d{7,15}$/.test(phone)) errors.phone = 'Entre 7 y 15 dígitos numéricos.'
 
   if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()))
-    errors.email = 'Ingresa un correo válido.'
+    errors.email = 'Formato de correo inválido.'
 
   return errors
+}
+
+function extractApiError(err) {
+  const data = err?.response?.data
+  if (data?.errors?.length) {
+    const byField = {}
+    for (const e of data.errors) {
+      if (e.field && e.message) byField[e.field] = e.message
+    }
+    if (Object.keys(byField).length) return { fieldErrors: byField }
+  }
+  return { general: data?.message ?? err?.message ?? 'Error inesperado.' }
 }
 
 // ── Componente ──────────────────────────────────────────────────
@@ -59,6 +74,7 @@ export function Clientes() {
 
   // Modal confirmación delete
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleteReason, setDeleteReason] = useState('')
   const [deleting,     setDeleting]     = useState(false)
 
   const mountedRef     = useRef(true)
@@ -140,17 +156,21 @@ export function Clientes() {
         last_name:     formData.last_name.trim(),
         document_type: formData.document_type,
         document:      formData.document.trim(),
-        phone:         formData.phone.trim()   || undefined,
+        phone:         formData.phone.trim(),
         email:         formData.email.trim()   || undefined,
         address:       formData.address.trim() || undefined,
       })
       toast.success(`Cliente "${created.name} ${created.last_name}" registrado`)
       closeModal()
-      // Ir a página 1 para ver el nuevo cliente
       setPage(1)
       loadClients(1, search)
     } catch (err) {
-      setFormErrors({ _general: err.message || 'Error al guardar el cliente.' })
+      const parsed = extractApiError(err)
+      if (parsed.fieldErrors) {
+        setFormErrors(parsed.fieldErrors)
+      } else {
+        setFormErrors({ _general: parsed.general })
+      }
     } finally {
       setSubmitting(false)
     }
@@ -158,27 +178,36 @@ export function Clientes() {
 
   // ── Eliminar ─────────────────────────────────────────────────
   function requestDelete(client) {
+    setDeleteReason('')
     setDeleteTarget({
       id:    client.id,
       label: `${client.name} ${client.last_name}`,
     })
   }
 
+  const [deleteError, setDeleteError] = useState(null)
+
   async function handleConfirmDelete() {
     if (!deleteTarget) return
     setDeleting(true)
+    setDeleteError(null)
     const label = deleteTarget.label
     try {
-      await clientsApi.remove(deleteTarget.id)
+      await clientsApi.remove(deleteTarget.id, deleteReason)
       toast.success(`Cliente "${label}" eliminado`)
       setDeleteTarget(null)
-      // Si era el último de la página, retroceder
       const targetPage = clients.length === 1 && page > 1 ? page - 1 : page
       setPage(targetPage)
       loadClients(targetPage, search)
     } catch (err) {
-      toast.error(err.message || 'Error al eliminar el cliente.')
-      setDeleteTarget(null)
+      const msg = err?.response?.data?.message ?? err?.message ?? 'Error al eliminar.'
+      const isConflict = err?.response?.status === 409
+      if (isConflict) {
+        setDeleteError({ message: msg, clientId: deleteTarget.id })
+      } else {
+        toast.error(msg)
+        setDeleteTarget(null)
+      }
     } finally {
       setDeleting(false)
     }
@@ -294,47 +323,13 @@ export function Clientes() {
             </table>
           </div>
 
-          {/* Paginación */}
-          {pagination.totalPages > 1 ? (
-            <nav
-              aria-label="Paginación de clientes"
-              style={{
-                display: 'flex', justifyContent: 'center', alignItems: 'center',
-                gap: '1rem', padding: '1rem 0', borderTop: '1px solid #E2E8F0',
-              }}
-            >
-              <button
-                type="button"
-                disabled={page <= 1 || loading}
-                onClick={() => handlePageChange(page - 1)}
-                style={{
-                  padding: '0.375rem 0.875rem', cursor: page <= 1 ? 'not-allowed' : 'pointer',
-                  border: '1px solid #E2E8F0', borderRadius: '6px',
-                  background: page <= 1 ? '#F8FAFC' : '#fff', color: '#374151',
-                  opacity: page <= 1 ? 0.5 : 1,
-                }}
-              >
-                ← Anterior
-              </button>
-              <span style={{ color: '#64748B', fontSize: '0.875rem', minWidth: '8rem', textAlign: 'center' }}>
-                Página {page} de {pagination.totalPages}
-              </span>
-              <button
-                type="button"
-                disabled={page >= pagination.totalPages || loading}
-                onClick={() => handlePageChange(page + 1)}
-                style={{
-                  padding: '0.375rem 0.875rem',
-                  cursor: page >= pagination.totalPages ? 'not-allowed' : 'pointer',
-                  border: '1px solid #E2E8F0', borderRadius: '6px',
-                  background: page >= pagination.totalPages ? '#F8FAFC' : '#fff', color: '#374151',
-                  opacity: page >= pagination.totalPages ? 0.5 : 1,
-                }}
-              >
-                Siguiente →
-              </button>
-            </nav>
-          ) : null}
+          <Pagination
+            page={page}
+            totalPages={pagination.totalPages}
+            total={pagination.total}
+            onPageChange={handlePageChange}
+            disabled={loading}
+          />
         </>
       )}
 
@@ -375,7 +370,7 @@ export function Clientes() {
               ) : null}
 
               <label className={styles.formField}>
-                Nombre
+                Nombre <span className={styles.required}>*</span>
                 <input
                   name="name"
                   value={formData.name}
@@ -383,22 +378,22 @@ export function Clientes() {
                   placeholder="Carlos"
                   autoFocus
                 />
-                {formErrors.name ? <span>{formErrors.name}</span> : null}
+                {formErrors.name ? <span className={styles.fieldError}>{formErrors.name}</span> : <span className={styles.fieldHint}>Solo letras</span>}
               </label>
 
               <label className={styles.formField}>
-                Apellido
+                Apellido <span className={styles.required}>*</span>
                 <input
                   name="last_name"
                   value={formData.last_name}
                   onChange={handleInputChange}
                   placeholder="Ramírez"
                 />
-                {formErrors.last_name ? <span>{formErrors.last_name}</span> : null}
+                {formErrors.last_name ? <span className={styles.fieldError}>{formErrors.last_name}</span> : <span className={styles.fieldHint}>Solo letras</span>}
               </label>
 
               <label className={styles.formField}>
-                Tipo de documento
+                Tipo de documento <span className={styles.required}>*</span>
                 <select
                   name="document_type"
                   value={formData.document_type}
@@ -408,23 +403,23 @@ export function Clientes() {
                     <option key={t} value={t}>{t}</option>
                   ))}
                 </select>
-                {formErrors.document_type ? <span>{formErrors.document_type}</span> : null}
+                {formErrors.document_type ? <span className={styles.fieldError}>{formErrors.document_type}</span> : null}
               </label>
 
               <label className={styles.formField}>
-                Número de documento
+                Número de documento <span className={styles.required}>*</span>
                 <input
-                  inputMode="numeric"
+                  inputMode="text"
                   name="document"
                   value={formData.document}
                   onChange={handleInputChange}
                   placeholder="1020304050"
                 />
-                {formErrors.document ? <span>{formErrors.document}</span> : null}
+                {formErrors.document ? <span className={styles.fieldError}>{formErrors.document}</span> : <span className={styles.fieldHint}>5–20 caracteres alfanuméricos</span>}
               </label>
 
               <label className={styles.formField}>
-                Teléfono <span style={{ fontWeight: 400, color: '#94A3B8' }}>(opcional)</span>
+                Teléfono <span className={styles.required}>*</span>
                 <input
                   inputMode="tel"
                   name="phone"
@@ -432,11 +427,11 @@ export function Clientes() {
                   onChange={handleInputChange}
                   placeholder="3001234567"
                 />
-                {formErrors.phone ? <span>{formErrors.phone}</span> : null}
+                {formErrors.phone ? <span className={styles.fieldError}>{formErrors.phone}</span> : <span className={styles.fieldHint}>7–15 dígitos</span>}
               </label>
 
               <label className={styles.formField}>
-                Correo electrónico <span style={{ fontWeight: 400, color: '#94A3B8' }}>(opcional)</span>
+                Correo electrónico <span className={styles.optional}>(opcional)</span>
                 <input
                   inputMode="email"
                   name="email"
@@ -444,18 +439,18 @@ export function Clientes() {
                   onChange={handleInputChange}
                   placeholder="correo@email.com"
                 />
-                {formErrors.email ? <span>{formErrors.email}</span> : null}
+                {formErrors.email ? <span className={styles.fieldError}>{formErrors.email}</span> : null}
               </label>
 
               <label className={`${styles.formField} ${styles.fullWidth}`}>
-                Dirección <span style={{ fontWeight: 400, color: '#94A3B8' }}>(opcional)</span>
+                Dirección <span className={styles.optional}>(opcional)</span>
                 <input
                   name="address"
                   value={formData.address}
                   onChange={handleInputChange}
                   placeholder="Cra 5 # 12-34, Ciudad"
                 />
-                {formErrors.address ? <span>{formErrors.address}</span> : null}
+                {formErrors.address ? <span className={styles.fieldError}>{formErrors.address}</span> : null}
               </label>
 
               <div className={styles.formActions}>
@@ -481,12 +476,56 @@ export function Clientes() {
       ) : null}
 
       {/* Modal confirmación delete */}
-      <ConfirmModal
-        isOpen={Boolean(deleteTarget)}
-        entityLabel={deleteTarget?.label ?? ''}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => !deleting && setDeleteTarget(null)}
-      />
+      {deleteTarget && !deleteError ? (
+        <ConfirmModal
+          isOpen
+          entityLabel={deleteTarget.label}
+          reason={deleteReason}
+          onReasonChange={setDeleteReason}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => !deleting && setDeleteTarget(null)}
+        />
+      ) : null}
+
+      {/* Error de conflicto (órdenes activas) */}
+      {deleteError ? (
+        <div className={styles.modalBackdrop} role="presentation">
+          <section className={styles.modal} role="alertdialog" aria-modal="true">
+            <div className={styles.modalHeader}>
+              <div>
+                <p className={styles.eyebrowDanger}>No se puede eliminar</p>
+                <h2>{deleteTarget?.label}</h2>
+              </div>
+              <button className={styles.iconButton} type="button" onClick={() => { setDeleteError(null); setDeleteTarget(null) }} aria-label="Cerrar">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
+              </button>
+            </div>
+            <div className={styles.conflictBody}>
+              <svg viewBox="0 0 20 20" fill="currentColor" width="40" height="40" className={styles.conflictIcon}>
+                <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
+              </svg>
+              <p className={styles.conflictText}>{deleteError.message}</p>
+              <p className={styles.conflictHint}>Cierra o entrega las órdenes pendientes antes de eliminar este cliente.</p>
+            </div>
+            <div className={styles.conflictActions}>
+              <button
+                className={styles.secondaryButton}
+                type="button"
+                onClick={() => { setDeleteError(null); setDeleteTarget(null) }}
+              >
+                Cerrar
+              </button>
+              <a
+                className={styles.primaryButton}
+                href={`/admin/ordenes?client_id=${deleteError.clientId}`}
+                style={{ textDecoration: 'none', textAlign: 'center' }}
+              >
+                Ver órdenes del cliente
+              </a>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </section>
   )
 }

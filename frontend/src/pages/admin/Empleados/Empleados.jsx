@@ -5,7 +5,16 @@ import styles from './Empleados.module.css'
 
 const LIMIT = 20
 const DOCUMENT_TYPES = ['CC', 'CE', 'Pasaporte']
-const STATUSES = ['Activo', 'Inactivo', 'Vacaciones']
+const STATUSES = ['Activo', 'Inactivo', 'Vacaciones', 'Incapacidad', 'Suspendido', 'Retirado']
+
+const STATUS_COLORS = {
+  Activo:      { bg: '#d1fae5', color: '#065f46' },
+  Inactivo:    { bg: '#f3f4f6', color: '#374151' },
+  Vacaciones:  { bg: '#dbeafe', color: '#1d4ed8' },
+  Incapacidad: { bg: '#fef3c7', color: '#d97706' },
+  Suspendido:  { bg: '#fee2e2', color: '#dc2626' },
+  Retirado:    { bg: '#e5e7eb', color: '#6b7280' },
+}
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10)
@@ -99,6 +108,11 @@ export function Empleados() {
   const [deleteReason, setDeleteReason] = useState('')
   const [deleteReasonError, setDeleteReasonError] = useState('')
   const [deleting, setDeleting] = useState(false)
+
+  // ── Status change modal ───────────────────────────────
+  const [statusTarget, setStatusTarget] = useState(null)
+  const [statusNew, setStatusNew] = useState('')
+  const [statusSubmitting, setStatusSubmitting] = useState(false)
 
   useEffect(() => {
     mountedRef.current = true
@@ -248,6 +262,31 @@ export function Empleados() {
     }
   }
 
+  // ── Status change handlers ─────────────────────────────
+  function openStatusModal(emp) {
+    setStatusTarget(emp)
+    setStatusNew(emp.status)
+  }
+
+  async function handleStatusSubmit(e) {
+    e.preventDefault()
+    if (!statusTarget || statusNew === statusTarget.status) {
+      setStatusTarget(null)
+      return
+    }
+    setStatusSubmitting(true)
+    try {
+      await employeesApi.update(statusTarget.id, { status: statusNew })
+      toast.success(`Estado de ${statusTarget.name} ${statusTarget.last_name} cambiado a ${statusNew}`)
+      setStatusTarget(null)
+      await loadEmployees({ silent: true, targetPage: page })
+    } catch (err) {
+      toast.error(err.message || 'Error al cambiar el estado.')
+    } finally {
+      if (mountedRef.current) setStatusSubmitting(false)
+    }
+  }
+
   // ── Derived ────────────────────────────────────────────
   const activeCount = employees.filter((e) => e.status === 'Activo').length
   const topEmployee = stats[0] ?? null
@@ -341,7 +380,6 @@ export function Empleados() {
                   <th>Correo</th>
                   <th>Especialidad</th>
                   <th>Estado</th>
-                  <th>Tarifa diaria</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
@@ -359,26 +397,40 @@ export function Empleados() {
                     <td data-label="Correo">{emp.email ?? '—'}</td>
                     <td data-label="Especialidad">{emp.specialty}</td>
                     <td data-label="Estado">
-                      <span className={styles.statusBadge} data-status={emp.status}>{emp.status}</span>
-                    </td>
-                    <td data-label="Tarifa diaria">
-                      {emp.daily_rate ? fmtCOP(emp.daily_rate) : '—'}
+                      <span
+                        className={styles.statusBadge}
+                        style={STATUS_COLORS[emp.status] ? {
+                          background: STATUS_COLORS[emp.status].bg,
+                          color: STATUS_COLORS[emp.status].color,
+                        } : undefined}
+                      >
+                        {emp.status}
+                      </span>
                     </td>
                     <td data-label="Acciones">
-                      <button
-                        className={styles.deleteButton}
-                        type="button"
-                        disabled={deleting && deleteTarget?.id === emp.id}
-                        onClick={() => handleDeleteClick(emp)}
-                      >
-                        Eliminar
-                      </button>
+                      <div className={styles.actionGroup}>
+                        <button
+                          className={styles.statusButton}
+                          type="button"
+                          onClick={() => openStatusModal(emp)}
+                        >
+                          Estado
+                        </button>
+                        <button
+                          className={styles.deleteButton}
+                          type="button"
+                          disabled={deleting && deleteTarget?.id === emp.id}
+                          onClick={() => handleDeleteClick(emp)}
+                        >
+                          Eliminar
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
                 {employees.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className={styles.emptyState}>
+                    <td colSpan={8} className={styles.emptyState}>
                       {hasFilters
                         ? 'Sin resultados para los filtros aplicados.'
                         : 'No hay empleados registrados aún.'}
@@ -495,8 +547,13 @@ export function Empleados() {
                         </div>
                         <span
                           className={styles.statusBadge}
-                          data-status={emp.employee_status}
-                          style={{ marginLeft: 'auto' }}
+                          style={{
+                            marginLeft: 'auto',
+                            ...(STATUS_COLORS[emp.employee_status] ? {
+                              background: STATUS_COLORS[emp.employee_status].bg,
+                              color: STATUS_COLORS[emp.employee_status].color,
+                            } : {}),
+                          }}
                         >
                           {emp.employee_status}
                         </span>
@@ -737,6 +794,92 @@ export function Empleados() {
                 </button>
                 <button className={styles.primaryButton} type="submit" disabled={submitting}>
                   {submitting ? 'Guardando...' : 'Guardar empleado'}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      ) : null}
+
+      {/* ── Status change modal ───────────────────────────── */}
+      {statusTarget ? (
+        <div className={styles.modalBackdrop} role="presentation">
+          <section
+            className={styles.modal}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="status-modal-title"
+          >
+            <div className={styles.modalHeader}>
+              <div>
+                <p className={styles.eyebrow}>Cambiar estado</p>
+                <h2 id="status-modal-title">{statusTarget.name} {statusTarget.last_name}</h2>
+              </div>
+              <button
+                className={styles.iconButton}
+                type="button"
+                onClick={() => setStatusTarget(null)}
+                aria-label="Cerrar"
+                disabled={statusSubmitting}
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true">
+                  <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                </svg>
+              </button>
+            </div>
+
+            <form className={styles.form} onSubmit={handleStatusSubmit}>
+              <div className={`${styles.formField} ${styles.fullWidth}`}>
+                <p style={{ margin: '0 0 10px', fontSize: '0.88rem', color: 'rgba(255,255,255,0.6)' }}>
+                  Estado actual: <strong style={{ color: '#fff' }}>{statusTarget.status}</strong>
+                </p>
+                <div className={styles.statusOptions}>
+                  {STATUSES.map((s) => (
+                    <label
+                      key={s}
+                      className={styles.statusOption}
+                      style={statusNew === s && STATUS_COLORS[s] ? {
+                        borderColor: STATUS_COLORS[s].color,
+                        background: STATUS_COLORS[s].bg + '22',
+                      } : undefined}
+                    >
+                      <input
+                        type="radio"
+                        name="status"
+                        value={s}
+                        checked={statusNew === s}
+                        onChange={() => setStatusNew(s)}
+                        disabled={statusSubmitting}
+                      />
+                      <span
+                        className={styles.statusBadge}
+                        style={STATUS_COLORS[s] ? {
+                          background: STATUS_COLORS[s].bg,
+                          color: STATUS_COLORS[s].color,
+                        } : undefined}
+                      >
+                        {s}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className={styles.formActions}>
+                <button
+                  className={styles.secondaryButton}
+                  type="button"
+                  onClick={() => setStatusTarget(null)}
+                  disabled={statusSubmitting}
+                >
+                  Cancelar
+                </button>
+                <button
+                  className={styles.primaryButton}
+                  type="submit"
+                  disabled={statusSubmitting || statusNew === statusTarget.status}
+                >
+                  {statusSubmitting ? 'Guardando...' : 'Cambiar estado'}
                 </button>
               </div>
             </form>

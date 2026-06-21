@@ -30,4 +30,24 @@ export const reportsApi = {
   getInventoryAlerts() {
     return apiClient.get('/reports/inventory-alerts').then((r) => r.data.data)
   },
+
+  // GET /reports/chart-data → { monthlyRevenue, topServices, topClients, stockByCategory, ordersByTech, appointmentsByMonth }
+  getChartData() {
+    return apiClient.get('/reports/chart-data').then((r) => r.data.data)
+  },
+
+  // GET /reports/audit-logs?search=&date_from=&date_to=&user_id=&action=&table_name=&page=&limit=
+  getAuditLogs(params = {}) {
+    return apiClient.get('/reports/audit-logs', { params }).then((r) => r.data)
+  },
+
+  // GET /reports/audit-actions → string[]
+  getAuditActions() {
+    return apiClient.get('/reports/audit-actions').then((r) => r.data.data)
+  },
+
+  // GET /reports/audit-tables → string[]
+  getAuditTables() {
+    return apiClient.get('/reports/audit-tables').then((r) => r.data.data)
+  },
 }

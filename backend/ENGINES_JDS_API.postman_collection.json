@@ -1,0 +1,881 @@
+{
+  "info": {
+    "name": "ENGINES JDS — API REST",
+    "description": "Colección completa de endpoints para el sistema de gestión de taller ENGINES JDS.\n\nAntes de usar: ejecuta 'Auth / Login' y el token se guarda automáticamente en {{token}}.",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000", "type": "string" },
+    { "key": "token",   "value": "",                      "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+
+    {
+      "name": "🔐 Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "if (pm.response.code === 200) {",
+                "  const body = pm.response.json();",
+                "  pm.collectionVariables.set('token', body.data.token);",
+                "  console.log('Token guardado:', body.data.token.slice(0,20) + '...');",
+                "}"
+              ]
+            }
+          }],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@enginesjds.com\",\n  \"password\": \"admin123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Perfil (GET /me)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/me"
+          }
+        },
+        {
+          "name": "Cambiar contraseña",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/change-password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"admin123\",\n  \"newPassword\": \"nuevoPass123\",\n  \"confirmPassword\": \"nuevoPass123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Registrar usuario (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"tecnico01\",\n  \"email\": \"tecnico@enginesjds.com\",\n  \"password\": \"tecnico123\",\n  \"role\": \"Técnico\"\n}"
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "👤 Usuarios",
+      "item": [
+        {
+          "name": "Listar usuarios",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"],
+              "query": [
+                { "key": "search", "value": "", "disabled": true },
+                { "key": "role",   "value": "Técnico", "disabled": true },
+                { "key": "status", "value": "Activo",  "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Detalle usuario",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/users/1"
+          }
+        },
+        {
+          "name": "Crear usuario",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/users",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"recepcion01\",\n  \"email\": \"recepcion@enginesjds.com\",\n  \"password\": \"recep123\",\n  \"role\": \"Recepcionista\",\n  \"status\": \"Activo\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Actualizar usuario",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/users/2",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Inactivo\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Restablecer contraseña",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/users/2/reset-password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"nueva123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Eliminar usuario",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/users/2",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Usuario inactivo más de 6 meses\"\n}"
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🧑 Clientes",
+      "item": [
+        {
+          "name": "Listar clientes",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/clients?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "clients"],
+              "query": [
+                { "key": "search", "value": "", "disabled": true },
+                { "key": "status", "value": "Activo", "disabled": true },
+                { "key": "sort",   "value": "created_at", "disabled": true },
+                { "key": "page",   "value": "1" },
+                { "key": "limit",  "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Detalle cliente",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/clients/1"
+          }
+        },
+        {
+          "name": "Crear cliente",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/clients",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"document_type\": \"CC\",\n  \"document\": \"12345678\",\n  \"name\": \"Carlos\",\n  \"last_name\": \"Martínez\",\n  \"phone\": \"3001234567\",\n  \"email\": \"carlos@email.com\",\n  \"city\": \"Bogotá\",\n  \"address\": \"Cra 15 # 80-20\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Actualizar cliente",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/clients/1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"3109876543\",\n  \"city\": \"Medellín\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Eliminar cliente (soft delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/clients/1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Solicitud del cliente — datos duplicados\"\n}"
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🔧 Empleados",
+      "item": [
+        {
+          "name": "Listar empleados",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/employees?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "employees"],
+              "query": [
+                { "key": "search",    "value": "", "disabled": true },
+                { "key": "status",    "value": "Activo", "disabled": true },
+                { "key": "specialty", "value": "", "disabled": true },
+                { "key": "page",      "value": "1" },
+                { "key": "limit",     "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Especialidades (catálogo)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/employees/specialties"
+          }
+        },
+        {
+          "name": "Detalle empleado",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/employees/1"
+          }
+        },
+        {
+          "name": "Rendimiento empleado",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/employees/1/performance"
+          }
+        },
+        {
+          "name": "Crear empleado",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/employees",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"document_type\": \"CC\",\n  \"document\": \"87654321\",\n  \"name\": \"Luis\",\n  \"last_name\": \"García\",\n  \"specialty\": \"Motor\",\n  \"phone\": \"3157654321\",\n  \"email\": \"luis@enginesjds.com\",\n  \"daily_rate\": 80000,\n  \"hire_date\": \"2024-01-15\",\n  \"status\": \"Activo\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Actualizar empleado",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/employees/1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"daily_rate\": 90000,\n  \"specialty\": \"Motor y Transmisión\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Eliminar empleado",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/employees/1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Renuncia voluntaria del empleado\"\n}"
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🏍️ Motocicletas",
+      "item": [
+        {
+          "name": "Listar motos",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/motorcycles?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "motorcycles"],
+              "query": [
+                { "key": "search",    "value": "", "disabled": true },
+                { "key": "brand",     "value": "Yamaha", "disabled": true },
+                { "key": "year",      "value": "2022",   "disabled": true },
+                { "key": "status",    "value": "Disponible", "disabled": true },
+                { "key": "client_id", "value": "1",      "disabled": true },
+                { "key": "page",      "value": "1" },
+                { "key": "limit",     "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Marcas (catálogo)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/motorcycles/brands"
+          }
+        },
+        {
+          "name": "Detalle moto",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/motorcycles/1"
+          }
+        },
+        {
+          "name": "Historial moto",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/motorcycles/1/history"
+          }
+        },
+        {
+          "name": "Registrar moto",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/motorcycles",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": 1,\n  \"plate\": \"ABC123\",\n  \"brand\": \"Yamaha\",\n  \"model\": \"FZ 150\",\n  \"year\": 2022,\n  \"color\": \"Azul\",\n  \"engine_cc\": 150,\n  \"vin\": \"1HGBH41JXMN109186\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Actualizar moto",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/motorcycles/1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"En servicio\",\n  \"color\": \"Rojo\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Eliminar moto",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/motorcycles/1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Moto vendida — cliente confirmó\"\n}"
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📦 Inventario",
+      "item": [
+        {
+          "name": "Listar repuestos",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "inventory"],
+              "query": [
+                { "key": "search",   "value": "", "disabled": true },
+                { "key": "category", "value": "Aceites", "disabled": true },
+                { "key": "status",   "value": "Disponible", "disabled": true },
+                { "key": "page",     "value": "1" },
+                { "key": "limit",    "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Categorías (catálogo)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/inventory/categories"
+          }
+        },
+        {
+          "name": "Marcas (catálogo)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/inventory/brands"
+          }
+        },
+        {
+          "name": "Alertas de stock",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/alerts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "inventory", "alerts"],
+              "query": [
+                { "key": "status", "value": "Stock bajo", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Detalle repuesto",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/inventory/1"
+          }
+        },
+        {
+          "name": "Movimientos de stock",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/1/movements?page=1&limit=30",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "inventory", "1", "movements"],
+              "query": [
+                { "key": "page",  "value": "1" },
+                { "key": "limit", "value": "30" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Crear repuesto",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/inventory",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"ACE-001\",\n  \"name\": \"Aceite 20W50 Motorex\",\n  \"brand\": \"Motorex\",\n  \"category\": \"Aceites\",\n  \"unit_price\": 15000,\n  \"sale_price\": 22000,\n  \"quantity\": 50,\n  \"min_stock\": 10,\n  \"unit\": \"litro\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Actualizar repuesto",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/inventory/1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sale_price\": 25000,\n  \"min_stock\": 15\n}"
+            }
+          }
+        },
+        {
+          "name": "Eliminar repuesto",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/inventory/1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Producto descontinuado por proveedor\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Registrar ENTRADA",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/inventory/1/entry",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qty\": 20,\n  \"notes\": \"Compra a proveedor Motopartes S.A.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Registrar SALIDA",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/inventory/1/output",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qty\": 5,\n  \"notes\": \"Uso en servicio fuera de orden\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Ajuste de inventario",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/inventory/1/adjustment",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 45,\n  \"notes\": \"Corrección por conteo físico\"\n}"
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📅 Citas",
+      "item": [
+        {
+          "name": "Listar citas",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/appointments?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "appointments"],
+              "query": [
+                { "key": "search",      "value": "", "disabled": true },
+                { "key": "status",      "value": "Pendiente", "disabled": true },
+                { "key": "date",        "value": "2025-06-15", "disabled": true },
+                { "key": "client_id",   "value": "1", "disabled": true },
+                { "key": "motorcycle_id","value": "1", "disabled": true },
+                { "key": "sort",        "value": "date", "disabled": true },
+                { "key": "page",        "value": "1" },
+                { "key": "limit",       "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Citas de hoy (vista)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/appointments/today"
+          }
+        },
+        {
+          "name": "Detalle cita",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/appointments/1"
+          }
+        },
+        {
+          "name": "Historial reprogramaciones",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/appointments/1/history"
+          }
+        },
+        {
+          "name": "Agendar cita (PÚBLICA)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/appointments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_name\": \"María López\",\n  \"client_phone\": \"3001234567\",\n  \"client_email\": \"maria@email.com\",\n  \"motorcycle_plate\": \"XYZ456\",\n  \"service_type\": \"Cambio de aceite\",\n  \"requested_date\": \"2025-07-01\",\n  \"requested_time\": \"09:00\",\n  \"notes\": \"Moto hace ruido extraño al acelerar\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Actualizar cita",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/appointments/1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assigned_employee_id\": 1,\n  \"notes\": \"Técnico asignado\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Confirmar cita",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/appointments/1/confirm"
+          }
+        },
+        {
+          "name": "Cancelar cita",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/appointments/1/cancel",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Cliente no se presentó\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Reprogramar cita",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/appointments/1/reschedule",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"new_date\": \"2025-07-05\",\n  \"new_time\": \"10:00\",\n  \"reason\": \"El cliente solicitó cambio de fecha por viaje\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Eliminar cita (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/appointments/1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Duplicado — cita registrada dos veces\"\n}"
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📋 Órdenes de Trabajo",
+      "item": [
+        {
+          "name": "Listar órdenes",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/orders?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"],
+              "query": [
+                { "key": "search",       "value": "", "disabled": true },
+                { "key": "status",       "value": "Pendiente", "disabled": true },
+                { "key": "employee_id",  "value": "1", "disabled": true },
+                { "key": "client_id",    "value": "1", "disabled": true },
+                { "key": "motorcycle_id","value": "1", "disabled": true },
+                { "key": "date_from",    "value": "2025-01-01", "disabled": true },
+                { "key": "date_to",      "value": "2025-12-31", "disabled": true },
+                { "key": "sort",         "value": "entry_date", "disabled": true },
+                { "key": "page",         "value": "1" },
+                { "key": "limit",        "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Órdenes activas",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/orders/active"
+          }
+        },
+        {
+          "name": "Catálogo de servicios",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/service-catalog",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "service-catalog"],
+              "query": [
+                { "key": "search",   "value": "", "disabled": true },
+                { "key": "category", "value": "Mantenimiento", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Detalle orden",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/orders/1"
+          }
+        },
+        {
+          "name": "Historial completo orden",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/orders/1/history"
+          }
+        },
+        {
+          "name": "Crear orden",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": 1,\n  \"motorcycle_id\": 1,\n  \"problem_description\": \"La moto no arranca y hace ruido extraño al encender\",\n  \"assigned_employee_id\": 1,\n  \"appointment_id\": null,\n  \"estimated_delivery_date\": \"2025-07-05\",\n  \"labor_cost\": 50000,\n  \"discount\": 0\n}"
+            }
+          }
+        },
+        {
+          "name": "Actualizar orden",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/orders/1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"diagnostic_notes\": \"Falla en el carburador — se requiere limpieza\",\n  \"work_notes\": \"Limpieza completada, se reemplazó filtro\",\n  \"labor_cost\": 80000,\n  \"discount\": 5000\n}"
+            }
+          }
+        },
+        {
+          "name": "Cambiar estado orden",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/orders/1/change-status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"En proceso\",\n  \"notes\": \"Técnico comenzó el diagnóstico\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Cerrar orden (→ Entregada)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/orders/1/close",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_method\": \"Efectivo\",\n  \"payment_status\": \"Pagado\",\n  \"notes\": \"Cliente retiró el vehículo y pagó en efectivo\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Agregar servicio",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/orders/1/add-service",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"service_catalog_id\": 1,\n  \"service_name\": \"Cambio de aceite\",\n  \"unit_price\": 35000,\n  \"quantity\": 1,\n  \"employee_id\": 1,\n  \"notes\": \"Aceite 20W50\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Eliminar servicio",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/orders/1/services/1"
+          }
+        },
+        {
+          "name": "Agregar repuesto",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/orders/1/add-part",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inventory_id\": 1,\n  \"quantity\": 2\n}"
+            }
+          }
+        },
+        {
+          "name": "Eliminar repuesto",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/orders/1/parts/1"
+          }
+        },
+        {
+          "name": "Eliminar orden (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/orders/1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Orden creada por error — duplicado\"\n}"
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📊 Reportes (STUB — pendiente implementar)",
+      "item": [
+        {
+          "name": "Resumen KPIs",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/reports/summary"
+          }
+        },
+        {
+          "name": "Órdenes por período",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/orders?period=month",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "orders"],
+              "query": [{ "key": "period", "value": "month" }]
+            }
+          }
+        },
+        {
+          "name": "Top repuestos",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/reports/top-parts"
+          }
+        },
+        {
+          "name": "Estadísticas empleados",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/reports/employees"
+          }
+        },
+        {
+          "name": "Estado tecnomecánica",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/reports/tecnomecanica"
+          }
+        },
+        {
+          "name": "Alertas inventario",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/reports/inventory-alerts"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "💚 Health Check",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/health"
+          }
+        }
+      ]
+    }
+
+  ]
+}

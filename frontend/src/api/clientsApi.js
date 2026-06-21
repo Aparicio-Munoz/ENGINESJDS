@@ -23,7 +23,7 @@ export const clientsApi = {
   },
 
   // DELETE /clients/:id (soft delete)
-  remove(id) {
-    return apiClient.delete(`/clients/${id}`).then((r) => r.data)
+  remove(id, reason) {
+    return apiClient.delete(`/clients/${id}`, { data: { reason } }).then((r) => r.data)
   },
 }

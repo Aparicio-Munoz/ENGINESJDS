@@ -31,6 +31,39 @@
   line-height: 1.6;
 }
 
+.reasonField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.reasonLabel {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #344054;
+}
+
+.required {
+  color: #b42318;
+}
+
+.reasonTextarea {
+  resize: vertical;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: #101828;
+  line-height: 1.5;
+}
+
+.reasonTextarea:focus {
+  outline: none;
+  border-color: #7f56d9;
+  box-shadow: 0 0 0 3px rgba(127, 86, 217, 0.15);
+}
+
 .actions {
   display: flex;
   justify-content: flex-end;
@@ -65,4 +98,9 @@
 
 .deleteButton:hover {
   background: #912018;
+}
+
+.deleteButton:disabled {
+  background: #f2b8b5;
+  cursor: not-allowed;
 }

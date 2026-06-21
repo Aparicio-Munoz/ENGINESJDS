@@ -1,0 +1,40 @@
+.page { display: grid; gap: 24px; }
+.pageHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.pageHeader h1, .pageHeader p { margin: 0; }
+.pageHeader h1 { color: #101828; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.1; }
+.pageHeader p { max-width: 680px; color: #475467; line-height: 1.7; }
+.eyebrow { color: #1d4ed8; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+
+.summaryBar { display: flex; flex-wrap: wrap; gap: 10px; }
+.summaryBar span { border: 1px solid #d9e1ec; border-radius: 8px; padding: 10px 12px; color: #344054; background: #fff; font-size: 0.92rem; font-weight: 800; }
+
+.loadingState, .errorState { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 60px 24px; color: #475467; text-align: center; }
+.spinner { width: 36px; height: 36px; border: 3px solid #e5e7eb; border-top-color: #1d4ed8; border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.retryButton { padding: 10px 20px; border: 0; border-radius: 8px; font-family: inherit; font-weight: 800; color: #fff; background: #1d4ed8; cursor: pointer; }
+.emptyState { padding: 60px 24px; color: #667085; text-align: center; font-size: 0.95rem; }
+
+.cardGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+
+.card { border: 1px solid #d9e1ec; border-radius: 12px; padding: 20px; background: #fff; box-shadow: 0 4px 12px rgba(16,24,40,.04); display: flex; flex-direction: column; gap: 12px; transition: border-color .2s, box-shadow .2s; }
+.card:hover { border-color: #93c5fd; box-shadow: 0 8px 24px rgba(29,78,216,.08); }
+
+.cardHeader { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.plateTag { font-family: ui-monospace, monospace; font-weight: 800; font-size: 1rem; color: #101828; background: #f1f5f9; border-radius: 6px; padding: 4px 10px; }
+.statusBadge { display: inline-flex; align-items: center; border-radius: 999px; padding: 4px 10px; font-size: 0.78rem; font-weight: 800; white-space: nowrap; }
+
+.cardTitle { margin: 0; font-size: 1.1rem; font-weight: 800; color: #101828; }
+.cardMeta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.85rem; color: #667085; }
+.vin { font-family: ui-monospace, monospace; font-size: 0.78rem; }
+
+.cardInfo { display: grid; gap: 6px; border-top: 1px solid #eef2f6; padding-top: 12px; }
+.infoRow { display: flex; justify-content: space-between; gap: 12px; font-size: 0.88rem; }
+.infoLabel { color: #667085; font-weight: 700; }
+.orderNum { font-family: ui-monospace, monospace; font-weight: 800; color: #1d4ed8; }
+
+.expandBtn { align-self: flex-start; padding: 6px 12px; border: 1px solid #d0d5dd; border-radius: 6px; background: #fff; color: #1d4ed8; font-size: 0.82rem; font-weight: 700; cursor: pointer; font-family: inherit; }
+.expandBtn:hover { background: #f0f7ff; }
+
+.diagnosticText { margin: 0; font-size: 0.88rem; color: #344054; line-height: 1.6; white-space: pre-wrap; background: #f8fafc; border-radius: 8px; padding: 12px; border: 1px solid #eef2f6; }
+
+@media (max-width: 760px) { .pageHeader { flex-direction: column; } .cardGrid { grid-template-columns: 1fr; } }
