@@ -26,6 +26,23 @@ export async function getSummary() {
   return ReportModel.getSummaryData()
 }
 
+export async function getExecutiveDashboard() {
+  const [kpis, charts, alerts] = await Promise.all([
+    ReportModel.getExecutiveKPIs(),
+    ReportModel.getMonthlyRevenue().then(async (monthlyRevenue) => {
+      const [topServices, topClients, stockByCategory, ordersByTech] = await Promise.all([
+        ReportModel.getTopServices(8),
+        ReportModel.getTopClients(8),
+        ReportModel.getStockByCategory(),
+        ReportModel.getOrdersByTechnician(),
+      ])
+      return { monthlyRevenue, topServices, topClients, stockByCategory, ordersByTech }
+    }),
+    ReportModel.getDashboardAlerts(),
+  ])
+  return { kpis, charts, alerts }
+}
+
 // ── Ventas por período ────────────────────────────────────────
 export async function getOrdersByPeriod(period = 'monthly') {
   if (period && !VALID_PERIODS.includes(period)) {

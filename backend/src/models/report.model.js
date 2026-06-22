@@ -221,6 +221,65 @@ export async function getTecnomecanicaStatus() {
   return { summary, items: itemRows }
 }
 
+// ── Dashboard ejecutivo: KPIs extendidos ─────────────────────
+export async function getExecutiveKPIs() {
+  const pool = getPool()
+  const [
+    [clientsRow], [motosRow], [activeRow], [deliveredRow],
+    [monthRevenueRow], [yearRevenueRow], [pendingApptsRow], [lowStockRow],
+    [statusRows],
+  ] = await Promise.all([
+    pool.query('SELECT COUNT(*) AS cnt FROM clients WHERE deleted_at IS NULL'),
+    pool.query('SELECT COUNT(*) AS cnt FROM motorcycles WHERE deleted_at IS NULL'),
+    pool.query("SELECT COUNT(*) AS cnt FROM orders WHERE status != 'Entregada'"),
+    pool.query("SELECT COUNT(*) AS cnt FROM orders WHERE status = 'Entregada'"),
+    pool.query(`SELECT COALESCE(SUM(final_price), 0) AS revenue FROM orders
+                WHERE status = 'Entregada' AND YEAR(actual_delivery_date) = YEAR(CURDATE())
+                AND MONTH(actual_delivery_date) = MONTH(CURDATE())`),
+    pool.query(`SELECT COALESCE(SUM(final_price), 0) AS revenue FROM orders
+                WHERE status = 'Entregada' AND YEAR(actual_delivery_date) = YEAR(CURDATE())`),
+    pool.query("SELECT COUNT(*) AS cnt FROM appointments WHERE status = 'Pendiente'"),
+    pool.query('SELECT COUNT(*) AS cnt FROM inventory WHERE quantity <= min_stock'),
+    pool.query(`SELECT status, COUNT(*) AS cnt FROM orders GROUP BY status`),
+  ])
+
+  const ordersByStatus = {}
+  for (const r of statusRows) ordersByStatus[r.status] = Number(r.cnt)
+
+  return {
+    totalClients:     Number(clientsRow[0].cnt),
+    totalMotorcycles: Number(motosRow[0].cnt),
+    activeOrders:     Number(activeRow[0].cnt),
+    deliveredOrders:  Number(deliveredRow[0].cnt),
+    monthlyRevenue:   Number(monthRevenueRow[0].revenue),
+    yearlyRevenue:    Number(yearRevenueRow[0].revenue),
+    pendingAppts:     Number(pendingApptsRow[0].cnt),
+    lowStockItems:    Number(lowStockRow[0].cnt),
+    ordersByStatus,
+  }
+}
+
+// ── Dashboard: alertas ───────────────────────────────────────
+export async function getDashboardAlerts() {
+  const pool = getPool()
+  const [[lowStock], [upcomingAppts], [delayedOrders]] = await Promise.all([
+    pool.query(`SELECT id, code, name, brand, quantity, min_stock
+                FROM inventory WHERE quantity <= min_stock ORDER BY quantity ASC LIMIT 5`),
+    pool.query(`SELECT id, client_name, service_type, requested_date
+                FROM appointments WHERE status = 'Pendiente'
+                AND requested_date <= DATE_ADD(CURDATE(), INTERVAL 3 DAY)
+                ORDER BY requested_date ASC LIMIT 5`),
+    pool.query(`SELECT o.id, o.order_number, o.status, o.entry_date, o.estimated_delivery_date,
+                CONCAT(c.name, ' ', c.last_name) AS client_name
+                FROM orders o INNER JOIN clients c ON c.id = o.client_id
+                WHERE o.status != 'Entregada'
+                AND o.estimated_delivery_date IS NOT NULL
+                AND o.estimated_delivery_date < CURDATE()
+                ORDER BY o.estimated_delivery_date ASC LIMIT 5`),
+  ])
+  return { lowStock, upcomingAppts, delayedOrders }
+}
+
 // ── Chart data: ingresos mensuales (últimos 12 meses) ────────
 export async function getMonthlyRevenue() {
   const [rows] = await getPool().query(

@@ -22,8 +22,11 @@
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
+    "multer": "^2.2.0",
     "mysql2": "^3.10.0",
-    "nodemailer": "^9.0.0"
+    "nodemailer": "^9.0.0",
+    "pdfkit": "^0.19.1",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"

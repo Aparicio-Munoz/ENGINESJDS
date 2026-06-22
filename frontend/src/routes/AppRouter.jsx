@@ -22,6 +22,10 @@ import { Marcas } from '../pages/admin/Marcas/Marcas'
 import { OrdenesTrabajo } from '../pages/admin/OrdenesTrabajo/OrdenesTrabajo'
 import { Citas } from '../pages/admin/Citas/Citas'
 import { Auditoria } from '../pages/admin/Auditoria/Auditoria'
+import { Backups } from '../pages/admin/Backups/Backups'
+import { Facturas } from '../pages/admin/Facturas/Facturas'
+import { HistorialMoto } from '../pages/admin/HistorialMoto/HistorialMoto'
+import { CRM } from '../pages/admin/CRM/CRM'
 import { Register } from '../pages/Register/Register'
 import { NotFound } from '../pages/NotFound/NotFound'
 import { DashboardTecnico } from '../pages/tecnico/DashboardTecnico/DashboardTecnico'
@@ -179,6 +183,46 @@ const router = createBrowserRouter([
         element: (
           <RoleRoute allowedRoles={['Administrador']}>
             <Auditoria />
+          </RoleRoute>
+        ),
+      },
+
+      // ── CRM: solo Administrador ─────────────────────────────
+      {
+        path: 'crm',
+        element: (
+          <RoleRoute allowedRoles={['Administrador']}>
+            <CRM />
+          </RoleRoute>
+        ),
+      },
+
+      // ── Historial clínico de moto ──────────────────────────
+      {
+        path: 'historial-moto/:id',
+        element: (
+          <RoleRoute allowedRoles={['Administrador', 'Recepcionista']}>
+            <HistorialMoto />
+          </RoleRoute>
+        ),
+      },
+
+      // ── Facturación: solo Administrador ────────────────────
+      {
+        path: 'facturas',
+        element: (
+          <RoleRoute allowedRoles={['Administrador']}>
+            <Facturas />
+          </RoleRoute>
+        ),
+      },
+
+      // ── Respaldos: solo Administrador ─────────────────────
+      {
+        path: 'backups',
+        element: (
+          <RoleRoute allowedRoles={['Administrador']}>
+            <Backups />
           </RoleRoute>
         ),
       },

@@ -11,6 +11,7 @@ import {
   deleteOrderRules,
 } from '../validations/order.validation.js'
 import * as OrderController from '../controllers/orders.controller.js'
+import * as PdfController from '../controllers/pdf.controller.js'
 
 const router = Router()
 router.use(verifyToken)
@@ -53,6 +54,9 @@ router.get('/:id', OrderController.getById)
 // GET /api/orders/:id/history
 //   { order, status_history, services, parts, sale }
 router.get('/:id/history', OrderController.getHistory)
+
+// GET /api/orders/:id/pdf   → application/pdf
+router.get('/:id/pdf', PdfController.getOrderPDF)
 
 // ── Actualización principal ───────────────────────────────────
 

@@ -993,6 +993,48 @@
   flex-shrink: 0;
 }
 
+/* ── PDF button (table — compact icon) ─────────── */
+.pdfButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #DC2626;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.pdfButton:hover {
+  background: #B91C1C;
+}
+
+/* ── PDF button (detail modal — with label) ────── */
+.pdfButtonLg {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #DC2626;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.pdfButtonLg:hover {
+  background: #B91C1C;
+}
+
 /* ── WhatsApp button (table — compact icon) ────── */
 .whatsappButton {
   display: inline-flex;

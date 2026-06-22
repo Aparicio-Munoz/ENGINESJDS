@@ -31,6 +31,11 @@ export const reportsApi = {
     return apiClient.get('/reports/inventory-alerts').then((r) => r.data.data)
   },
 
+  // GET /reports/executive → { kpis, charts, alerts }
+  getExecutiveDashboard() {
+    return apiClient.get('/reports/executive').then((r) => r.data.data)
+  },
+
   // GET /reports/chart-data → { monthlyRevenue, topServices, topClients, stockByCategory, ordersByTech, appointmentsByMonth }
   getChartData() {
     return apiClient.get('/reports/chart-data').then((r) => r.data.data)

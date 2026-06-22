@@ -458,6 +458,33 @@
   color: rgba(255, 255, 255, 0.35);
 }
 
+/* ── PDF section ─────────────────────────────────── */
+.pdfSection {
+  display: flex;
+  justify-content: center;
+  padding-top: 8px;
+}
+
+.pdfBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 10px;
+  background: rgba(249, 115, 22, 0.12);
+  border: 1px solid rgba(249, 115, 22, 0.3);
+  color: #F97316;
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.pdfBtn:hover {
+  background: rgba(249, 115, 22, 0.2);
+  border-color: #F97316;
+}
+
 /* ── Footer ──────────────────────────────────────── */
 .footer {
   position: relative;

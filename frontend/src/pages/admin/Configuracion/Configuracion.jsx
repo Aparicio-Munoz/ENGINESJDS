@@ -1,122 +1,75 @@
-import { useState } from 'react'
-import { getTallerConfig, saveTallerConfig } from '../../../services/tallerConfigService'
-import { getUsers } from '../../../services/usersService'
+import { useEffect, useRef, useState } from 'react'
+import { settingsApi } from '../../../api/settingsApi'
 import { useToast } from '../../../hooks/useToast'
 import styles from './Configuracion.module.css'
 
-const INITIAL_USERS = [
-  { id: 'u-1', username: 'admin', email: 'admin@enginesjds.com', role: 'Administrador', status: 'Activo' },
-  { id: 'u-2', username: 'tecnico1', email: 'tecnico1@enginesjds.com', role: 'Técnico', status: 'Activo' },
-]
-
-function BuildingIcon() {
-  return (
-    <svg viewBox="0 0 20 20" fill="currentColor" width="17" height="17" aria-hidden="true">
-      <path fillRule="evenodd" d="M4 16.5v-13h-.25a.75.75 0 0 1 0-1.5h12.5a.75.75 0 0 1 0 1.5H16v13h.25a.75.75 0 0 1 0 1.5h-3.5a.75.75 0 0 1-.75-.75v-2.5a.75.75 0 0 0-.75-.75h-2.5a.75.75 0 0 0-.75.75v2.5a.75.75 0 0 1-.75.75h-3.5a.75.75 0 0 1 0-1.5H4Zm3-11a.75.75 0 0 1 .75-.75h.5a.75.75 0 0 1 0 1.5h-.5A.75.75 0 0 1 7 5.5Zm.75 2.25h.5a.75.75 0 0 1 0 1.5h-.5a.75.75 0 0 1 0-1.5Zm2.75-2.25a.75.75 0 0 1 .75-.75h.5a.75.75 0 0 1 0 1.5h-.5A.75.75 0 0 1 10.5 5.5Zm.75 2.25h.5a.75.75 0 0 1 0 1.5h-.5a.75.75 0 0 1 0-1.5Z" clipRule="evenodd" />
-    </svg>
-  )
-}
-
-function ClockIcon() {
-  return (
-    <svg viewBox="0 0 20 20" fill="currentColor" width="17" height="17" aria-hidden="true">
-      <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-13a.75.75 0 0 0-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 0 0 0-1.5h-3.25V5Z" clipRule="evenodd" />
-    </svg>
-  )
-}
-
-function CalendarIcon() {
-  return (
-    <svg viewBox="0 0 20 20" fill="currentColor" width="17" height="17" aria-hidden="true">
-      <path fillRule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clipRule="evenodd" />
-    </svg>
-  )
-}
-
-function BoxIcon() {
-  return (
-    <svg viewBox="0 0 20 20" fill="currentColor" width="17" height="17" aria-hidden="true">
-      <path d="M10.362 1.093a.75.75 0 0 0-.724 0L2.523 5.018 10 9.143l7.477-4.125-7.115-3.925ZM18 6.443l-7.25 4V18.39l6.498-3.7a.75.75 0 0 0 .752-.931V6.443ZM9.25 18.39V10.443L2 6.443v7.316a.75.75 0 0 0 .752.931L9.25 18.39Z" />
-    </svg>
-  )
-}
-
-function CarIcon() {
-  return (
-    <svg viewBox="0 0 20 20" fill="currentColor" width="17" height="17" aria-hidden="true">
-      <path d="M6.5 3A1.5 1.5 0 0 0 5 4.5v.796a3.968 3.968 0 0 0-1.981 1.39L1.187 9.604A1.5 1.5 0 0 0 1 10.35V13.5A1.5 1.5 0 0 0 2.5 15h.5a2 2 0 0 0 4 0h6a2 2 0 0 0 4 0h.5a1.5 1.5 0 0 0 1.5-1.5v-3.15a1.5 1.5 0 0 0-.187-.746l-1.832-2.918A3.968 3.968 0 0 0 15 5.296V4.5A1.5 1.5 0 0 0 13.5 3h-7ZM6.5 4.5h7v.796a2.47 2.47 0 0 1-.085.63H6.585a2.47 2.47 0 0 1-.085-.63V4.5ZM5.5 8h9l1.4 2.232H4.1L5.5 8ZM5 13a1 1 0 1 1 2 0 1 1 0 0 1-2 0Zm9 0a1 1 0 1 1 2 0 1 1 0 0 1-2 0Z" />
-    </svg>
-  )
-}
-
-function UsersIcon() {
-  return (
-    <svg viewBox="0 0 20 20" fill="currentColor" width="17" height="17" aria-hidden="true">
-      <path d="M7 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM14.5 9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM1.615 16.428a1.224 1.224 0 0 1-.569-1.175 6.002 6.002 0 0 1 11.908 0c.058.467-.172.92-.57 1.174A9.953 9.953 0 0 1 7 17a9.953 9.953 0 0 1-5.385-1.572ZM14.5 16h-.106c.07-.297.088-.611.048-.933a7.47 7.47 0 0 0-1.588-3.755 4.502 4.502 0 0 1 5.874 2.636.818.818 0 0 1-.36.98A7.465 7.465 0 0 1 14.5 16Z" />
-    </svg>
-  )
-}
-
 export function Configuracion() {
   const toast = useToast()
-  const cfg = getTallerConfig()
-  const users = getUsers(INITIAL_USERS)
+  const mountedRef = useRef(true)
+  const [settings, setSettings] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [section, setSection] = useState('info')
 
-  const [taller, setTaller] = useState({
-    nombre: cfg.nombre,
-    direccion: cfg.direccion,
-    telefono: cfg.telefono,
-    whatsapp: cfg.whatsapp,
-    email: cfg.email,
-  })
+  useEffect(() => {
+    mountedRef.current = true
+    loadSettings()
+    return () => { mountedRef.current = false }
+  }, [])
 
-  const [horario, setHorario] = useState({
-    horaApertura: cfg.horaApertura,
-    horaCierre: cfg.horaCierre,
-  })
-
-  const [citas, setCitas] = useState({
-    duracionCita: cfg.duracionCita,
-    intervaloCita: cfg.intervaloCita,
-  })
-
-  const [inventario, setInventario] = useState({
-    stockMinimo: cfg.stockMinimo,
-  })
-
-  const [tecno, setTecno] = useState({
-    diasTecno: cfg.diasTecno,
-  })
-
-  function handleSaveTaller(e) {
-    e.preventDefault()
-    saveTallerConfig({ ...getTallerConfig(), ...taller })
-    toast.success('Información del taller guardada exitosamente')
+  async function loadSettings() {
+    setLoading(true)
+    try {
+      const data = await settingsApi.get()
+      if (mountedRef.current) setSettings(data)
+    } catch { if (mountedRef.current) toast.error('Error al cargar configuración') }
+    finally { if (mountedRef.current) setLoading(false) }
   }
 
-  function handleSaveHorario(e) {
-    e.preventDefault()
-    saveTallerConfig({ ...getTallerConfig(), ...horario })
-    toast.success('Horario de atención guardado exitosamente')
+  async function handleSave(fields) {
+    setSaving(true)
+    try {
+      const updated = await settingsApi.update(fields)
+      if (mountedRef.current) { setSettings(updated); toast.success('Configuración guardada') }
+    } catch (err) { toast.error(err?.response?.data?.message ?? 'Error al guardar') }
+    finally { if (mountedRef.current) setSaving(false) }
   }
 
-  function handleSaveCitas(e) {
-    e.preventDefault()
-    saveTallerConfig({ ...getTallerConfig(), ...citas })
-    toast.success('Configuración de citas guardada exitosamente')
+  async function handleLogoUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setSaving(true)
+    try {
+      const updated = await settingsApi.uploadLogo(file)
+      if (mountedRef.current) { setSettings(updated); toast.success('Logo actualizado') }
+    } catch (err) { toast.error(err?.response?.data?.message ?? 'Error al subir logo') }
+    finally { if (mountedRef.current) setSaving(false) }
   }
 
-  function handleSaveInventario(e) {
-    e.preventDefault()
-    saveTallerConfig({ ...getTallerConfig(), ...inventario })
-    toast.success('Configuración de inventario guardada exitosamente')
+  function upd(key, val) { setSettings((p) => ({ ...p, [key]: val })) }
+  function updHours(key, val) {
+    setSettings((p) => {
+      const wh = typeof p.working_hours === 'string' ? JSON.parse(p.working_hours) : (p.working_hours ?? {})
+      return { ...p, working_hours: { ...wh, [key]: val } }
+    })
   }
 
-  function handleSaveTecno(e) {
-    e.preventDefault()
-    saveTallerConfig({ ...getTallerConfig(), ...tecno })
-    toast.success('Configuración tecnomecánica guardada exitosamente')
-  }
+  const wh = settings?.working_hours
+    ? (typeof settings.working_hours === 'string' ? JSON.parse(settings.working_hours) : settings.working_hours)
+    : {}
+
+  const TABS = [
+    { id: 'info', label: 'Taller', icon: '🏢' },
+    { id: 'logo', label: 'Logo', icon: '🖼️' },
+    { id: 'social', label: 'Redes', icon: '🌐' },
+    { id: 'billing', label: 'Facturación', icon: '💰' },
+    { id: 'signature', label: 'Firma', icon: '✍️' },
+    { id: 'appearance', label: 'Apariencia', icon: '🎨' },
+    { id: 'hours', label: 'Horarios', icon: '🕐' },
+  ]
+
+  if (loading) return <div className={styles.page}><div className={styles.loadingState}><div className={styles.spinner} />Cargando configuración…</div></div>
+  if (!settings) return <div className={styles.page}><div className={styles.loadingState}>Error al cargar configuración</div></div>
 
   return (
     <div className={styles.page}>
@@ -124,273 +77,133 @@ export function Configuracion() {
         <div>
           <p className={styles.eyebrow}>Sistema</p>
           <h1 className={styles.title}>Configuración</h1>
-          <p className={styles.subtitle}>Personaliza el taller, horarios y preferencias del sistema</p>
+          <p className={styles.subtitle}>Personaliza completamente tu taller.</p>
         </div>
       </header>
 
+      {/* Tabs */}
+      <nav className={styles.tabNav}>
+        {TABS.map((t) => (
+          <button key={t.id} type="button" className={`${styles.tab} ${section === t.id ? styles.tabActive : ''}`} onClick={() => setSection(t.id)}>
+            <span>{t.icon}</span> {t.label}
+          </button>
+        ))}
+      </nav>
+
       <div className={styles.layout}>
-        {/* ── Información del taller ──────────────── */}
-        <section className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <div className={styles.sectionTitleRow}>
-              <span className={styles.sectionIcon} style={{ background: '#EFF6FF', color: '#1d4ed8' }}>
-                <BuildingIcon />
-              </span>
-              <div>
-                <h2 className={styles.sectionTitle}>Información del Taller</h2>
-                <p className={styles.sectionSub}>Datos de contacto e identificación del negocio</p>
-              </div>
-            </div>
-          </div>
-          <form onSubmit={handleSaveTaller} className={styles.form}>
-            <div className={styles.field}>
-              <label className={styles.label}>Nombre del taller</label>
-              <input
-                className={styles.input}
-                value={taller.nombre}
-                onChange={(e) => setTaller((p) => ({ ...p, nombre: e.target.value }))}
-                placeholder="ENGINES JDS"
-              />
-            </div>
-            <div className={`${styles.field} ${styles.fieldFull}`}>
-              <label className={styles.label}>Dirección</label>
-              <input
-                className={styles.input}
-                value={taller.direccion}
-                onChange={(e) => setTaller((p) => ({ ...p, direccion: e.target.value }))}
-                placeholder="Calle 45 # 12-30, Bogotá"
-              />
-            </div>
-            <div className={styles.field}>
-              <label className={styles.label}>Teléfono</label>
-              <input
-                className={styles.input}
-                value={taller.telefono}
-                onChange={(e) => setTaller((p) => ({ ...p, telefono: e.target.value }))}
-                placeholder="+57 1 234 5678"
-              />
-            </div>
-            <div className={styles.field}>
-              <label className={styles.label}>WhatsApp</label>
-              <input
-                className={styles.input}
-                value={taller.whatsapp}
-                onChange={(e) => setTaller((p) => ({ ...p, whatsapp: e.target.value }))}
-                placeholder="+57 300 000 0000"
-              />
-            </div>
-            <div className={`${styles.field} ${styles.fieldFull}`}>
-              <label className={styles.label}>Correo electrónico</label>
-              <input
-                className={styles.input}
-                type="email"
-                value={taller.email}
-                onChange={(e) => setTaller((p) => ({ ...p, email: e.target.value }))}
-                placeholder="contacto@enginesjds.com"
-              />
-            </div>
-            <div className={styles.formActions}>
-              <button type="submit" className={styles.primaryButton}>Guardar información</button>
-            </div>
-          </form>
-        </section>
+        {/* ── 1. Info del taller ──────────────────── */}
+        {section === 'info' ? (
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Información del Taller</h2>
+            <form className={styles.form} onSubmit={(e) => { e.preventDefault(); handleSave({ business_name: settings.business_name, slogan: settings.slogan, address: settings.address, phone: settings.phone, email: settings.email, whatsapp: settings.whatsapp }) }}>
+              <div className={styles.field}><label className={styles.label}>Nombre del taller</label><input className={styles.input} value={settings.business_name ?? ''} onChange={(e) => upd('business_name', e.target.value)} /></div>
+              <div className={styles.field}><label className={styles.label}>Slogan</label><input className={styles.input} value={settings.slogan ?? ''} onChange={(e) => upd('slogan', e.target.value)} /></div>
+              <div className={`${styles.field} ${styles.fieldFull}`}><label className={styles.label}>Dirección</label><input className={styles.input} value={settings.address ?? ''} onChange={(e) => upd('address', e.target.value)} /></div>
+              <div className={styles.field}><label className={styles.label}>Teléfono</label><input className={styles.input} value={settings.phone ?? ''} onChange={(e) => upd('phone', e.target.value)} /></div>
+              <div className={styles.field}><label className={styles.label}>WhatsApp</label><input className={styles.input} value={settings.whatsapp ?? ''} onChange={(e) => upd('whatsapp', e.target.value)} /></div>
+              <div className={`${styles.field} ${styles.fieldFull}`}><label className={styles.label}>Correo electrónico</label><input className={styles.input} type="email" value={settings.email ?? ''} onChange={(e) => upd('email', e.target.value)} /></div>
+              <div className={styles.formActions}><button type="submit" className={styles.primaryButton} disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</button></div>
+            </form>
+          </section>
+        ) : null}
 
-        {/* ── Horario ─────────────────────────────── */}
-        <section className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <div className={styles.sectionTitleRow}>
-              <span className={styles.sectionIcon} style={{ background: '#FFF7ED', color: '#EA580C' }}>
-                <ClockIcon />
-              </span>
-              <div>
-                <h2 className={styles.sectionTitle}>Horario de Atención</h2>
-                <p className={styles.sectionSub}>Define las horas de apertura y cierre del taller</p>
-              </div>
+        {/* ── 2. Logo ────────────────────────────── */}
+        {section === 'logo' ? (
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Logo del Taller</h2>
+            <div className={styles.logoSection}>
+              {settings.logo_url ? (
+                <div className={styles.logoPreview}><img src={settings.logo_url} alt="Logo" /><button type="button" className={styles.dangerBtn} onClick={() => handleSave({ logo_url: null })}>Eliminar logo</button></div>
+              ) : <p className={styles.noLogo}>Sin logo configurado</p>}
+              <label className={styles.uploadLabel}>
+                <input type="file" accept="image/*" className={styles.hiddenInput} onChange={handleLogoUpload} />
+                <span className={styles.uploadBtn}>{saving ? 'Subiendo…' : 'Subir imagen'}</span>
+              </label>
             </div>
-          </div>
-          <form onSubmit={handleSaveHorario} className={styles.form}>
-            <div className={styles.field}>
-              <label className={styles.label}>Hora de apertura</label>
-              <input
-                className={styles.input}
-                type="time"
-                value={horario.horaApertura}
-                onChange={(e) => setHorario((p) => ({ ...p, horaApertura: e.target.value }))}
-              />
-            </div>
-            <div className={styles.field}>
-              <label className={styles.label}>Hora de cierre</label>
-              <input
-                className={styles.input}
-                type="time"
-                value={horario.horaCierre}
-                onChange={(e) => setHorario((p) => ({ ...p, horaCierre: e.target.value }))}
-              />
-            </div>
-            <div className={styles.horarioPreview}>
-              <span className={styles.horarioText}>
-                Horario configurado: <strong>{horario.horaApertura}</strong> — <strong>{horario.horaCierre}</strong>
-              </span>
-            </div>
-            <div className={styles.formActions}>
-              <button type="submit" className={styles.primaryButton}>Guardar horario</button>
-            </div>
-          </form>
-        </section>
+          </section>
+        ) : null}
 
-        {/* ── Citas ───────────────────────────────── */}
-        <section className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <div className={styles.sectionTitleRow}>
-              <span className={styles.sectionIcon} style={{ background: '#F0FDF4', color: '#16A34A' }}>
-                <CalendarIcon />
-              </span>
-              <div>
-                <h2 className={styles.sectionTitle}>Configuración de Citas</h2>
-                <p className={styles.sectionSub}>Duración e intervalo entre citas del taller</p>
-              </div>
-            </div>
-          </div>
-          <form onSubmit={handleSaveCitas} className={styles.form}>
-            <div className={styles.field}>
-              <label className={styles.label}>Duración por cita (minutos)</label>
-              <input
-                className={styles.input}
-                type="number"
-                min="15"
-                max="240"
-                step="15"
-                value={citas.duracionCita}
-                onChange={(e) => setCitas((p) => ({ ...p, duracionCita: Number(e.target.value) }))}
-              />
-              <span className={styles.fieldHint}>Tiempo estimado por servicio</span>
-            </div>
-            <div className={styles.field}>
-              <label className={styles.label}>Intervalo entre citas (minutos)</label>
-              <input
-                className={styles.input}
-                type="number"
-                min="0"
-                max="120"
-                step="5"
-                value={citas.intervaloCita}
-                onChange={(e) => setCitas((p) => ({ ...p, intervaloCita: Number(e.target.value) }))}
-              />
-              <span className={styles.fieldHint}>Tiempo libre entre turnos</span>
-            </div>
-            <div className={styles.formActions}>
-              <button type="submit" className={styles.primaryButton}>Guardar configuración</button>
-            </div>
-          </form>
-        </section>
+        {/* ── 3. Redes sociales ──────────────────── */}
+        {section === 'social' ? (
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Redes Sociales</h2>
+            <form className={styles.form} onSubmit={(e) => { e.preventDefault(); handleSave({ facebook: settings.facebook, instagram: settings.instagram, website: settings.website }) }}>
+              <div className={styles.field}><label className={styles.label}>Facebook</label><input className={styles.input} placeholder="https://facebook.com/enginesjds" value={settings.facebook ?? ''} onChange={(e) => upd('facebook', e.target.value)} /></div>
+              <div className={styles.field}><label className={styles.label}>Instagram</label><input className={styles.input} placeholder="https://instagram.com/enginesjds" value={settings.instagram ?? ''} onChange={(e) => upd('instagram', e.target.value)} /></div>
+              <div className={`${styles.field} ${styles.fieldFull}`}><label className={styles.label}>Página web</label><input className={styles.input} value={settings.website ?? ''} onChange={(e) => upd('website', e.target.value)} /></div>
+              <div className={styles.formActions}><button type="submit" className={styles.primaryButton} disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</button></div>
+            </form>
+          </section>
+        ) : null}
 
-        {/* ── Inventario ──────────────────────────── */}
-        <section className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <div className={styles.sectionTitleRow}>
-              <span className={styles.sectionIcon} style={{ background: '#FFF1F2', color: '#DC2626' }}>
-                <BoxIcon />
-              </span>
-              <div>
-                <h2 className={styles.sectionTitle}>Inventario</h2>
-                <p className={styles.sectionSub}>Umbral de alerta por stock bajo de repuestos</p>
-              </div>
-            </div>
-          </div>
-          <form onSubmit={handleSaveInventario} className={styles.form}>
-            <div className={styles.field}>
-              <label className={styles.label}>Stock mínimo para alerta</label>
-              <input
-                className={styles.input}
-                type="number"
-                min="1"
-                max="100"
-                value={inventario.stockMinimo}
-                onChange={(e) => setInventario({ stockMinimo: Number(e.target.value) })}
-              />
-              <span className={styles.fieldHint}>
-                Se mostrará alerta cuando un repuesto tenga {inventario.stockMinimo} unidades o menos
-              </span>
-            </div>
-            <div className={styles.formActions}>
-              <button type="submit" className={styles.primaryButton}>Guardar configuración</button>
-            </div>
-          </form>
-        </section>
+        {/* ── 4. Facturación ─────────────────────── */}
+        {section === 'billing' ? (
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Facturación</h2>
+            <form className={styles.form} onSubmit={(e) => { e.preventDefault(); handleSave({ currency: settings.currency, tax_percent: settings.tax_percent, footer_message: settings.footer_message }) }}>
+              <div className={styles.field}><label className={styles.label}>Moneda</label><input className={styles.input} value={settings.currency ?? 'COP'} onChange={(e) => upd('currency', e.target.value)} /></div>
+              <div className={styles.field}><label className={styles.label}>IVA (%)</label><input className={styles.input} type="number" min="0" max="100" step="0.01" value={settings.tax_percent ?? 0} onChange={(e) => upd('tax_percent', e.target.value)} /></div>
+              <div className={`${styles.field} ${styles.fieldFull}`}><label className={styles.label}>Mensaje pie de factura</label><textarea className={styles.textarea} rows={3} value={settings.footer_message ?? ''} onChange={(e) => upd('footer_message', e.target.value)} /></div>
+              <div className={styles.formActions}><button type="submit" className={styles.primaryButton} disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</button></div>
+            </form>
+          </section>
+        ) : null}
 
-        {/* ── Tecnomecánica ───────────────────────── */}
-        <section className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <div className={styles.sectionTitleRow}>
-              <span className={styles.sectionIcon} style={{ background: '#FFFBEB', color: '#D97706' }}>
-                <CarIcon />
-              </span>
-              <div>
-                <h2 className={styles.sectionTitle}>Tecnomecánica</h2>
-                <p className={styles.sectionSub}>Días de anticipación para alertas de vencimiento</p>
-              </div>
-            </div>
-          </div>
-          <form onSubmit={handleSaveTecno} className={styles.form}>
-            <div className={styles.field}>
-              <label className={styles.label}>Días de anticipación para alerta</label>
-              <input
-                className={styles.input}
-                type="number"
-                min="7"
-                max="365"
-                value={tecno.diasTecno}
-                onChange={(e) => setTecno({ diasTecno: Number(e.target.value) })}
-              />
-              <span className={styles.fieldHint}>
-                Alertar cuando falten {tecno.diasTecno} días o menos para el vencimiento
-              </span>
-            </div>
-            <div className={styles.formActions}>
-              <button type="submit" className={styles.primaryButton}>Guardar configuración</button>
-            </div>
-          </form>
-        </section>
+        {/* ── 5. Firma digital ───────────────────── */}
+        {section === 'signature' ? (
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Firma Digital</h2>
+            <form className={styles.form} onSubmit={(e) => { e.preventDefault(); handleSave({ signature_name: settings.signature_name, signature_position: settings.signature_position }) }}>
+              <div className={styles.field}><label className={styles.label}>Nombre</label><input className={styles.input} placeholder="José García" value={settings.signature_name ?? ''} onChange={(e) => upd('signature_name', e.target.value)} /></div>
+              <div className={styles.field}><label className={styles.label}>Cargo</label><input className={styles.input} placeholder="Gerente Técnico" value={settings.signature_position ?? ''} onChange={(e) => upd('signature_position', e.target.value)} /></div>
+              <div className={styles.formActions}><button type="submit" className={styles.primaryButton} disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</button></div>
+            </form>
+          </section>
+        ) : null}
 
-        {/* ── Usuarios con acceso ─────────────────── */}
-        <section className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <div className={styles.sectionTitleRow}>
-              <span className={styles.sectionIcon} style={{ background: '#F5F3FF', color: '#7C3AED' }}>
-                <UsersIcon />
-              </span>
-              <div>
-                <h2 className={styles.sectionTitle}>Usuarios con Acceso</h2>
-                <p className={styles.sectionSub}>Personas con acceso al panel administrativo</p>
-              </div>
-            </div>
-          </div>
-          <div className={styles.userList}>
-            {users.map((u) => (
-              <div key={u.id} className={styles.userRow}>
-                <div className={styles.userAvatar}>
-                  {(u.username || u.email || 'U')[0].toUpperCase()}
-                </div>
-                <div className={styles.userInfo}>
-                  <span className={styles.userName}>{u.username || u.email}</span>
-                  <span className={styles.userEmail}>{u.email}</span>
-                </div>
-                <div className={styles.userMeta}>
-                  <span className={styles.userRole}>{u.role}</span>
-                  <span
-                    className={styles.userStatus}
-                    data-status={u.status}
-                  >
-                    {u.status}
-                  </span>
+        {/* ── 6. Apariencia ──────────────────────── */}
+        {section === 'appearance' ? (
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Apariencia</h2>
+            <form className={styles.form} onSubmit={(e) => { e.preventDefault(); handleSave({ primary_color: settings.primary_color, secondary_color: settings.secondary_color }) }}>
+              <div className={styles.field}>
+                <label className={styles.label}>Color principal</label>
+                <div className={styles.colorRow}>
+                  <input type="color" value={settings.primary_color ?? '#F97316'} onChange={(e) => upd('primary_color', e.target.value)} className={styles.colorInput} />
+                  <input className={styles.input} value={settings.primary_color ?? ''} onChange={(e) => upd('primary_color', e.target.value)} />
                 </div>
               </div>
-            ))}
-          </div>
-          <p className={styles.usersHint}>
-            Gestiona los usuarios desde la sección <strong>Usuarios</strong> del menú lateral.
-          </p>
-        </section>
+              <div className={styles.field}>
+                <label className={styles.label}>Color secundario</label>
+                <div className={styles.colorRow}>
+                  <input type="color" value={settings.secondary_color ?? '#1E293B'} onChange={(e) => upd('secondary_color', e.target.value)} className={styles.colorInput} />
+                  <input className={styles.input} value={settings.secondary_color ?? ''} onChange={(e) => upd('secondary_color', e.target.value)} />
+                </div>
+              </div>
+              <div className={`${styles.field} ${styles.fieldFull}`}>
+                <label className={styles.label}>Vista previa</label>
+                <div className={styles.preview} style={{ background: settings.secondary_color ?? '#1E293B' }}>
+                  <span style={{ color: settings.primary_color ?? '#F97316', fontWeight: 800, fontSize: '1.2rem' }}>◈ {settings.business_name}</span>
+                  <span style={{ color: '#94A3B8', fontSize: '0.82rem' }}>{settings.slogan}</span>
+                </div>
+              </div>
+              <div className={styles.formActions}><button type="submit" className={styles.primaryButton} disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</button></div>
+            </form>
+          </section>
+        ) : null}
+
+        {/* ── 7. Horarios ────────────────────────── */}
+        {section === 'hours' ? (
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Horarios de Atención</h2>
+            <form className={styles.form} onSubmit={(e) => { e.preventDefault(); handleSave({ working_hours: wh }) }}>
+              <div className={styles.field}><label className={styles.label}>Lunes a Viernes</label><input className={styles.input} placeholder="8:00 AM - 6:00 PM" value={wh.weekdays ?? ''} onChange={(e) => updHours('weekdays', e.target.value)} /></div>
+              <div className={styles.field}><label className={styles.label}>Sábado</label><input className={styles.input} placeholder="8:00 AM - 1:00 PM" value={wh.saturday ?? ''} onChange={(e) => updHours('saturday', e.target.value)} /></div>
+              <div className={styles.field}><label className={styles.label}>Domingo</label><input className={styles.input} placeholder="Cerrado" value={wh.sunday ?? ''} onChange={(e) => updHours('sunday', e.target.value)} /></div>
+              <div className={styles.formActions}><button type="submit" className={styles.primaryButton} disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</button></div>
+            </form>
+          </section>
+        ) : null}
       </div>
     </div>
   )

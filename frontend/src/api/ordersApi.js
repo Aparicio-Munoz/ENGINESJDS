@@ -72,4 +72,15 @@ export const ordersApi = {
   removePart(id, itemId) {
     return apiClient.delete(`/orders/${id}/parts/${itemId}`).then((r) => r.data)
   },
+
+  // GET /orders/:id/pdf → descarga el PDF de la orden
+  async downloadPDF(id) {
+    const res = await apiClient.get(`/orders/${id}/pdf`, { responseType: 'blob' })
+    const url = URL.createObjectURL(res.data)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `OT_${id}.pdf`
+    a.click()
+    URL.revokeObjectURL(url)
+  },
 }

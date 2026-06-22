@@ -69,6 +69,13 @@ export async function getAuditTables(req, res, next) {
   } catch (err) { next(err) }
 }
 
+export async function getExecutiveDashboard(req, res, next) {
+  try {
+    const data = await ReportService.getExecutiveDashboard()
+    ApiResponse.success(res, data)
+  } catch (err) { next(err) }
+}
+
 export async function getChartData(req, res, next) {
   try {
     const data = await ReportService.getChartData()

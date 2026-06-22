@@ -1,0 +1,94 @@
+.page { display: grid; gap: 24px; }
+
+.pageHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.pageHeader h1, .pageHeader p, .modalHeader h2 { margin: 0; }
+.pageHeader h1 { color: #101828; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.1; }
+.pageHeader p { max-width: 680px; color: #475467; line-height: 1.7; }
+.eyebrow { color: #F97316; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+
+.headerActions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ── Stats ────────────────────────────────────────── */
+.statsGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.statCard { padding: 20px; border-radius: 12px; background: #fff; border: 1px solid #E2E8F0; display: flex; flex-direction: column; gap: 6px; }
+.statLabel { font-size: 0.78rem; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.04em; }
+.statValue { font-size: 1.3rem; font-weight: 800; color: #0F172A; }
+.statusOk { color: #059669; }
+.statusFail { color: #DC2626; }
+
+/* ── Buttons ──────────────────────────────────────── */
+.primaryButton, .secondaryButton, .dangerButton, .downloadBtn, .deleteBtn, .iconButton {
+  border: 0; border-radius: 8px; font-family: inherit; font-weight: 800; cursor: pointer;
+}
+.primaryButton { padding: 12px 16px; color: #fff; background: #F97316; }
+.primaryButton:hover { background: #EA580C; }
+.primaryButton:disabled { opacity: .5; cursor: not-allowed; }
+.secondaryButton { padding: 12px 16px; color: #344054; background: #e5e7eb; }
+.dangerButton { padding: 12px 16px; color: #fff; background: #DC2626; }
+.dangerButton:hover { background: #B91C1C; }
+.dangerButton:disabled { opacity: .5; cursor: not-allowed; }
+.downloadBtn { padding: 8px 12px; color: #1d4ed8; background: #dbeafe; }
+.downloadBtn:hover { background: #bfdbfe; }
+.deleteBtn { padding: 8px 12px; color: #b42318; background: #fee4e2; }
+.deleteBtn:hover { background: #fecaca; }
+.iconButton { width: 36px; height: 36px; color: #344054; background: #eef2f6; font-size: 1.1rem; }
+
+/* ── States ───────────────────────────────────────── */
+.loadingState { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 60px 24px; color: #475467; }
+.spinner { width: 36px; height: 36px; border: 3px solid #e5e7eb; border-top-color: #F97316; border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.emptyState { padding: 50px 24px; color: #667085; text-align: center; border: 1px dashed #d9e1ec; border-radius: 8px; background: #fff; }
+
+/* ── Table ────────────────────────────────────────── */
+.tableWrapper { overflow-x: auto; border: 1px solid #d9e1ec; border-radius: 8px; background: #fff; box-shadow: 0 12px 28px rgba(16,24,40,.06); }
+.table { width: 100%; min-width: 780px; border-collapse: collapse; }
+.table th, .table td { border-bottom: 1px solid #eef2f6; padding: 14px 16px; text-align: left; vertical-align: middle; }
+.table th { color: #475467; background: #f8fafc; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.table td { color: #172033; font-size: 0.88rem; }
+.table tbody tr:last-child td { border-bottom: 0; }
+
+.filename { font-family: ui-monospace, monospace; font-size: 0.82rem; font-weight: 700; color: #1d4ed8; }
+.statusBadge { display: inline-flex; padding: 3px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 800; }
+.statusBadge.statusOk { background: #d1fae5; color: #047857; }
+.statusBadge.statusFail { background: #fee2e2; color: #b91c1c; }
+.actionsCell { display: flex; gap: 6px; }
+
+/* ── Modal ────────────────────────────────────────── */
+.modalBackdrop { position: fixed; z-index: 20; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(15,23,42,.46); }
+.modal { width: min(560px, 100%); max-height: min(86vh, 760px); overflow: auto; border-radius: 12px; padding: 24px; background: #fff; box-shadow: 0 24px 60px rgba(15,23,42,.24); }
+.modalHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.modalHeader h2 { color: #101828; font-size: 1.4rem; }
+.modalText { margin: 0 0 20px; font-size: 0.95rem; color: #475467; line-height: 1.6; }
+.modalActions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 16px; }
+
+/* ── Drop zone ────────────────────────────────────── */
+.dropZone {
+  border: 2px dashed #d0d5dd; border-radius: 12px; padding: 32px; text-align: center;
+  cursor: pointer; transition: border-color .2s, background .2s;
+}
+.dropZone:hover, .dropZoneActive { border-color: #F97316; background: rgba(249,115,22,.04); }
+.hiddenInput { display: none; }
+.dropPrompt { display: flex; flex-direction: column; align-items: center; gap: 8px; color: #64748B; }
+.dropPrompt p { margin: 0; font-weight: 700; font-size: 0.95rem; color: #344054; }
+.dropPrompt span { font-size: 0.82rem; }
+.dropIcon { color: #94A3B8; }
+
+.fileInfo { display: flex; align-items: center; gap: 12px; text-align: left; }
+.fileIcon { color: #F97316; flex-shrink: 0; }
+.fileInfo strong { display: block; font-size: 0.92rem; color: #101828; }
+.fileMeta { font-size: 0.8rem; color: #64748B; }
+.fileRemove { width: 28px; height: 28px; border: 0; border-radius: 6px; background: #fee4e2; color: #b42318; font-weight: 800; cursor: pointer; margin-left: auto; }
+
+.restoreWarn { margin: 12px 0 0; padding: 12px; border-radius: 8px; background: #FEF3C7; color: #92400E; font-size: 0.85rem; font-weight: 600; text-align: center; }
+
+@media (max-width: 900px) { .statsGrid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 760px) {
+  .pageHeader { flex-direction: column; } .headerActions { width: 100%; }
+  .primaryButton, .secondaryButton { flex: 1; text-align: center; }
+  .statsGrid { grid-template-columns: 1fr 1fr; }
+  .table { min-width: 0; } .table thead { display: none; }
+  .table, .table tbody, .table tr, .table td { display: block; width: 100%; }
+  .table tr { border-bottom: 1px solid #eef2f6; padding: 10px 0; }
+  .table td { display: flex; justify-content: space-between; gap: 12px; border-bottom: 0; padding: 6px 16px; text-align: right; }
+  .table td::before { content: attr(data-label); color: #667085; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; text-align: left; }
+}

@@ -15,6 +15,7 @@ router.use(requireRole('Administrador'))
 // GET /api/reports/inventory-alerts → Repuestos bajo stock mínimo
 
 router.get('/summary',           ReportController.getSummary)
+router.get('/executive',         ReportController.getExecutiveDashboard)
 router.get('/orders',            ReportController.getOrdersByPeriod)
 router.get('/top-parts',         ReportController.getTopParts)
 router.get('/employees',         ReportController.getEmployeeStats)

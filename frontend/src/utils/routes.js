@@ -16,6 +16,10 @@ export const ROUTES = {
   adminUsuarios: '/admin/usuarios',
   adminReportes: '/admin/reportes',
   adminAuditoria: '/admin/auditoria',
+  adminBackups: '/admin/backups',
+  adminFacturas: '/admin/facturas',
+  adminHistorialMoto: '/admin/historial-moto',
+  adminCRM: '/admin/crm',
   adminPerfil: '/admin/perfil',
   adminConfiguracion: '/admin/configuracion',
   // Técnico

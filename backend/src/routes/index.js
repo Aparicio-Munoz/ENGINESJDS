@@ -10,6 +10,11 @@ import userRoutes        from './users.routes.js'
 import reportRoutes      from './reports.routes.js'
 import technicianRoutes  from './technician.routes.js'
 import brandRoutes       from './brands.routes.js'
+import backupRoutes      from './backups.routes.js'
+import invoiceRoutes     from './invoices.routes.js'
+import historyRoutes     from './history.routes.js'
+import reminderRoutes    from './reminders.routes.js'
+import settingsRoutes    from './settings.routes.js'
 import publicRoutes      from './public.routes.js'
 
 export const apiRouter = Router()
@@ -30,6 +35,11 @@ apiRouter.use('/brands',       brandRoutes)
 apiRouter.use('/employees',    employeeRoutes)
 apiRouter.use('/users',        userRoutes)
 apiRouter.use('/reports',      reportRoutes)
+apiRouter.use('/backups',      backupRoutes)
+apiRouter.use('/invoices',     invoiceRoutes)
+apiRouter.use('/history',      historyRoutes)
+apiRouter.use('/reminders',    reminderRoutes)
+apiRouter.use('/settings',     settingsRoutes)
 
 // ── Panel Técnico (requiere rol Técnico) ──────────────
 apiRouter.use('/technician',   technicianRoutes)
