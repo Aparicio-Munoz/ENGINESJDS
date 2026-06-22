@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { io } from 'socket.io-client'
 import { apiClient } from '../../api/apiClient'
 import styles from './Tracking.module.css'
 
@@ -37,7 +38,13 @@ export function Tracking() {
   useEffect(() => {
     mountedRef.current = true
     loadTracking()
-    return () => { mountedRef.current = false }
+
+    const { protocol, hostname } = window.location
+    const socket = io(`${protocol}//${hostname}:3000`, { transports: ['websocket', 'polling'] })
+    socket.emit('join-tracking', token)
+    socket.on('TRACKING_UPDATED', () => { loadTracking() })
+
+    return () => { mountedRef.current = false; socket.disconnect() }
   }, [token])
 
   async function loadTracking() {

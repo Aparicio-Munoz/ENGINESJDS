@@ -1,6 +1,7 @@
 import * as ReminderModel from '../models/reminder.model.js'
 import { ApiError } from '../utils/ApiError.js'
 import { logAudit } from './audit.service.js'
+import { emit, EVENTS } from '../socket/index.js'
 
 export async function getAll(query) {
   const { rows, total } = await ReminderModel.findAll(query)
@@ -56,7 +57,10 @@ export async function send(id, actor = {}) {
     description: `Recordatorio ${r.type} enviado a ${r.client_name} (${r.client_phone})`,
   })
 
-  // Build WhatsApp URL for the frontend to open
+  emit(EVENTS.CRM_REMINDER_SENT, {
+    client: r.client_name, motorcycle: r.plate ?? '—', type: r.type,
+  })
+
   const phone = (r.client_phone || '').replace(/\D/g, '')
   const target = phone.startsWith('57') ? phone : `57${phone}`
   const waUrl = `https://wa.me/${target}?text=${encodeURIComponent(r.message)}`

@@ -2,6 +2,7 @@ import { getPool } from '../config/database.js'
 import * as OrderModel from '../models/order.model.js'
 import { ApiError } from '../utils/ApiError.js'
 import { auditEntity, AUDIT_ACTIONS } from './audit.service.js'
+import { emit, emitToTracking, EVENTS } from '../socket/index.js'
 
 // ── CRUD principal ────────────────────────────────────────────
 
@@ -79,6 +80,13 @@ export async function create(data, createdById, actor = {}) {
     description: `Orden ${order.order_number} creada`,
   })
 
+  emit(EVENTS.ORDER_CREATED, {
+    id: order.id, order_number: order.order_number,
+    plate: order.motorcycle_plate, client: order.client_name,
+    status: order.status,
+  })
+  emit(EVENTS.DASHBOARD_REFRESH, { trigger: 'order_created' })
+
   return order
 }
 
@@ -152,6 +160,19 @@ export async function changeStatus(id, { status, notes }, changedById, actor = {
     newValues: { status, notes: notes ?? null },
     description: `Orden #${id}: ${order.status} → ${status}`,
   })
+
+  emit(EVENTS.ORDER_STATUS_CHANGED, {
+    id, order_number: updated.order_number ?? order.order_number,
+    previousStatus: order.status, newStatus: status,
+    updatedAt: new Date().toISOString(),
+  })
+  if (updated.tracking_token) {
+    emitToTracking(updated.tracking_token, EVENTS.TRACKING_UPDATED, {
+      tracking_token: updated.tracking_token, status,
+      estimated_delivery: updated.estimated_delivery_date,
+    })
+  }
+  emit(EVENTS.DASHBOARD_REFRESH, { trigger: 'status_changed' })
 
   return updated
 }

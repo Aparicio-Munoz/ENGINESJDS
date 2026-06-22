@@ -6,6 +6,8 @@ import morgan from 'morgan'
 import path from 'path'
 import os from 'os'
 
+import http from 'http'
+import { initSocket } from './socket/index.js'
 import { validateEnv } from './config/env.js'
 import { testConnection, closePool } from './config/database.js'
 import { apiRouter } from './routes/index.js'
@@ -82,7 +84,9 @@ function getLocalIP() {
 async function bootstrap() {
   try {
     await testConnection()
-    const server = app.listen(PORT, HOST, () => {
+    const httpServer = http.createServer(app)
+    initSocket(httpServer)
+    httpServer.listen(PORT, HOST, () => {
       const localIP = getLocalIP()
       logger.info(`ENGINES JDS API`)
       logger.info(`  Local:   http://localhost:${PORT}`)
@@ -92,7 +96,7 @@ async function bootstrap() {
     // Graceful shutdown
     const shutdown = async (signal) => {
       logger.info(`Señal ${signal} recibida — cerrando servidor`)
-      server.close(async () => {
+      httpServer.close(async () => {
         await closePool()
         process.exit(0)
       })

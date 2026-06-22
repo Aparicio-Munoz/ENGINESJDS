@@ -12,6 +12,7 @@ import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
 import { reportsApi } from '../../api/reportsApi'
 import { useAuth } from '../../hooks/useAuth'
+import { useSocket } from '../../context/SocketContext'
 import { ROUTES } from '../../utils/routes'
 import styles from './DashboardAdmin.module.css'
 
@@ -61,6 +62,7 @@ export function DashboardAdmin() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const mountedRef = useRef(true)
+  const { refreshKey } = useSocket() ?? {}
 
   const loadData = useCallback(async () => {
     setLoading(true); setError(null)
@@ -79,7 +81,7 @@ export function DashboardAdmin() {
     loadData()
     const iv = setInterval(loadData, 120_000)
     return () => { mountedRef.current = false; clearInterval(iv) }
-  }, [loadData])
+  }, [loadData, refreshKey])
 
   const now = new Date()
   const hour = now.getHours()

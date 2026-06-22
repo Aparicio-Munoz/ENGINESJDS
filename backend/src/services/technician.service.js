@@ -2,6 +2,7 @@ import { getPool } from '../config/database.js'
 import * as EmployeeModel from '../models/employee.model.js'
 import { ApiError } from '../utils/ApiError.js'
 import { auditEntity, AUDIT_ACTIONS } from './audit.service.js'
+import { emit, emitToTracking, EVENTS } from '../socket/index.js'
 
 // ── Resolver employee_id del técnico autenticado ─────────────
 export async function resolveEmployeeId(userId) {
@@ -170,7 +171,21 @@ export async function updateOrderStatus(employeeId, orderId, { status, notes }, 
      WHERE o.id = ?`,
     [orderId]
   )
-  return rows[0]
+
+  const updated = rows[0]
+  emit(EVENTS.ORDER_STATUS_CHANGED, {
+    id: orderId, order_number: updated?.order_number,
+    previousStatus: order.status, newStatus: status,
+    updatedAt: new Date().toISOString(),
+  })
+  if (updated?.tracking_token) {
+    emitToTracking(updated.tracking_token, EVENTS.TRACKING_UPDATED, {
+      tracking_token: updated.tracking_token, status,
+    })
+  }
+  emit(EVENTS.DASHBOARD_REFRESH, { trigger: 'tech_status_changed' })
+
+  return updated
 }
 
 // ── Agregar notas técnicas ───────────────────────────────────
