@@ -230,9 +230,16 @@ export function DashboardLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [profileOpen, setProfileOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 900)
   const [accessBanner, setAccessBanner] = useState('')
   const profileRef = useRef(null)
   const bannerTimerRef = useRef(null)
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 900
+
+  // ── Close sidebar on mobile nav ────────────────────────────────────────────
+  useEffect(() => {
+    if (window.innerWidth <= 900) setSidebarOpen(false)
+  }, [location.pathname])
 
   // ── Banner de acceso denegado ──────────────────────────────────────────────
   useEffect(() => {
@@ -268,8 +275,13 @@ export function DashboardLayout() {
   const isAdmin = user?.role === 'Administrador'
 
   return (
-    <div className={styles.shell}>
-      <aside className={styles.sidebar}>
+    <div className={`${styles.shell} ${sidebarOpen ? styles.shellOpen : styles.shellClosed}`}>
+      {/* Mobile overlay */}
+      {sidebarOpen && isMobile ? (
+        <div className={styles.overlay} onClick={() => setSidebarOpen(false)} />
+      ) : null}
+
+      <aside className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : styles.sidebarClosed}`}>
         <NavLink to={ROUTES.admin} className={styles.brand}>
           <span className={styles.brandMark} aria-hidden="true">◈</span>
           ENGINES JDS
@@ -373,6 +385,20 @@ export function DashboardLayout() {
 
       <div className={styles.contentShell}>
         <div className={styles.topBar}>
+          <button
+            className={styles.hamburger}
+            type="button"
+            aria-label={sidebarOpen ? 'Cerrar menú' : 'Abrir menú'}
+            onClick={() => setSidebarOpen((v) => !v)}
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20">
+              {sidebarOpen ? (
+                <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+              ) : (
+                <path fillRule="evenodd" d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75ZM2 10a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10Zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z" clipRule="evenodd" />
+              )}
+            </svg>
+          </button>
           <GlobalSearch />
           <NotificationCenter />
         </div>
