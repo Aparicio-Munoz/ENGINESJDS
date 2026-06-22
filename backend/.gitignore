@@ -2,7 +2,10 @@ node_modules/
 .env
 dist/
 coverage/
-storage/backups/
+storage/backups/*
+storage/uploads/*
+!storage/backups/.gitkeep
+!storage/uploads/.gitkeep
 *.log
 npm-debug.log*
 .DS_Store
