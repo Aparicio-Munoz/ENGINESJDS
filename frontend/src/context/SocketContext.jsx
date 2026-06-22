@@ -21,6 +21,9 @@ function resolveSocketURL() {
 
 export function SocketProvider({ children }) {
   const toast = useToast()
+  const toastRef = useRef(toast)
+  toastRef.current = toast
+
   const socketRef = useRef(null)
   const [notifications, setNotifications] = useState(() => {
     try { return JSON.parse(localStorage.getItem('engines-notifications') ?? '[]') } catch { return [] }
@@ -41,30 +44,30 @@ export function SocketProvider({ children }) {
     socketRef.current = socket
 
     socket.on(EVENTS.ORDER_CREATED, (data) => {
-      toast.success(`Nueva orden: ${data.order_number}`)
+      toastRef.current.success(`Nueva orden: ${data.order_number}`)
       addNotification({ type: 'order', title: 'Nueva orden', message: `${data.order_number} — ${data.client}` })
       setRefreshKey((k) => k + 1)
     })
 
     socket.on(EVENTS.ORDER_STATUS_CHANGED, (data) => {
-      toast.success(`${data.order_number}: ${data.previousStatus} → ${data.newStatus}`)
+      toastRef.current.success(`${data.order_number}: ${data.previousStatus} → ${data.newStatus}`)
       addNotification({ type: 'status', title: 'Estado actualizado', message: `${data.order_number} → ${data.newStatus}` })
       setRefreshKey((k) => k + 1)
     })
 
     socket.on(EVENTS.INVOICE_PAID, (data) => {
-      toast.success(`Factura ${data.invoice_number} pagada`)
+      toastRef.current.success(`Factura ${data.invoice_number} pagada`)
       addNotification({ type: 'invoice', title: 'Factura pagada', message: `${data.invoice_number} — $${Number(data.total).toLocaleString('es-CO')}` })
       setRefreshKey((k) => k + 1)
     })
 
     socket.on(EVENTS.LOW_STOCK_ALERT, (data) => {
-      toast.error(`Stock bajo: ${data.product} (${data.stock} uds)`)
+      toastRef.current.error(`Stock bajo: ${data.product} (${data.stock} uds)`)
       addNotification({ type: 'alert', title: 'Stock bajo', message: `${data.product}: ${data.stock} / ${data.minimum_stock}` })
     })
 
     socket.on(EVENTS.CRM_REMINDER_SENT, (data) => {
-      toast.success(`Recordatorio enviado a ${data.client}`)
+      toastRef.current.success(`Recordatorio enviado a ${data.client}`)
       addNotification({ type: 'crm', title: 'Recordatorio enviado', message: `${data.client} — ${data.type}` })
     })
 
@@ -73,7 +76,7 @@ export function SocketProvider({ children }) {
     })
 
     return () => { socket.disconnect() }
-  }, [toast, addNotification])
+  }, [addNotification])
 
   const joinTracking = useCallback((token) => {
     socketRef.current?.emit('join-tracking', token)

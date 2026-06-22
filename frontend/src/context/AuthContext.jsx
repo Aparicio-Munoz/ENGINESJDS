@@ -1,6 +1,7 @@
-import { useCallback, useMemo, useState } from 'react'
-import { AuthContext } from './authContextValue'
+import { createContext, useCallback, useMemo, useState } from 'react'
 import { authService } from '../services/authService'
+
+export const AuthContext = createContext(null)
 import { authApi } from '../api/authApi'
 
 const AUTH_KEY = 'engines-jds-auth'
