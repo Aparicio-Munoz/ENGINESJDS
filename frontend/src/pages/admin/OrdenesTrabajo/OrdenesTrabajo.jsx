@@ -4,7 +4,7 @@ import { Pagination } from '../../../components/Pagination/Pagination'
 import { useToast } from '../../../hooks/useToast'
 import styles from './OrdenesTrabajo.module.css'
 
-const TRACKING_BASE_URL = 'https://enginesjds.com/tracking'
+const TRACKING_BASE_URL = `${window.location.origin}/tracking`
 const WHATSAPP_NUMBER   = '573000000000'
 
 const VALID_STATUSES    = ['Pendiente', 'En proceso', 'En reparación', 'Esperando repuesto', 'Listo', 'Lista para entrega', 'Entregada']
