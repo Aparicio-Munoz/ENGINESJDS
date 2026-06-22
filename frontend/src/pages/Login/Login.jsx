@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { promptInstall, canInstall } from '../../pwa'
 import { ROUTES } from '../../utils/routes'
 import styles from './Login.module.css'
 
@@ -15,6 +16,33 @@ function EyeIcon({ open }) {
       <path fillRule="evenodd" d="M3.28 2.22a.75.75 0 0 0-1.06 1.06l14.5 14.5a.75.75 0 1 0 1.06-1.06l-1.745-1.745a10.029 10.029 0 0 0 3.3-4.38 1.651 1.651 0 0 0 0-1.185A10.004 10.004 0 0 0 9.999 3a9.956 9.956 0 0 0-4.744 1.194L3.28 2.22ZM7.752 6.69l1.092 1.092a2.5 2.5 0 0 1 3.374 3.373l1.091 1.092a4 4 0 0 0-5.557-5.557Z" clipRule="evenodd" />
       <path d="M10.748 13.93l2.523 2.523a10.065 10.065 0 0 1-3.27.547c-4.258 0-7.894-2.66-9.337-6.41a1.651 1.651 0 0 1 0-1.186A10.007 10.007 0 0 1 2.839 6.02L6.07 9.252a4 4 0 0 0 4.678 4.678Z" />
     </svg>
+  )
+}
+
+function InstallButton() {
+  const [show, setShow] = useState(canInstall())
+
+  useEffect(() => {
+    function onAvailable() { setShow(true) }
+    window.addEventListener('pwa-install-available', onAvailable)
+    return () => window.removeEventListener('pwa-install-available', onAvailable)
+  }, [])
+
+  if (!show) return null
+
+  async function handleInstall() {
+    const accepted = await promptInstall()
+    if (accepted) setShow(false)
+  }
+
+  return (
+    <button className={styles.installButton} type="button" onClick={handleInstall}>
+      <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+        <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z" />
+        <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
+      </svg>
+      Instalar ENGINES JDS
+    </button>
   )
 }
 
@@ -160,6 +188,8 @@ export function Login() {
               {loading ? 'Verificando...' : 'Iniciar sesión'}
             </button>
           </form>
+
+          <InstallButton />
         </div>
       </div>
     </div>
