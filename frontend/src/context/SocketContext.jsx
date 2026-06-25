@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { io } from 'socket.io-client'
 import { useToast } from '../hooks/useToast'
+import { useAuth } from '../hooks/useAuth'
 
 const SocketContext = createContext(null)
 
@@ -20,6 +21,7 @@ function resolveSocketURL() {
 }
 
 export function SocketProvider({ children }) {
+  const { isAuthenticated } = useAuth()
   const toast = useToast()
   const toastRef = useRef(toast)
   toastRef.current = toast
@@ -40,8 +42,28 @@ export function SocketProvider({ children }) {
   }, [])
 
   useEffect(() => {
-    const socket = io(resolveSocketURL(), { transports: ['websocket', 'polling'], reconnection: true })
+    if (!isAuthenticated) {
+      if (socketRef.current) {
+        socketRef.current.removeAllListeners()
+        socketRef.current.disconnect()
+        socketRef.current = null
+      }
+      return
+    }
+
+    const socket = io(resolveSocketURL(), {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 10000,
+      timeout: 20000,
+    })
     socketRef.current = socket
+
+    socket.on('connect_error', (err) => {
+      console.warn('[Socket] connect_error:', err.message)
+    })
 
     socket.on(EVENTS.ORDER_CREATED, (data) => {
       toastRef.current.success(`Nueva orden: ${data.order_number}`)
@@ -75,8 +97,12 @@ export function SocketProvider({ children }) {
       setRefreshKey((k) => k + 1)
     })
 
-    return () => { socket.disconnect() }
-  }, [addNotification])
+    return () => {
+      socket.removeAllListeners()
+      socket.disconnect()
+      socketRef.current = null
+    }
+  }, [isAuthenticated, addNotification])
 
   const joinTracking = useCallback((token) => {
     socketRef.current?.emit('join-tracking', token)

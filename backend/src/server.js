@@ -13,6 +13,7 @@ import { testConnection, closePool } from './config/database.js'
 import { apiRouter } from './routes/index.js'
 import { errorHandler } from './middlewares/error.middleware.js'
 import { logger } from './utils/logger.js'
+import { verifySmtp } from './services/email.service.js'
 
 validateEnv()
 
@@ -84,6 +85,7 @@ function getLocalIP() {
 async function bootstrap() {
   try {
     await testConnection()
+    await verifySmtp()
     const httpServer = http.createServer(app)
     initSocket(httpServer)
     httpServer.listen(PORT, HOST, () => {

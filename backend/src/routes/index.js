@@ -16,6 +16,7 @@ import historyRoutes     from './history.routes.js'
 import reminderRoutes    from './reminders.routes.js'
 import settingsRoutes    from './settings.routes.js'
 import publicRoutes      from './public.routes.js'
+import { verifySmtp, sendTestEmail } from '../services/email.service.js'
 
 export const apiRouter = Router()
 
@@ -43,3 +44,30 @@ apiRouter.use('/settings',     settingsRoutes)
 
 // ── Panel Técnico (requiere rol Técnico) ──────────────
 apiRouter.use('/technician',   technicianRoutes)
+
+// ── Diagnóstico SMTP (solo desarrollo) ────────────────
+apiRouter.get('/test-email', async (_req, res) => {
+  const smtp = await verifySmtp()
+  if (!smtp.ok) {
+    return res.status(500).json({
+      success: false,
+      message: 'SMTP no conectado',
+      smtp,
+    })
+  }
+  try {
+    const info = await sendTestEmail()
+    res.json({
+      success: true,
+      message: `Correo de prueba enviado a ${process.env.SMTP_USER}`,
+      messageId: info.messageId,
+      response: info.response,
+    })
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: 'Error enviando correo de prueba',
+      error: { code: err.code, response: err.response, message: err.message },
+    })
+  }
+})

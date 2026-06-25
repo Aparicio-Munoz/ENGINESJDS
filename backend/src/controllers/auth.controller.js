@@ -1,5 +1,7 @@
 import { ApiResponse } from '../utils/ApiResponse.js'
+import { ApiError } from '../utils/ApiError.js'
 import * as AuthService from '../services/auth.service.js'
+import * as SettingsModel from '../models/settings.model.js'
 
 export async function login(req, res, next) {
   try {
@@ -68,6 +70,15 @@ export async function forgotPassword(req, res, next) {
   }
 }
 
+export async function verifyResetCode(req, res, next) {
+  try {
+    const result = await AuthService.verifyResetCode(req.body.code, req.ip)
+    ApiResponse.success(res, result, 'Código válido')
+  } catch (err) {
+    next(err)
+  }
+}
+
 export async function resetPassword(req, res, next) {
   try {
     const { code, newPassword } = req.body
@@ -76,4 +87,23 @@ export async function resetPassword(req, res, next) {
   } catch (err) {
     next(err)
   }
+}
+
+export async function publicRegister(req, res, next) {
+  try {
+    const settings = await SettingsModel.get()
+    if (!settings?.allow_public_registration) {
+      throw ApiError.forbidden('El registro público no está habilitado')
+    }
+    const { username, email, password } = req.body
+    const user = await AuthService.register({ username, email, password, role: 'Recepcionista' })
+    ApiResponse.created(res, user, 'Cuenta creada exitosamente')
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function getRegistrationStatus(_req, res) {
+  const settings = await SettingsModel.get()
+  res.json({ success: true, data: { allowed: Boolean(settings?.allow_public_registration) } })
 }

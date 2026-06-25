@@ -78,21 +78,31 @@ export function ForgotPassword() {
     }
   }
 
-  // ── Paso 2: validar código (solo local) ───────────────────
-  function handleVerifyCode(e) {
+  // ── Paso 2: validar código en el servidor ──────────────────
+  async function handleVerifyCode(e) {
     e.preventDefault()
     if (!/^\d{6}$/.test(code)) {
       setError('El código debe tener exactamente 6 dígitos numéricos')
       return
     }
     setError('')
-    setStep('password')
+    setLoading(true)
+    try {
+      await authApi.verifyResetCode(code)
+      setStep('password')
+    } catch (err) {
+      setError(err.message || 'El código es inválido o ha expirado.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   // ── Paso 3: restablecer contraseña ────────────────────────
   async function handleReset(e) {
     e.preventDefault()
-    if (pwd.length < 6) { setError('La contraseña debe tener al menos 6 caracteres'); return }
+    if (pwd.length < 8) { setError('La contraseña debe tener al menos 8 caracteres'); return }
+    if (!/[A-Z]/.test(pwd)) { setError('La contraseña debe contener al menos una mayúscula'); return }
+    if (!/[0-9]/.test(pwd)) { setError('La contraseña debe contener al menos un número'); return }
     if (pwd !== confirm) { setError('Las contraseñas no coinciden'); return }
     setError('')
     setLoading(true)
@@ -220,8 +230,8 @@ export function ForgotPassword() {
                 >
                   Volver
                 </button>
-                <button type="submit" className={styles.submitButton} disabled={code.length !== 6}>
-                  Continuar
+                <button type="submit" className={styles.submitButton} disabled={code.length !== 6 || loading}>
+                  {loading ? 'Verificando…' : 'Continuar'}
                 </button>
               </div>
             </form>
@@ -234,7 +244,7 @@ export function ForgotPassword() {
             <div className={styles.header}>
               <h1 className={styles.formTitle}>Nueva contraseña</h1>
               <p className={styles.formSubtitle}>
-                Elige una contraseña segura para tu cuenta. Mínimo 6 caracteres.
+                Elige una contraseña segura. Mínimo 8 caracteres, una mayúscula y un número.
               </p>
             </div>
             <form onSubmit={handleReset} className={styles.form} noValidate>
@@ -247,7 +257,7 @@ export function ForgotPassword() {
                     className={`${styles.input} ${error ? styles.inputError : ''}`}
                     value={pwd}
                     onChange={(e) => { setPwd(e.target.value); setError('') }}
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder="Mínimo 8 caracteres"
                     autoComplete="new-password"
                     required
                   />

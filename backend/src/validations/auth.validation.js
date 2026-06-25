@@ -28,6 +28,23 @@ export const registerRules = [
     .withMessage('Estado inválido'),
 ]
 
+export const publicRegisterRules = [
+  body('username')
+    .trim()
+    .notEmpty().withMessage('El nombre es requerido')
+    .isLength({ min: 3, max: 50 }).withMessage('El nombre debe tener entre 3 y 50 caracteres'),
+  body('email')
+    .isEmail().withMessage('Ingresa un correo electrónico válido')
+    .normalizeEmail(),
+  body('password')
+    .isLength({ min: 8 }).withMessage('La contraseña debe tener al menos 8 caracteres')
+    .matches(/[A-Z]/).withMessage('La contraseña debe contener al menos una mayúscula')
+    .matches(/[0-9]/).withMessage('La contraseña debe contener al menos un número'),
+  body('confirmPassword')
+    .custom((value, { req }) => value === req.body.password)
+    .withMessage('Las contraseñas no coinciden'),
+]
+
 export const changePasswordRules = [
   body('currentPassword')
     .notEmpty().withMessage('La contraseña actual es requerida'),
@@ -44,11 +61,20 @@ export const forgotPasswordRules = [
     .normalizeEmail(),
 ]
 
+export const verifyCodeRules = [
+  body('code')
+    .notEmpty().withMessage('El código es requerido')
+    .isLength({ min: 6, max: 6 }).withMessage('El código debe tener exactamente 6 dígitos')
+    .isNumeric().withMessage('El código solo debe contener números'),
+]
+
 export const resetPasswordRules = [
   body('code')
     .notEmpty().withMessage('El código es requerido')
     .isLength({ min: 6, max: 6 }).withMessage('El código debe tener exactamente 6 dígitos')
     .isNumeric().withMessage('El código solo debe contener números'),
   body('newPassword')
-    .isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
+    .isLength({ min: 8 }).withMessage('La contraseña debe tener al menos 8 caracteres')
+    .matches(/[A-Z]/).withMessage('La contraseña debe contener al menos una mayúscula')
+    .matches(/[0-9]/).withMessage('La contraseña debe contener al menos un número'),
 ]

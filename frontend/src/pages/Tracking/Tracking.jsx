@@ -40,11 +40,20 @@ export function Tracking() {
     loadTracking()
 
     const { protocol, hostname } = window.location
-    const socket = io(`${protocol}//${hostname}:3000`, { transports: ['websocket', 'polling'] })
+    const socket = io(`${protocol}//${hostname}:3000`, {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 2000,
+      reconnectionDelayMax: 10000,
+    })
     socket.emit('join-tracking', token)
     socket.on('TRACKING_UPDATED', () => { loadTracking() })
 
-    return () => { mountedRef.current = false; socket.disconnect() }
+    return () => {
+      mountedRef.current = false
+      socket.removeAllListeners()
+      socket.disconnect()
+    }
   }, [token])
 
   async function loadTracking() {

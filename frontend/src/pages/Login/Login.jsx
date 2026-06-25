@@ -189,6 +189,11 @@ export function Login() {
             </button>
           </form>
 
+          <p className={styles.registerPrompt}>
+            ¿No tienes una cuenta?{' '}
+            <Link to={ROUTES.register} className={styles.registerLink}>Registrarse</Link>
+          </p>
+
           <InstallButton />
         </div>
       </div>

@@ -66,6 +66,7 @@ export function Configuracion() {
     { id: 'signature', label: 'Firma', icon: '✍️' },
     { id: 'appearance', label: 'Apariencia', icon: '🎨' },
     { id: 'hours', label: 'Horarios', icon: '🕐' },
+    { id: 'security', label: 'Seguridad', icon: '🔒' },
   ]
 
   if (loading) return <div className={styles.page}><div className={styles.loadingState}><div className={styles.spinner} />Cargando configuración…</div></div>
@@ -202,6 +203,32 @@ export function Configuracion() {
               <div className={styles.field}><label className={styles.label}>Domingo</label><input className={styles.input} placeholder="Cerrado" value={wh.sunday ?? ''} onChange={(e) => updHours('sunday', e.target.value)} /></div>
               <div className={styles.formActions}><button type="submit" className={styles.primaryButton} disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</button></div>
             </form>
+          </section>
+        ) : null}
+
+        {/* ── 8. Seguridad ──────────────────────── */}
+        {section === 'security' ? (
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Seguridad</h2>
+            <div className={styles.form}>
+              <div className={`${styles.field} ${styles.fieldFull}`}>
+                <div className={styles.switchRow}>
+                  <div>
+                    <label className={styles.label}>Permitir registro público</label>
+                    <p className={styles.fieldDesc}>Cuando está activo, cualquier persona puede crear una cuenta desde la pantalla de login. Los nuevos usuarios se crean con rol Recepcionista.</p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={Boolean(settings.allow_public_registration)}
+                    className={`${styles.toggle} ${settings.allow_public_registration ? styles.toggleOn : ''}`}
+                    onClick={() => { const next = settings.allow_public_registration ? 0 : 1; upd('allow_public_registration', next); handleSave({ allow_public_registration: next }) }}
+                  >
+                    <span className={styles.toggleKnob} />
+                  </button>
+                </div>
+              </div>
+            </div>
           </section>
         ) : null}
       </div>

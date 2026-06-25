@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { ErrorBoundary } from './components/ErrorBoundary/ErrorBoundary.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { ToastProvider } from './context/ToastContext.jsx'
 import { SocketProvider } from './context/SocketContext.jsx'
@@ -11,12 +12,14 @@ registerSW()
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <AuthProvider>
-      <ToastProvider>
-        <SocketProvider>
-          <App />
-        </SocketProvider>
-      </ToastProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <ToastProvider>
+          <SocketProvider>
+            <App />
+          </SocketProvider>
+        </ToastProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   </StrictMode>,
 )

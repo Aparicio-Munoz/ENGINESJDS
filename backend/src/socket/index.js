@@ -3,10 +3,34 @@ import { logger } from '../utils/logger.js'
 
 let io = null
 
+function getAllowedOrigins() {
+  const raw = process.env.FRONTEND_URL ?? 'http://localhost:5173'
+  return raw.split(',').map((s) => s.trim())
+}
+
 export function initSocket(httpServer) {
+  const allowedOrigins = getAllowedOrigins()
+
   io = new Server(httpServer, {
-    cors: { origin: true, credentials: true },
+    cors: {
+      origin(origin, cb) {
+        if (!origin) return cb(null, true)
+        if (allowedOrigins.includes(origin)) return cb(null, true)
+        if (process.env.NODE_ENV !== 'production' && (
+          origin.includes('://192.168.') ||
+          origin.includes('://10.') ||
+          origin.includes('://172.') ||
+          origin.includes('://localhost')
+        )) {
+          return cb(null, true)
+        }
+        cb(null, false)
+      },
+      credentials: true,
+    },
     transports: ['websocket', 'polling'],
+    pingTimeout: 60000,
+    pingInterval: 25000,
   })
 
   io.on('connection', (socket) => {
@@ -16,8 +40,8 @@ export function initSocket(httpServer) {
       if (token) socket.join(`tracking:${token}`)
     })
 
-    socket.on('disconnect', () => {
-      logger.info(`Socket disconnected: ${socket.id}`)
+    socket.on('disconnect', (reason) => {
+      logger.info(`Socket disconnected: ${socket.id} (${reason})`)
     })
   })
 

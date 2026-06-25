@@ -6,8 +6,10 @@ import { validate } from '../middlewares/validate.middleware.js'
 import {
   loginRules,
   registerRules,
+  publicRegisterRules,
   changePasswordRules,
   forgotPasswordRules,
+  verifyCodeRules,
   resetPasswordRules,
 } from '../validations/auth.validation.js'
 import * as AuthController from '../controllers/auth.controller.js'
@@ -49,8 +51,17 @@ router.post('/refresh', AuthController.refresh)
 // POST /api/auth/logout → Invalida el refresh token recibido
 router.post('/logout', AuthController.logout)
 
+// GET  /api/auth/registration-status → Indica si el registro público está habilitado
+router.get('/registration-status', AuthController.getRegistrationStatus)
+
+// POST /api/auth/public-register → Registro público (si está habilitado en settings)
+router.post('/public-register', publicRegisterRules, validate, AuthController.publicRegister)
+
 // POST /api/auth/forgot-password → Genera código 6 dígitos y envía email
 router.post('/forgot-password', forgotLimiter, forgotPasswordRules, validate, AuthController.forgotPassword)
+
+// POST /api/auth/verify-reset-code → Valida código sin consumirlo
+router.post('/verify-reset-code', resetLimiter, verifyCodeRules, validate, AuthController.verifyResetCode)
 
 // POST /api/auth/reset-password → Recibe { code, newPassword } y actualiza contraseña
 router.post('/reset-password', resetLimiter, resetPasswordRules, validate, AuthController.resetPassword)

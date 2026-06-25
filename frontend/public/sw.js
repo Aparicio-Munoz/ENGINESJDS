@@ -1,4 +1,4 @@
-const CACHE_NAME = 'engines-jds-v1'
+const CACHE_NAME = 'engines-jds-v2'
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -16,7 +16,7 @@ self.addEventListener('install', (event) => {
   self.skipWaiting()
 })
 
-// Activate: clean old caches
+// Activate: clean ALL old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
@@ -26,7 +26,7 @@ self.addEventListener('activate', (event) => {
   self.clients.claim()
 })
 
-// Fetch: network-first for API, cache-first for static
+// Fetch handler
 self.addEventListener('fetch', (event) => {
   const { request } = event
   const url = new URL(request.url)
@@ -34,8 +34,9 @@ self.addEventListener('fetch', (event) => {
   // Skip non-GET and API calls
   if (request.method !== 'GET') return
   if (url.pathname.startsWith('/api/')) return
+  if (url.hostname !== self.location.hostname) return
 
-  // For navigation requests: network first, fallback to cache, then offline page
+  // Navigation requests: network first → cache fallback → offline page
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
@@ -51,12 +52,29 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Static assets: cache first, then network
+  // Vite hashed assets (contain hash in filename): network first with cache fallback
+  // These files have unique names per build, so stale cache is the main risk
+  if (url.pathname.match(/\/assets\/.*-[a-zA-Z0-9]{8}\.(js|css)$/)) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone))
+          }
+          return response
+        })
+        .catch(() => caches.match(request).then((cached) => cached || new Response('', { status: 408 })))
+    )
+    return
+  }
+
+  // Static assets (icons, fonts, images): cache first → network
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached
       return fetch(request).then((response) => {
-        if (response.ok && (url.pathname.match(/\.(js|css|svg|png|jpg|webp|woff2?)$/) || url.pathname === '/')) {
+        if (response.ok && url.pathname.match(/\.(svg|png|jpg|webp|woff2?)$/)) {
           const clone = response.clone()
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone))
         }
@@ -66,7 +84,7 @@ self.addEventListener('fetch', (event) => {
   )
 })
 
-// Listen for messages from the app (skip waiting)
+// Listen for skip-waiting messages from the app
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') {
     self.skipWaiting()

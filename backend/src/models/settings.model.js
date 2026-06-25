@@ -11,6 +11,7 @@ export async function update(fields) {
     'website', 'facebook', 'instagram', 'whatsapp', 'working_hours',
     'currency', 'tax_percent', 'primary_color', 'secondary_color',
     'footer_message', 'signature_name', 'signature_position',
+    'allow_public_registration',
   ]
   const sets = []; const params = []
   for (const key of allowed) {

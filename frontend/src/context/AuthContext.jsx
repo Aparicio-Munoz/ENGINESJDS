@@ -1,13 +1,30 @@
-import { createContext, useCallback, useMemo, useState } from 'react'
+import { createContext, useCallback, useEffect, useMemo, useState } from 'react'
 import { authService } from '../services/authService'
+import { authApi } from '../api/authApi'
 
 export const AuthContext = createContext(null)
-import { authApi } from '../api/authApi'
 
 const AUTH_KEY = 'engines-jds-auth'
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(() => authService.getSession())
+
+  useEffect(() => {
+    function onStorage(e) {
+      if (e.key !== AUTH_KEY) return
+      if (!e.newValue) {
+        setSession({ user: null, token: null })
+        return
+      }
+      try {
+        setSession(JSON.parse(e.newValue))
+      } catch {
+        setSession({ user: null, token: null })
+      }
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
 
   const login = useCallback(async (credentials) => {
     const nextSession = await authService.login(credentials)
@@ -20,17 +37,15 @@ export function AuthProvider({ children }) {
     setSession({ user: null, token: null })
   }, [])
 
-  // Refresca los datos del usuario desde el backend (útil tras cambio de email/username)
   const refreshUser = useCallback(async () => {
     try {
       const fresh = await authApi.me()
-      // Releer la sesión persistida para no pisar un access token recién renovado
       const latest = authService.getSession()
       const updated = { ...latest, user: fresh }
       localStorage.setItem(AUTH_KEY, JSON.stringify(updated))
       setSession(updated)
     } catch {
-      // Si falla (token expirado, etc.) el interceptor de axios ya redirige a /login
+      // interceptor handles redirect
     }
   }, [])
 
