@@ -1,5 +1,4 @@
 import { Router } from 'express'
-import rateLimit from 'express-rate-limit'
 import { verifyToken, requireRole } from '../middlewares/auth.middleware.js'
 import { checkBlockedIp } from '../middlewares/security.middleware.js'
 import { validate } from '../middlewares/validate.middleware.js'
@@ -8,65 +7,26 @@ import {
   registerRules,
   publicRegisterRules,
   changePasswordRules,
-  forgotPasswordRules,
-  verifyCodeRules,
-  resetPasswordRules,
 } from '../validations/auth.validation.js'
 import * as AuthController from '../controllers/auth.controller.js'
 
 const router = Router()
 
-// ── Rate limiters ─────────────────────────────────────────────
-const forgotLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 3,
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-  message: {
-    success: false,
-    message: 'Demasiadas solicitudes de recuperación. Intenta nuevamente en unos minutos.',
-  },
-})
-
-const resetLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-  message: {
-    success: false,
-    message: 'Demasiados intentos de verificación. Intenta nuevamente en unos minutos.',
-  },
-})
-
-// ── Rutas públicas ────────────────────────────────────────────
 // POST /api/auth/login
-//   checkBlockedIp rechaza la IP si está bloqueada (5 fallos → 15 min).
-//   El desbloqueo es automático al expirar el periodo.
 router.post('/login', checkBlockedIp, loginRules, validate, AuthController.login)
 
-// POST /api/auth/refresh → Renueva el access token con un refresh token válido
+// POST /api/auth/refresh
 router.post('/refresh', AuthController.refresh)
 
-// POST /api/auth/logout → Invalida el refresh token recibido
+// POST /api/auth/logout
 router.post('/logout', AuthController.logout)
 
-// GET  /api/auth/registration-status → Indica si el registro público está habilitado
+// GET  /api/auth/registration-status
 router.get('/registration-status', AuthController.getRegistrationStatus)
 
-// POST /api/auth/public-register → Registro público (si está habilitado en settings)
+// POST /api/auth/public-register
 router.post('/public-register', publicRegisterRules, validate, AuthController.publicRegister)
 
-// POST /api/auth/forgot-password → Genera código 6 dígitos y envía email
-router.post('/forgot-password', forgotLimiter, forgotPasswordRules, validate, AuthController.forgotPassword)
-
-// POST /api/auth/verify-reset-code → Valida código sin consumirlo
-router.post('/verify-reset-code', resetLimiter, verifyCodeRules, validate, AuthController.verifyResetCode)
-
-// POST /api/auth/reset-password → Recibe { code, newPassword } y actualiza contraseña
-router.post('/reset-password', resetLimiter, resetPasswordRules, validate, AuthController.resetPassword)
-
-// ── Requieren sesión activa ───────────────────────────────────
 // GET  /api/auth/me
 router.get('/me', verifyToken, AuthController.me)
 
@@ -79,8 +39,7 @@ router.put(
   AuthController.changePassword
 )
 
-// ── Solo Administrador ────────────────────────────────────────
-// POST /api/auth/register
+// POST /api/auth/register  (solo Administrador)
 router.post(
   '/register',
   verifyToken,

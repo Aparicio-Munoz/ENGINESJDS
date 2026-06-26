@@ -13,7 +13,7 @@ import { testConnection, closePool } from './config/database.js'
 import { apiRouter } from './routes/index.js'
 import { errorHandler } from './middlewares/error.middleware.js'
 import { logger } from './utils/logger.js'
-import { verifySmtp } from './services/email.service.js'
+import { initialize as initEmail } from './services/email.service.js'
 
 validateEnv()
 
@@ -85,7 +85,7 @@ function getLocalIP() {
 async function bootstrap() {
   try {
     await testConnection()
-    await verifySmtp()
+    await initEmail().catch((err) => logger.error('SMTP no disponible', { message: err.message }))
     const httpServer = http.createServer(app)
     initSocket(httpServer)
     httpServer.listen(PORT, HOST, () => {

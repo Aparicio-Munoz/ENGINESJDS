@@ -26,8 +26,6 @@ TRUNCATE TABLE audit_logs;
 TRUNCATE TABLE backups;
 TRUNCATE TABLE login_attempts;
 TRUNCATE TABLE refresh_tokens;
-TRUNCATE TABLE password_resets;
-TRUNCATE TABLE password_reset_tokens;
 TRUNCATE TABLE notifications;
 TRUNCATE TABLE tecnomecanica;
 
@@ -78,8 +76,6 @@ ALTER TABLE order_items AUTO_INCREMENT = 1;
 ALTER TABLE order_services AUTO_INCREMENT = 1;
 ALTER TABLE order_status_history AUTO_INCREMENT = 1;
 ALTER TABLE orders AUTO_INCREMENT = 1;
-ALTER TABLE password_resets AUTO_INCREMENT = 1;
-ALTER TABLE password_reset_tokens AUTO_INCREMENT = 1;
 ALTER TABLE refresh_tokens AUTO_INCREMENT = 1;
 ALTER TABLE sales AUTO_INCREMENT = 1;
 ALTER TABLE service_catalog AUTO_INCREMENT = 1;

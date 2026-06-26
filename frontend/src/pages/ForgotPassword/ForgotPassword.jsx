@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { authApi } from '../../api/authApi'
 import { ROUTES } from '../../utils/routes'
 import styles from './ForgotPassword.module.css'
 
@@ -30,90 +29,29 @@ export function ForgotPassword() {
   const [confirm, setConfirm] = useState('')
   const [showPwd, setShowPwd] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [loading] = useState(false)
   const [error, setError] = useState('')
-  const [resendCooldown, setResendCooldown] = useState(0)
+  const [resendCooldown] = useState(0)
 
   const stepIndex = STEPS.indexOf(step)
 
-  // ── Paso 1: enviar correo ──────────────────────────────────
-  async function handleSendEmail(e) {
+  function handleSendEmail(e) {
     e.preventDefault()
-    if (!email.trim()) { setError('Ingresa tu correo electrónico'); return }
-    setError('')
-    setLoading(true)
-    try {
-      await authApi.forgotPassword(email.trim())
-      setStep('code')
-      startResendCooldown()
-    } catch (err) {
-      setError(err.message || 'Error al procesar la solicitud. Intenta de nuevo.')
-    } finally {
-      setLoading(false)
-    }
+    setError('Funcionalidad en construcción')
   }
 
-  // ── Reenviar código ────────────────────────────────────────
-  function startResendCooldown() {
-    setResendCooldown(60)
-    const interval = setInterval(() => {
-      setResendCooldown((prev) => {
-        if (prev <= 1) { clearInterval(interval); return 0 }
-        return prev - 1
-      })
-    }, 1000)
+  function handleResend() {
+    setError('Funcionalidad en construcción')
   }
 
-  async function handleResend() {
-    if (resendCooldown > 0) return
-    setError('')
-    setLoading(true)
-    try {
-      await authApi.forgotPassword(email.trim())
-      startResendCooldown()
-    } catch (err) {
-      setError(err.message || 'No se pudo reenviar. Intenta de nuevo.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // ── Paso 2: validar código en el servidor ──────────────────
-  async function handleVerifyCode(e) {
+  function handleVerifyCode(e) {
     e.preventDefault()
-    if (!/^\d{6}$/.test(code)) {
-      setError('El código debe tener exactamente 6 dígitos numéricos')
-      return
-    }
-    setError('')
-    setLoading(true)
-    try {
-      await authApi.verifyResetCode(code)
-      setStep('password')
-    } catch (err) {
-      setError(err.message || 'El código es inválido o ha expirado.')
-    } finally {
-      setLoading(false)
-    }
+    setError('Funcionalidad en construcción')
   }
 
-  // ── Paso 3: restablecer contraseña ────────────────────────
-  async function handleReset(e) {
+  function handleReset(e) {
     e.preventDefault()
-    if (pwd.length < 8) { setError('La contraseña debe tener al menos 8 caracteres'); return }
-    if (!/[A-Z]/.test(pwd)) { setError('La contraseña debe contener al menos una mayúscula'); return }
-    if (!/[0-9]/.test(pwd)) { setError('La contraseña debe contener al menos un número'); return }
-    if (pwd !== confirm) { setError('Las contraseñas no coinciden'); return }
-    setError('')
-    setLoading(true)
-    try {
-      await authApi.resetPassword({ code, newPassword: pwd })
-      setStep('success')
-    } catch (err) {
-      setError(err.message || 'El código es inválido o ha expirado.')
-    } finally {
-      setLoading(false)
-    }
+    setError('Funcionalidad en construcción')
   }
 
   // ── Render ─────────────────────────────────────────────────

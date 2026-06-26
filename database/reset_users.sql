@@ -9,7 +9,6 @@ USE engines_jds;
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- Limpiar tablas relacionadas con autenticación
-DELETE FROM password_resets;
 DELETE FROM refresh_tokens;
 
 -- Limpiar audit_logs de login (conservar estructura)
@@ -27,7 +26,6 @@ DELETE FROM users;
 
 -- Reiniciar AUTO_INCREMENT
 ALTER TABLE users AUTO_INCREMENT = 1;
-ALTER TABLE password_resets AUTO_INCREMENT = 1;
 ALTER TABLE refresh_tokens AUTO_INCREMENT = 1;
 
 SET FOREIGN_KEY_CHECKS = 1;

@@ -1,7 +1,7 @@
 import { ApiResponse } from '../utils/ApiResponse.js'
-import { ApiError } from '../utils/ApiError.js'
 import * as AuthService from '../services/auth.service.js'
 import * as SettingsModel from '../models/settings.model.js'
+import { ApiError } from '../utils/ApiError.js'
 
 export async function login(req, res, next) {
   try {
@@ -56,34 +56,6 @@ export async function changePassword(req, res, next) {
     const { currentPassword, newPassword } = req.body
     await AuthService.changePassword(req.user.id, currentPassword, newPassword, req.ip)
     ApiResponse.success(res, null, 'Contraseña actualizada correctamente')
-  } catch (err) {
-    next(err)
-  }
-}
-
-export async function forgotPassword(req, res, next) {
-  try {
-    await AuthService.forgotPassword(req.body.email, req.ip)
-    ApiResponse.success(res, null, 'Si el correo está registrado, recibirás un código en los próximos minutos')
-  } catch (err) {
-    next(err)
-  }
-}
-
-export async function verifyResetCode(req, res, next) {
-  try {
-    const result = await AuthService.verifyResetCode(req.body.code, req.ip)
-    ApiResponse.success(res, result, 'Código válido')
-  } catch (err) {
-    next(err)
-  }
-}
-
-export async function resetPassword(req, res, next) {
-  try {
-    const { code, newPassword } = req.body
-    await AuthService.resetPassword(code, newPassword, req.ip)
-    ApiResponse.success(res, null, 'Contraseña restablecida correctamente')
   } catch (err) {
     next(err)
   }
