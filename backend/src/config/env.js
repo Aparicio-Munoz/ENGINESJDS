@@ -6,7 +6,7 @@ const REQUIRED = [
 ]
 
 export function validateEnv() {
-  const missing = REQUIRED.filter((key) => process.env[key] === undefined || process.env[key] === null)
+  const missing = REQUIRED.filter((key) => !process.env[key]?.trim())
   if (missing.length > 0) {
     throw new Error(
       `[env] Variables de entorno requeridas no configuradas: ${missing.join(', ')}\n` +

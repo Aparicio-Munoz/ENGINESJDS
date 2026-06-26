@@ -12,10 +12,8 @@ import * as InventoryController from '../controllers/inventory.controller.js'
 
 const router = Router()
 
-// Todos los endpoints requieren sesión activa
 router.use(verifyToken)
-// Inventario completo (incluida lectura): vedado para Recepcionista
-router.use(requireRole('Administrador', 'Técnico'))
+router.use(requireRole('Administrador'))
 
 // ── Rutas estáticas (ANTES de /:id) ──────────────────────────
 
@@ -49,43 +47,25 @@ router.get('/:id', InventoryController.getById)
 //   ?page=  ?limit=
 router.get('/:id/movements', InventoryController.getMovements)
 
-// POST /api/inventory              [Administrador]
-router.post('/', requireRole('Administrador'), createInventoryRules, validate, InventoryController.create)
+// POST /api/inventory
+router.post('/', createInventoryRules, validate, InventoryController.create)
 
-// PUT  /api/inventory/:id          [Administrador]
-router.put('/:id', requireRole('Administrador'), updateInventoryRules, validate, InventoryController.update)
+// PUT  /api/inventory/:id
+router.put('/:id', updateInventoryRules, validate, InventoryController.update)
 
-// DELETE /api/inventory/:id        [Administrador]   body: { reason }
+// DELETE /api/inventory/:id   body: { reason }
 // Bloqueado si el repuesto tiene historial en órdenes
-router.delete('/:id', requireRole('Administrador'), InventoryController.remove)
+router.delete('/:id', InventoryController.remove)
 
-// ── Movimientos manuales de stock  [Administrador] ────────────
+// ── Movimientos manuales de stock ────────────────────────────
 
-// POST /api/inventory/:id/entry
-//   body: { qty: number, notes?: string }
-router.post(
-  '/:id/entry',
-  requireRole('Administrador'),
-  entryRules, validate,
-  InventoryController.recordEntry
-)
+// POST /api/inventory/:id/entry   body: { qty: number, notes?: string }
+router.post('/:id/entry', entryRules, validate, InventoryController.recordEntry)
 
-// POST /api/inventory/:id/output
-//   body: { qty: number, notes?: string }
-router.post(
-  '/:id/output',
-  requireRole('Administrador'),
-  outputRules, validate,
-  InventoryController.recordOutput
-)
+// POST /api/inventory/:id/output   body: { qty: number, notes?: string }
+router.post('/:id/output', outputRules, validate, InventoryController.recordOutput)
 
-// POST /api/inventory/:id/adjustment
-//   body: { quantity: number (valor absoluto nuevo), notes?: string }
-router.post(
-  '/:id/adjustment',
-  requireRole('Administrador'),
-  adjustmentRules, validate,
-  InventoryController.recordAdjustment
-)
+// POST /api/inventory/:id/adjustment   body: { quantity: number, notes?: string }
+router.post('/:id/adjustment', adjustmentRules, validate, InventoryController.recordAdjustment)
 
 export default router

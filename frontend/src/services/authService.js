@@ -23,7 +23,7 @@ export const authService = {
   getSession() {
     try {
       const stored = localStorage.getItem(AUTH_STORAGE_KEY)
-      return stored ? JSON.parse(stored) : { user: null, token: null }
+      return stored ? JSON.parse(stored) : { user: null, token: null, refreshToken: null }
     } catch {
       localStorage.removeItem(AUTH_STORAGE_KEY)
       return { user: null, token: null }

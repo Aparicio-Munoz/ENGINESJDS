@@ -41,7 +41,7 @@ import { useAuth } from '../hooks/useAuth'
 function AdminIndex() {
   const { user } = useAuth()
   if (user?.role === 'Técnico')       return <Navigate to={ROUTES.tecnicoDashboard} replace />
-  if (user?.role === 'Recepcionista') return <Navigate to="/admin/clientes"     replace />
+  if (user?.role === 'Recepcionista') return <Navigate to={ROUTES.adminClientes} replace />
   return <DashboardAdmin />
 }
 
