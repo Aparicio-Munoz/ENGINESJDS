@@ -1,15 +1,11 @@
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { DashboardLayout } from '../layouts/DashboardLayout/DashboardLayout'
-import { MainLayout } from '../layouts/MainLayout'
 import { DashboardAdmin } from '../pages/DashboardAdmin/DashboardAdmin'
 import { Perfil } from '../pages/admin/Perfil/Perfil'
 import { Configuracion } from '../pages/admin/Configuracion/Configuracion'
-import { Home } from '../pages/Home/Home'
 import { Login } from '../pages/Login/Login'
 import { ForgotPassword } from '../pages/ForgotPassword/ForgotPassword'
 import { ResetPassword } from '../pages/ResetPassword/ResetPassword'
-import { AgendarCita } from '../pages/AgendarCita/AgendarCita'
-import { Repuestos } from '../pages/Repuestos/Repuestos'
 import { Clientes } from '../pages/admin/Clientes/Clientes'
 import { Motocicletas } from '../pages/admin/Motocicletas/Motocicletas'
 import { ProtectedRoute } from '../components/ProtectedRoute/ProtectedRoute'
@@ -26,7 +22,6 @@ import { Backups } from '../pages/admin/Backups/Backups'
 import { Facturas } from '../pages/admin/Facturas/Facturas'
 import { HistorialMoto } from '../pages/admin/HistorialMoto/HistorialMoto'
 import { CRM } from '../pages/admin/CRM/CRM'
-import { Register } from '../pages/Register/Register'
 import { NotFound } from '../pages/NotFound/NotFound'
 import { DashboardTecnico } from '../pages/tecnico/DashboardTecnico/DashboardTecnico'
 import { OrdenesAsignadas } from '../pages/tecnico/OrdenesAsignadas/OrdenesAsignadas'
@@ -50,19 +45,11 @@ function AdminIndex() {
 //   cuando el usuario no tiene permisos.
 
 const router = createBrowserRouter([
-  {
-    path: ROUTES.home,
-    element: <MainLayout />,
-    children: [
-      { index: true, element: <Home /> },
-      { path: ROUTES.login,         element: <Login /> },
-      { path: ROUTES.register,      element: <Register /> },
-      { path: ROUTES.forgotPassword, element: <ForgotPassword /> },
-      { path: ROUTES.resetPassword,  element: <ResetPassword /> },
-      { path: ROUTES.agendarCita,   element: <AgendarCita /> },
-      { path: ROUTES.repuestos,     element: <Repuestos /> },
-    ],
-  },
+  // ── Raíz: siempre redirige al login (sin landing pública) ──
+  { path: ROUTES.home, element: <Navigate to={ROUTES.login} replace /> },
+  { path: ROUTES.login,          element: <Login /> },
+  { path: ROUTES.forgotPassword, element: <ForgotPassword /> },
+  { path: ROUTES.resetPassword,  element: <ResetPassword /> },
   {
     path: ROUTES.admin,
     element: (

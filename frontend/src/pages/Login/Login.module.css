@@ -305,25 +305,6 @@
   }
 }
 
-/* ── Register prompt ─────────────────────────────── */
-.registerPrompt {
-  margin: 0;
-  text-align: center;
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.45);
-}
-
-.registerLink {
-  color: #F97316;
-  font-weight: 600;
-  text-decoration: none;
-  transition: opacity 0.15s;
-}
-
-.registerLink:hover {
-  opacity: 0.75;
-}
-
 /* ── PWA Install button ──────────────────────────── */
 .installButton {
   display: inline-flex;

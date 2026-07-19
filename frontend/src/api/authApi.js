@@ -26,13 +26,18 @@ export const authApi = {
     return apiClient.put('/auth/change-password', data).then((r) => r.data)
   },
 
-  // GET /auth/registration-status → { allowed: boolean }
-  registrationStatus() {
-    return apiClient.get('/auth/registration-status').then((r) => r.data.data)
+  // POST /auth/forgot-password
+  forgotPassword(email) {
+    return apiClient.post('/auth/forgot-password', { email }).then((r) => r.data)
   },
 
-  // POST /auth/public-register
-  publicRegister(data) {
-    return apiClient.post('/auth/public-register', data).then((r) => r.data)
+  // POST /auth/verify-code
+  verifyResetCode(email, code) {
+    return apiClient.post('/auth/verify-code', { email, code }).then((r) => r.data)
+  },
+
+  // POST /auth/reset-password
+  resetPassword(data) {
+    return apiClient.post('/auth/reset-password', data).then((r) => r.data)
   },
 }

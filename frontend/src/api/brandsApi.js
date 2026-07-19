@@ -30,14 +30,4 @@ export const brandsApi = {
   remove(id) {
     return apiClient.delete(`/brands/${id}`).then((r) => r.data)
   },
-
-  // ── Público (sin sesión) ────────────────���────────────────
-  getPublicBrands(category) {
-    const params = category ? { category } : {}
-    return apiClient.get('/public/brands', { params }).then((r) => r.data.data)
-  },
-
-  getPublicProducts(params = {}) {
-    return apiClient.get('/public/products', { params }).then((r) => r.data.data)
-  },
 }

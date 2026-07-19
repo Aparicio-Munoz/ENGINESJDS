@@ -1,11 +1,8 @@
 export const ROUTES = {
   home: '/',
   login: '/login',
-  register: '/register',
   forgotPassword: '/forgot-password',
   resetPassword: '/reset-password',
-  agendarCita: '/agendar-cita',
-  repuestos: '/repuestos',
   admin: '/admin',
   adminClientes: '/admin/clientes',
   adminCitas: '/admin/citas',

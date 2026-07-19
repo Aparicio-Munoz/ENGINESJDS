@@ -2,7 +2,6 @@ import { Router } from 'express'
 import { verifyToken, requireRole } from '../middlewares/auth.middleware.js'
 import { validate } from '../middlewares/validate.middleware.js'
 import {
-  createAppointmentRules,
   updateAppointmentRules,
   rescheduleRules,
   cancelRules,
@@ -10,15 +9,6 @@ import {
 import * as AppointmentController from '../controllers/appointments.controller.js'
 
 const router = Router()
-
-// ── Ruta pública — clientes agendan desde la landing ─────────
-// POST /api/appointments
-router.post(
-  '/',
-  createAppointmentRules,
-  validate,
-  AppointmentController.create
-)
 
 // ── Todo lo siguiente requiere JWT ───────────────────────────
 router.use(verifyToken)
