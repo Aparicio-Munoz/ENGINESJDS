@@ -99,13 +99,10 @@ const EMPTY_FORM = {
   model: '',
   year: '',
   engine_cc: '',
-  color: '',
-  vin: '',
 }
 
 function validate(form) {
   const errors = {}
-  if (!form.client_id) errors.client_id = 'Selecciona un propietario.'
   const plate = form.plate.trim().toUpperCase()
   if (!plate) errors.plate = 'La placa es obligatoria.'
   else if (!/^[A-Z]{3}[0-9]{2}[A-Z0-9]$/.test(plate)) errors.plate = 'Placa colombiana: 3 letras + 2 números + 1 letra o número (ej. ABC12D).'
@@ -118,9 +115,6 @@ function validate(form) {
   }
   if (form.engine_cc && (isNaN(Number(form.engine_cc)) || Number(form.engine_cc) <= 0)) {
     errors.engine_cc = 'Cilindraje inválido.'
-  }
-  if (form.vin && !/^[A-HJ-NPR-Z0-9]{17}$/i.test(form.vin.trim())) {
-    errors.vin = 'VIN inválido: 17 caracteres, sin I, O ni Q.'
   }
   return errors
 }
@@ -262,14 +256,12 @@ export function Motocicletas() {
     setSubmitting(true)
     try {
       const payload = {
-        client_id: Number(formData.client_id),
+        ...(formData.client_id ? { client_id: Number(formData.client_id) } : {}),
         plate: formData.plate.trim().toUpperCase(),
         brand: formData.brand.trim(),
         model: formData.model.trim(),
         year: Number(formData.year),
         ...(formData.engine_cc ? { engine_cc: Number(formData.engine_cc) } : {}),
-        ...(formData.color.trim() ? { color: formData.color.trim() } : {}),
-        ...(formData.vin.trim() ? { vin: formData.vin.trim() } : {}),
       }
       await motorcyclesApi.create(payload)
       console.log('[Motocicletas] Creada exitosamente')
@@ -385,9 +377,13 @@ export function Motocicletas() {
                     <td data-label="Modelo">{m.model}</td>
                     <td data-label="Año">{m.year}</td>
                     <td data-label="Cliente">
-                      <span className={styles.ownerName}>
-                        {m.client_name} {m.client_last_name}
-                      </span>
+                      {m.client_name ? (
+                        <span className={styles.ownerName}>
+                          {m.client_name} {m.client_last_name}
+                        </span>
+                      ) : (
+                        <span className={styles.noOwner}>Sin propietario</span>
+                      )}
                     </td>
                     <td data-label="Teléfono">
                       <span className={styles.ownerPhone}>{m.client_phone ?? '—'}</span>
@@ -477,9 +473,9 @@ export function Motocicletas() {
 
             <form className={styles.form} onSubmit={handleCreate}>
               <label className={`${styles.formField} ${styles.fullWidth}`}>
-                Propietario *
+                Propietario
                 <select name="client_id" value={formData.client_id} onChange={handleInputChange}>
-                  <option value="">Seleccionar cliente...</option>
+                  <option value="">Sin propietario asignado (opcional)</option>
                   {clients.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name} {c.last_name} — {c.document}
@@ -549,28 +545,6 @@ export function Motocicletas() {
                   disabled={submitting}
                 />
                 {formErrors.engine_cc ? <span>{formErrors.engine_cc}</span> : null}
-              </label>
-
-              <label className={styles.formField}>
-                Color
-                <input
-                  name="color"
-                  value={formData.color}
-                  onChange={handleInputChange}
-                  placeholder="Negro"
-                  disabled={submitting}
-                />
-              </label>
-
-              <label className={styles.formField}>
-                VIN / Chasis
-                <input
-                  name="vin"
-                  value={formData.vin}
-                  onChange={handleInputChange}
-                  placeholder="Número de chasis"
-                  disabled={submitting}
-                />
               </label>
 
               <div className={styles.formActions}>

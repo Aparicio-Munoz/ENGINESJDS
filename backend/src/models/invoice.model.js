@@ -61,8 +61,8 @@ export async function findById(id) {
             o.diagnostic_notes, o.work_notes,
             o.labor_cost, o.parts_cost,
             c.name AS c_name, c.last_name AS c_last_name,
-            c.document_type, c.document AS c_document, c.phone AS c_phone, c.email AS c_email,
-            m.plate, m.brand, m.model, m.year, m.color, m.engine_cc,
+            c.document_type, c.document AS c_document, c.phone AS c_phone,
+            m.plate, m.brand, m.model, m.year, m.engine_cc,
             CONCAT(e.name, ' ', e.last_name) AS employee_name
      FROM invoices i
      INNER JOIN orders o ON o.id = i.order_id

@@ -19,9 +19,6 @@ export const createOrderRules = [
   body('appointment_id')
     .optional({ checkFalsy: true })
     .isInt({ min: 1 }).withMessage('appointment_id inválido'),
-  body('estimated_delivery_date')
-    .optional({ checkFalsy: true })
-    .isDate({ format: 'YYYY-MM-DD' }).withMessage('Fecha de entrega inválida (YYYY-MM-DD)'),
   body('labor_cost')
     .optional()
     .isFloat({ min: 0 }).withMessage('labor_cost debe ser >= 0'),
@@ -36,9 +33,6 @@ export const updateOrderRules = [
     .optional({ nullable: true })
     .if((val) => val !== null)
     .isInt({ min: 1 }).withMessage('assigned_employee_id inválido'),
-  body('estimated_delivery_date')
-    .optional({ checkFalsy: true })
-    .isDate({ format: 'YYYY-MM-DD' }).withMessage('Fecha de entrega inválida (YYYY-MM-DD)'),
   body('diagnostic_notes')
     .optional()
     .trim()

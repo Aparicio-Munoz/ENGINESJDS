@@ -2,7 +2,6 @@ import { getPool } from '../config/database.js'
 import * as OrderModel from '../models/order.model.js'
 import { ApiError } from '../utils/ApiError.js'
 import { auditEntity, AUDIT_ACTIONS } from './audit.service.js'
-import { emit, emitToTracking, EVENTS } from '../socket/index.js'
 
 // ── CRUD principal ────────────────────────────────────────────
 
@@ -36,7 +35,7 @@ export async function getHistory(id) {
 export async function create(data, createdById, actor = {}) {
   const {
     client_id, motorcycle_id, assigned_employee_id, appointment_id,
-    problem_description, estimated_delivery_date, labor_cost, discount,
+    problem_description, labor_cost, discount,
   } = data
 
   await _assertClientExists(client_id)
@@ -53,7 +52,6 @@ export async function create(data, createdById, actor = {}) {
     appointment_id:          appointment_id ?? null,
     assigned_employee_id:    assigned_employee_id ?? null,
     diagnostic_notes:        problem_description,
-    estimated_delivery_date: estimated_delivery_date ?? null,
     labor_cost:              labor_cost ?? 0,
     discount:                discount   ?? 0,
     created_by:              createdById,
@@ -79,13 +77,6 @@ export async function create(data, createdById, actor = {}) {
     },
     description: `Orden ${order.order_number} creada`,
   })
-
-  emit(EVENTS.ORDER_CREATED, {
-    id: order.id, order_number: order.order_number,
-    plate: order.motorcycle_plate, client: order.client_name,
-    status: order.status,
-  })
-  emit(EVENTS.DASHBOARD_REFRESH, { trigger: 'order_created' })
 
   return order
 }
@@ -160,19 +151,6 @@ export async function changeStatus(id, { status, notes }, changedById, actor = {
     newValues: { status, notes: notes ?? null },
     description: `Orden #${id}: ${order.status} → ${status}`,
   })
-
-  emit(EVENTS.ORDER_STATUS_CHANGED, {
-    id, order_number: updated.order_number ?? order.order_number,
-    previousStatus: order.status, newStatus: status,
-    updatedAt: new Date().toISOString(),
-  })
-  if (updated.tracking_token) {
-    emitToTracking(updated.tracking_token, EVENTS.TRACKING_UPDATED, {
-      tracking_token: updated.tracking_token, status,
-      estimated_delivery: updated.estimated_delivery_date,
-    })
-  }
-  emit(EVENTS.DASHBOARD_REFRESH, { trigger: 'status_changed' })
 
   return updated
 }

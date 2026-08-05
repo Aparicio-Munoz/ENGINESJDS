@@ -2,6 +2,16 @@ import nodemailer from 'nodemailer'
 import { logger } from '../utils/logger.js'
 
 let transporter = null
+let initPromise = null
+
+// Inicializa el transporter de forma perezosa e idempotente — necesario en
+// serverless, donde no hay un único arranque de proceso que lo dispare.
+export function ensureInitialized() {
+  if (!transporter && !initPromise) {
+    initPromise = initialize().finally(() => { initPromise = null })
+  }
+  return initPromise ?? Promise.resolve()
+}
 
 export async function initialize() {
   const host = process.env.SMTP_HOST
@@ -39,6 +49,7 @@ export function getTransporter() {
 }
 
 export async function sendTestEmail() {
+  await ensureInitialized()
   const t = getTransporter()
   const to   = process.env.SMTP_USER ?? 'test@enginesjds.com'
   const from = process.env.SMTP_FROM ?? process.env.SMTP_USER ?? 'noreply@enginesjds.com'

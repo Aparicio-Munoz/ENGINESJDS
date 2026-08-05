@@ -2,7 +2,6 @@ import * as InvoiceModel from '../models/invoice.model.js'
 import * as OrderModel from '../models/order.model.js'
 import { ApiError } from '../utils/ApiError.js'
 import { logAudit } from './audit.service.js'
-import { emit, EVENTS } from '../socket/index.js'
 import PDFDocument from 'pdfkit'
 
 export async function getAll(query) {
@@ -62,11 +61,6 @@ export async function markPaid(id, actor = {}) {
     tableName: 'invoices', recordId: id,
     description: `Factura ${inv.invoice_number} marcada como pagada`,
   })
-
-  emit(EVENTS.INVOICE_PAID, {
-    invoice_number: inv.invoice_number, total: inv.total, payment_method: inv.payment_method,
-  })
-  emit(EVENTS.DASHBOARD_REFRESH, { trigger: 'invoice_paid' })
 
   return updated
 }

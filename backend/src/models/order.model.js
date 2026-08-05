@@ -11,7 +11,7 @@ import { getPool } from '../config/database.js'
 const LIST_SELECT = `
   SELECT
     o.id, o.order_number, o.tracking_token, o.status, o.entry_date,
-    o.estimated_delivery_date, o.actual_delivery_date,
+    o.actual_delivery_date,
     o.labor_cost, o.parts_cost, o.discount, o.subtotal, o.final_price,
     o.diagnostic_notes, o.work_notes,
     o.motorcycle_id, o.client_id, o.appointment_id, o.assigned_employee_id,
@@ -102,12 +102,12 @@ export async function findById(id) {
   const [rows] = await getPool().query(
     `SELECT
        o.*,
-       c.document_type, c.document,
        c.name AS client_name, c.last_name AS client_last_name,
-       c.phone AS client_phone, c.email AS client_email,
+       c.document_type, c.document,
+       c.phone AS client_phone,
        m.plate AS motorcycle_plate, m.brand AS motorcycle_brand,
        m.model AS motorcycle_model, m.year AS motorcycle_year,
-       m.color AS motorcycle_color, m.engine_cc, m.vin,
+       m.engine_cc,
        CONCAT(e.name, ' ', e.last_name) AS employee_name,
        e.specialty AS employee_specialty, e.phone AS employee_phone
      FROM orders o
@@ -138,8 +138,8 @@ export async function findHistory(id) {
     getPool().query(
       `SELECT o.*,
          c.name AS client_name, c.last_name AS client_last_name,
-         c.phone AS client_phone, c.email AS client_email, c.document,
-         m.plate, m.brand, m.model, m.year, m.color, m.engine_cc, m.vin,
+         c.phone AS client_phone, c.document,
+         m.plate, m.brand, m.model, m.year, m.engine_cc,
          CONCAT(e.name, ' ', e.last_name) AS employee_name,
          e.specialty AS employee_specialty
        FROM orders o
@@ -201,7 +201,6 @@ export async function create({
   appointment_id          = null,
   assigned_employee_id    = null,
   diagnostic_notes        = null,
-  estimated_delivery_date = null,
   labor_cost              = 0,
   discount                = 0,
   created_by              = null,
@@ -209,11 +208,11 @@ export async function create({
   const [result] = await getPool().query(
     `INSERT INTO orders
        (motorcycle_id, client_id, appointment_id, assigned_employee_id,
-        diagnostic_notes, estimated_delivery_date, labor_cost, discount, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        diagnostic_notes, labor_cost, discount, created_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       motorcycle_id, client_id, appointment_id, assigned_employee_id,
-      diagnostic_notes, estimated_delivery_date,
+      diagnostic_notes,
       labor_cost, discount, created_by,
     ]
   )
@@ -224,7 +223,6 @@ export async function create({
 export async function update(id, fields) {
   const allowed = [
     'assigned_employee_id',
-    'estimated_delivery_date',
     'diagnostic_notes',
     'work_notes',
     'labor_cost',

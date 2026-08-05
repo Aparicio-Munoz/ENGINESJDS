@@ -479,6 +479,12 @@
 }
 
 /* ── Detail modal ────────────────────────────────── */
+/* z-index por encima del sidebar (200) para que el overlay cubra toda
+   la vista y el modal quede realmente centrado, no pegado al costado */
+.modalBackdrop.detailBackdrop {
+  z-index: 500;
+}
+
 .detailModal {
   width: min(900px, 100%);
   max-height: min(90vh, 960px);
@@ -1217,4 +1223,34 @@
   .formActions button {
     width: 100%;
   }
+}
+
+/* ── Bitácora de trabajos ── */
+.workLogAddRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.workLogAddRow input {
+  flex: 1;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 0.88rem;
+}
+
+.workLogAddRow input:focus {
+  outline: none;
+  border-color: #f97316;
+}
+
+.workLogList {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }

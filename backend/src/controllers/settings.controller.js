@@ -1,3 +1,4 @@
+import { put } from '@vercel/blob'
 import { ApiResponse } from '../utils/ApiResponse.js'
 import * as SettingsService from '../services/settings.service.js'
 
@@ -22,13 +23,12 @@ export async function update(req, res, next) {
 export async function uploadLogo(req, res, next) {
   try {
     if (!req.file) return res.status(400).json({ success: false, message: 'Imagen requerida' })
-    const logoUrl = `/uploads/logo_${Date.now()}_${req.file.originalname}`
-    const fs = await import('fs/promises')
-    const path = await import('path')
-    const dir = path.resolve(process.cwd(), 'storage', 'uploads')
-    await fs.mkdir(dir, { recursive: true })
-    await fs.writeFile(path.join(dir, path.basename(logoUrl)), req.file.buffer)
-    const settings = await SettingsService.updateLogo(logoUrl, actor(req))
+    const filename = `logo_${Date.now()}_${req.file.originalname}`
+    const blob = await put(filename, req.file.buffer, {
+      access: 'public',
+      contentType: req.file.mimetype,
+    })
+    const settings = await SettingsService.updateLogo(blob.url, actor(req))
     ApiResponse.success(res, settings, 'Logo actualizado')
   } catch (err) { next(err) }
 }

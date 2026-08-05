@@ -2,7 +2,7 @@ import { getPool } from '../config/database.js'
 
 const SAFE_FIELDS = `
   id, user_id, document_type, document, name, last_name,
-  specialty, phone, email, daily_rate, status, hire_date,
+  specialty, phone, email, daily_rate, commission_percent, status, hire_date,
   notes, created_at, updated_at
 `
 
@@ -109,6 +109,7 @@ export async function create({
   phone,
   email      = null,
   daily_rate = 0,
+  commission_percent = 0,
   status     = 'Activo',
   hire_date,
   notes      = null,
@@ -116,10 +117,10 @@ export async function create({
   const [result] = await getPool().query(
     `INSERT INTO employees
        (user_id, document_type, document, name, last_name,
-        specialty, phone, email, daily_rate, status, hire_date, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        specialty, phone, email, daily_rate, commission_percent, status, hire_date, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [user_id, document_type, document, name, last_name,
-     specialty, phone, email, daily_rate, status, hire_date, notes]
+     specialty, phone, email, daily_rate, commission_percent, status, hire_date, notes]
   )
   return findById(result.insertId)
 }
@@ -127,7 +128,7 @@ export async function create({
 export async function update(id, fields) {
   const allowed = [
     'user_id', 'document_type', 'document', 'name', 'last_name',
-    'specialty', 'phone', 'email', 'daily_rate', 'status', 'hire_date', 'notes',
+    'specialty', 'phone', 'email', 'daily_rate', 'commission_percent', 'status', 'hire_date', 'notes',
   ]
   const sets   = []
   const params = []
@@ -209,6 +210,39 @@ export async function getEarnings(employeeId) {
     [employeeId]
   )
   return rows[0]
+}
+
+// Total generado (mano de obra + repuestos − descuento) por el empleado
+// (técnico asignado) en un rango de fechas — base para el cálculo de comisión
+export async function getOrderEarnings(employeeId, from, to) {
+  const [[totals]] = await getPool().query(
+    `SELECT
+       COALESCE(SUM(final_price), 0) AS order_total,
+       COUNT(*)                      AS orders_count
+     FROM orders
+     WHERE assigned_employee_id = ?
+       AND DATE(entry_date) BETWEEN ? AND ?`,
+    [employeeId, from, to]
+  )
+
+  const [orders] = await getPool().query(
+    `SELECT
+       o.id, o.order_number, o.status, o.entry_date,
+       o.labor_cost, o.parts_cost, o.discount, o.final_price,
+       m.plate AS motorcycle_plate, m.brand AS motorcycle_brand
+     FROM orders o
+     INNER JOIN motorcycles m ON m.id = o.motorcycle_id
+     WHERE o.assigned_employee_id = ?
+       AND DATE(o.entry_date) BETWEEN ? AND ?
+     ORDER BY o.entry_date DESC`,
+    [employeeId, from, to]
+  )
+
+  return {
+    order_total:  Number(totals.order_total),
+    orders_count: Number(totals.orders_count),
+    orders,
+  }
 }
 
 // Lista de especialidades activas — para filtro en el frontend

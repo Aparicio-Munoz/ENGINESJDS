@@ -31,7 +31,7 @@ export const ordersApi = {
     return apiClient.post('/orders', data).then((r) => r.data.data)
   },
 
-  // PUT /orders/:id — { assigned_employee_id?, estimated_delivery_date?, diagnostic_notes?, work_notes?, labor_cost?, discount? }
+  // PUT /orders/:id — { assigned_employee_id?, diagnostic_notes?, work_notes?, labor_cost?, discount? }
   update(id, data) {
     return apiClient.put(`/orders/${id}`, data).then((r) => r.data.data)
   },

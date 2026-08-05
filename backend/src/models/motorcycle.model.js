@@ -4,14 +4,14 @@ import { getPool } from '../config/database.js'
 const BASE_SELECT = `
   SELECT
     m.id, m.client_id, m.plate, m.brand, m.model, m.year,
-    m.color, m.engine_cc, m.vin, m.status, m.notes,
+    m.engine_cc, m.status, m.notes,
     m.created_at, m.updated_at,
     c.name        AS client_name,
     c.last_name   AS client_last_name,
     c.phone       AS client_phone,
     c.document    AS client_document
   FROM motorcycles m
-  INNER JOIN clients c ON c.id = m.client_id
+  LEFT JOIN clients c ON c.id = m.client_id
 `
 
 const SORT_MAP = {
@@ -38,11 +38,11 @@ export async function findAll({
 
   if (search) {
     conditions.push(
-      `(m.plate LIKE ? OR m.vin LIKE ? OR m.brand LIKE ? OR m.model LIKE ?
+      `(m.plate LIKE ? OR m.brand LIKE ? OR m.model LIKE ?
         OR c.name LIKE ? OR c.last_name LIKE ?)`
     )
     const t = `%${search}%`
-    params.push(t, t, t, t, t, t)
+    params.push(t, t, t, t, t)
   }
   if (brand)     { conditions.push('m.brand = ?');     params.push(brand) }
   if (model)     { conditions.push('m.model LIKE ?');  params.push(`%${model}%`) }
@@ -56,7 +56,7 @@ export async function findAll({
 
   const [[{ total }]] = await getPool().query(
     `SELECT COUNT(*) AS total FROM motorcycles m
-     INNER JOIN clients c ON c.id = m.client_id ${where}`,
+     LEFT JOIN clients c ON c.id = m.client_id ${where}`,
     params
   )
   const [rows] = await getPool().query(
@@ -93,33 +93,22 @@ export async function plateExists(plate, excludeId = null) {
   return rows.length > 0
 }
 
-export async function vinExists(vin, excludeId = null) {
-  if (!vin) return false
-  const [rows] = await getPool().query(
-    'SELECT id FROM motorcycles WHERE vin = ? AND id != ? AND deleted_at IS NULL',
-    [vin, excludeId ?? 0]
-  )
-  return rows.length > 0
-}
-
 // ── CRUD ─────────────────────────────────────────────────────
 export async function create({
-  client_id,
+  client_id = null,
   plate,
   brand,
   model,
   year,
-  color     = null,
   engine_cc = null,
-  vin       = null,
   status    = 'Disponible',
   notes     = null,
 }) {
   const [result] = await getPool().query(
     `INSERT INTO motorcycles
-       (client_id, plate, brand, model, year, color, engine_cc, vin, status, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [client_id, plate, brand, model, year, color, engine_cc, vin, status, notes]
+       (client_id, plate, brand, model, year, engine_cc, status, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [client_id, plate, brand, model, year, engine_cc, status, notes]
   )
   return findById(result.insertId)
 }
@@ -127,7 +116,7 @@ export async function create({
 export async function update(id, fields) {
   const allowed = [
     'client_id', 'plate', 'brand', 'model', 'year',
-    'color', 'engine_cc', 'vin', 'status', 'notes',
+    'engine_cc', 'status', 'notes',
   ]
   const sets   = []
   const params = []
@@ -190,10 +179,10 @@ export async function getHistory(id) {
       `SELECT m.*,
               c.name AS client_name, c.last_name AS client_last_name,
               c.document_type, c.document AS client_document,
-              c.phone AS client_phone, c.email AS client_email,
-              c.address, c.city
+              c.phone AS client_phone,
+              c.city
        FROM motorcycles m
-       INNER JOIN clients c ON c.id = m.client_id
+       LEFT JOIN clients c ON c.id = m.client_id
        WHERE m.id = ? AND m.deleted_at IS NULL`,
       [id]
     ),
@@ -215,7 +204,7 @@ export async function getHistory(id) {
     pool.query(
       `SELECT
          o.id, o.order_number, o.status, o.entry_date,
-         o.estimated_delivery_date, o.actual_delivery_date,
+         o.actual_delivery_date,
          o.diagnostic_notes, o.work_notes,
          o.labor_cost, o.parts_cost, o.discount, o.final_price,
          CONCAT(e.name, ' ', e.last_name) AS assigned_employee,
@@ -235,7 +224,7 @@ export async function getHistory(id) {
        LEFT JOIN order_items   oi ON oi.order_id = o.id
        WHERE o.motorcycle_id = ?
        GROUP BY o.id, o.order_number, o.status, o.entry_date,
-                o.estimated_delivery_date, o.actual_delivery_date,
+                o.actual_delivery_date,
                 o.diagnostic_notes, o.work_notes,
                 o.labor_cost, o.parts_cost, o.discount, o.final_price,
                 e.name, e.last_name

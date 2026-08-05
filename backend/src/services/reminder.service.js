@@ -1,7 +1,6 @@
 import * as ReminderModel from '../models/reminder.model.js'
 import { ApiError } from '../utils/ApiError.js'
 import { logAudit } from './audit.service.js'
-import { emit, EVENTS } from '../socket/index.js'
 
 export async function getAll(query) {
   const { rows, total } = await ReminderModel.findAll(query)
@@ -55,10 +54,6 @@ export async function send(id, actor = {}) {
     userId: actor.userId, userName: actor.userName, role: actor.role, ipAddress: actor.ip,
     tableName: 'customer_reminders', recordId: id,
     description: `Recordatorio ${r.type} enviado a ${r.client_name} (${r.client_phone})`,
-  })
-
-  emit(EVENTS.CRM_REMINDER_SENT, {
-    client: r.client_name, motorcycle: r.plate ?? '—', type: r.type,
   })
 
   const phone = (r.client_phone || '').replace(/\D/g, '')

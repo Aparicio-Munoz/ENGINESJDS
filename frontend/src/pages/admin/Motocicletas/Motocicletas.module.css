@@ -108,6 +108,11 @@
   font-size: 0.86rem;
 }
 
+.noOwner {
+  color: #98a2b3;
+  font-style: italic;
+}
+
 .statusBadge {
   display: inline-flex;
   align-items: center;

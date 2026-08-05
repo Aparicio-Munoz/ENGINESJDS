@@ -80,7 +80,7 @@ export async function generatePDF(motorcycleId, actor = {}) {
     // Motorcycle info
     doc.fontSize(16).fillColor('#0F172A').text(`${motorcycle.plate}`)
     doc.fontSize(11).fillColor('#64748B').text(`${motorcycle.brand} ${motorcycle.model} ${motorcycle.year} — ${motorcycle.color ?? ''} ${motorcycle.engine_cc ? motorcycle.engine_cc + 'cc' : ''}`)
-    doc.fontSize(9).text(`Cliente: ${motorcycle.client_name} · Tel: ${motorcycle.client_phone ?? '—'}`)
+    doc.fontSize(9).text(`Cliente: ${motorcycle.client_name ?? 'Sin propietario asignado'} · Tel: ${motorcycle.client_phone ?? '—'}`)
     doc.moveDown(0.8)
 
     // Stats

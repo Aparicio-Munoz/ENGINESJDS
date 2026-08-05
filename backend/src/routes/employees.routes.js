@@ -31,6 +31,11 @@ router.get('/:id', EmployeeController.getById)
 //              monthlyEarnings, dailySalaryCost, biweeklySalaryCost, monthlySalaryCost } }
 router.get('/:id/performance', EmployeeController.getPerformance)
 
+// GET  /api/employees/:id/earnings?from=YYYY-MM-DD&to=YYYY-MM-DD
+//   Mano de obra generada por órdenes asignadas en el rango (por fecha de ingreso)
+//   Retorna: { employee, from, to, labor_total, orders_count, commission_amount, orders[] }
+router.get('/:id/earnings', EmployeeController.getEarnings)
+
 // POST   /api/employees        [Administrador]
 router.post('/', requireRole('Administrador'), createEmployeeRules, validate, EmployeeController.create)
 

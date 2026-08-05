@@ -9,3 +9,5 @@ storage/uploads/*
 *.log
 npm-debug.log*
 .DS_Store
+.vercel
+.env*

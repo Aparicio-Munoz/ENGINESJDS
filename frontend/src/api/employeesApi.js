@@ -21,6 +21,11 @@ export const employeesApi = {
     return apiClient.get(`/employees/${id}/performance`).then((r) => r.data.data)
   },
 
+  // GET /employees/:id/earnings?from=YYYY-MM-DD&to=YYYY-MM-DD
+  getEarnings(id, params = {}) {
+    return apiClient.get(`/employees/${id}/earnings`, { params }).then((r) => r.data.data)
+  },
+
   // POST /employees — requires: document_type, document, hire_date, name, last_name, specialty, phone
   create(data) {
     return apiClient.post('/employees', data).then((r) => r.data.data)

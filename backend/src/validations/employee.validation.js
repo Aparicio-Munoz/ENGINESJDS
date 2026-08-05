@@ -28,6 +28,9 @@ const sharedRules = [
   body('daily_rate')
     .optional()
     .isFloat({ min: 0 }).withMessage('La tarifa diaria debe ser un número mayor o igual a 0'),
+  body('commission_percent')
+    .optional()
+    .isFloat({ min: 0, max: 100 }).withMessage('La comisión debe estar entre 0 y 100'),
   body('status')
     .optional()
     .isIn(VALID_STATUS)
@@ -70,6 +73,9 @@ const sharedOptional = [
   body('daily_rate')
     .optional()
     .isFloat({ min: 0 }).withMessage('La tarifa diaria debe ser un número mayor o igual a 0'),
+  body('commission_percent')
+    .optional()
+    .isFloat({ min: 0, max: 100 }).withMessage('La comisión debe estar entre 0 y 100'),
   body('status')
     .optional()
     .isIn(VALID_STATUS)

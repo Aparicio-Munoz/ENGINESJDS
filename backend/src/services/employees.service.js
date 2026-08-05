@@ -104,6 +104,42 @@ export async function getPerformance(id) {
   }
 }
 
+// Ganancias por comisión: total de las órdenes asignadas
+// (mano de obra + repuestos − descuento) × % de comisión del empleado
+export async function getEarningsByRange(id, { from, to } = {}) {
+  const employee = await getById(id)
+
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+  const today   = new Date().toISOString().slice(0, 10)
+  const fromDate = DATE_RE.test(from ?? '') ? from : today
+  const toDate   = DATE_RE.test(to ?? '')   ? to   : fromDate
+
+  if (fromDate > toDate) {
+    throw ApiError.badRequest('El rango de fechas es inválido: "desde" es posterior a "hasta"')
+  }
+
+  const { order_total, orders_count, orders } =
+    await EmployeeModel.getOrderEarnings(id, fromDate, toDate)
+
+  const commissionPercent = Number(employee.commission_percent ?? 0)
+  const commissionAmount  = Math.round(order_total * commissionPercent) / 100
+
+  return {
+    employee: {
+      id:                 employee.id,
+      name:               employee.name,
+      last_name:          employee.last_name,
+      commission_percent: commissionPercent,
+    },
+    from: fromDate,
+    to:   toDate,
+    order_total:       order_total,
+    orders_count,
+    commission_amount: commissionAmount,
+    orders,
+  }
+}
+
 export async function getSpecialties() {
   return EmployeeModel.findSpecialties()
 }

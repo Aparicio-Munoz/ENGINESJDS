@@ -43,7 +43,7 @@ router.get('/', OrderController.getAll)
 // POST /api/orders
 //   body: { client_id, motorcycle_id, problem_description,
 //           assigned_employee_id?, appointment_id?,
-//           estimated_delivery_date?, labor_cost?, discount? }
+//           labor_cost?, discount? }
 router.post('/', createOrderRules, validate, OrderController.create)
 
 // ── Detalle e historial ───────────────────────────────────────
@@ -61,8 +61,7 @@ router.get('/:id/pdf', PdfController.getOrderPDF)
 // ── Actualización principal ───────────────────────────────────
 
 // PUT /api/orders/:id
-//   body: { assigned_employee_id?, estimated_delivery_date?,
-//           diagnostic_notes?, work_notes?, labor_cost?, discount? }
+//   body: { assigned_employee_id?, diagnostic_notes?, work_notes?, labor_cost?, discount? }
 router.put('/:id', updateOrderRules, validate, OrderController.update)
 
 // ── Transiciones de estado ────────────────────────────────────

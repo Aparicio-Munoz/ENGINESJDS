@@ -2,7 +2,6 @@ import { getPool } from '../config/database.js'
 import * as InventoryModel from '../models/inventory.model.js'
 import { ApiError } from '../utils/ApiError.js'
 import { auditEntity, AUDIT_ACTIONS } from './audit.service.js'
-import { emit, EVENTS } from '../socket/index.js'
 
 export async function getAll({ search, category, brand, status, sort, page = 1, limit = 20 } = {}) {
   const { rows, total } = await InventoryModel.findAll({
@@ -80,12 +79,6 @@ export async function update(id, data, actor = {}) {
   await auditEntity(AUDIT_ACTIONS.EDITAR_INVENTARIO, {
     actor, tableName: 'inventory', recordId: id, oldValues: current, newValues: updated,
   })
-
-  if (Number(updated.quantity) <= Number(updated.min_stock)) {
-    emit(EVENTS.LOW_STOCK_ALERT, {
-      product: updated.name, stock: updated.quantity, minimum_stock: updated.min_stock,
-    })
-  }
 
   return updated
 }

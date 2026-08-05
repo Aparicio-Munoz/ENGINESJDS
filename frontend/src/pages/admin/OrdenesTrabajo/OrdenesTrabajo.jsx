@@ -59,20 +59,30 @@ function buildWhatsAppUrl(order) {
 function emptyCreate() {
   return {
     client_id: '', motorcycle_id: '', assigned_employee_id: '',
-    problem_description: '', estimated_delivery_date: '',
+    problem_description: '',
     labor_cost: '', discount: '',
   }
 }
 
 function emptyEdit(order = {}) {
   return {
-    assigned_employee_id:    order.assigned_employee_id  ?? '',
-    estimated_delivery_date: order.estimated_delivery_date?.slice(0, 10) ?? '',
-    diagnostic_notes:        order.diagnostic_notes ?? '',
-    work_notes:              order.work_notes       ?? '',
-    labor_cost:              order.labor_cost       ?? '',
-    discount:                order.discount         ?? '',
+    assigned_employee_id: order.assigned_employee_id  ?? '',
+    diagnostic_notes:     order.diagnostic_notes ?? '',
+    labor_cost:           order.labor_cost       ?? '',
+    discount:             order.discount         ?? '',
   }
+}
+
+// La bitácora de trabajos se guarda en work_notes como una línea por entrada
+function parseWorkLog(text) {
+  return (text ?? '')
+    .split('\n')
+    .map((l) => l.replace(/^[-•*]\s*/, '').trim())
+    .filter(Boolean)
+}
+
+function serializeWorkLog(entries) {
+  return entries.join('\n')
 }
 
 function emptySvc() {
@@ -110,11 +120,15 @@ export function OrdenesTrabajo() {
   const [createForm, setCreateForm]     = useState(emptyCreate)
   const [createErrors, setCreateErrors] = useState({})
   const [creating, setCreating]         = useState(false)
+  const [clientSearch, setClientSearch] = useState('')
+  const [motoSearch, setMotoSearch]     = useState('')
 
   // ── Edit modal ────────────────────────────────────────────
   const [editTarget, setEditTarget]   = useState(null)
   const [editForm, setEditForm]       = useState({})
   const [editing, setEditing]         = useState(false)
+  const [workLogEntries, setWorkLogEntries] = useState([])
+  const [workLogInput, setWorkLogInput]     = useState('')
 
   // ── Detail modal ──────────────────────────────────────────
   const [detailTarget, setDetailTarget]   = useState(null)
@@ -181,12 +195,15 @@ export function OrdenesTrabajo() {
 
   useEffect(() => { loadOrders() }, [loadOrders])
 
-  // ── Load employees once ───────────────────────────────────
-  useEffect(() => {
-    employeesApi.getAll({ limit: 200 }).then((res) => {
+  // ── Load technicians (empleados activos) ───────────────────
+  const loadEmployees = useCallback(async () => {
+    try {
+      const res = await employeesApi.getAll({ status: 'Activo', limit: 200 })
       if (mountedRef.current) setEmployees(res.data ?? [])
-    }).catch(() => { /* ignore */ })
+    } catch { /* ignore */ }
   }, [])
+
+  useEffect(() => { loadEmployees() }, [loadEmployees])
 
   // ── Search debounce ───────────────────────────────────────
   function handleSearchChange(e) {
@@ -204,6 +221,8 @@ export function OrdenesTrabajo() {
     setCreateForm(emptyCreate())
     setCreateErrors({})
     setMotorcycles([])
+    setClientSearch('')
+    setMotoSearch('')
     setCreateOpen(true)
     try {
       const res = await clientsApi.getAll({ limit: 200 })
@@ -211,11 +230,12 @@ export function OrdenesTrabajo() {
     } catch { /* ignore */ }
   }
 
-  async function handleClientChange(e) {
-    const client_id = e.target.value
-    setCreateForm((p) => ({ ...p, client_id, motorcycle_id: '' }))
+  async function handleClientSelect(client_id) {
+    setCreateForm((p) => ({ ...p, client_id: String(client_id), motorcycle_id: '' }))
+    setClientSearch('')
+    setMotoSearch('')
     setMotorcycles([])
-    if (!client_id) return
+    setCreateErrors((p) => ({ ...p, client_id: undefined }))
     try {
       const res = await motorcyclesApi.getAll({ client_id, limit: 100 })
       if (mountedRef.current) setMotorcycles(res.data ?? [])
@@ -238,7 +258,6 @@ export function OrdenesTrabajo() {
         motorcycle_id:          Number(createForm.motorcycle_id),
         problem_description:    createForm.problem_description.trim(),
         assigned_employee_id:   createForm.assigned_employee_id ? Number(createForm.assigned_employee_id) : undefined,
-        estimated_delivery_date: createForm.estimated_delivery_date || undefined,
         labor_cost:             createForm.labor_cost !== '' ? Number(createForm.labor_cost) : undefined,
         discount:               createForm.discount   !== '' ? Number(createForm.discount)   : undefined,
       })
@@ -258,9 +277,29 @@ export function OrdenesTrabajo() {
   }
 
   // ── Edit ──────────────────────────────────────────────────
-  function openEdit(order) {
+  async function openEdit(order) {
     setEditTarget(order)
     setEditForm(emptyEdit(order))
+    setWorkLogEntries(parseWorkLog(order.work_notes))
+    setWorkLogInput('')
+    setAddSvcOpen(false)
+    setAddPartOpen(false)
+    setDetailHistory(null)
+    loadEmployees()
+    await loadDetail(order.id)
+  }
+
+  function closeEdit() {
+    setEditTarget(null)
+    setAddSvcOpen(false)
+    setAddPartOpen(false)
+  }
+
+  function handleAddWorkLogEntry() {
+    const entry = workLogInput.trim()
+    if (!entry) return
+    setWorkLogEntries((prev) => [...prev, entry])
+    setWorkLogInput('')
   }
 
   async function handleEditSubmit(e) {
@@ -269,9 +308,8 @@ export function OrdenesTrabajo() {
     try {
       const payload = {
         assigned_employee_id:    editForm.assigned_employee_id ? Number(editForm.assigned_employee_id) : null,
-        estimated_delivery_date: editForm.estimated_delivery_date || null,
         diagnostic_notes:        editForm.diagnostic_notes.trim() || null,
-        work_notes:              editForm.work_notes.trim()       || null,
+        work_notes:              serializeWorkLog(workLogEntries) || null,
         labor_cost:              editForm.labor_cost !== '' ? Number(editForm.labor_cost) : undefined,
         discount:                editForm.discount   !== '' ? Number(editForm.discount)   : undefined,
       }
@@ -326,16 +364,12 @@ export function OrdenesTrabajo() {
   async function openDetail(order) {
     setDetailTarget(order)
     setDetailHistory(null)
-    setAddSvcOpen(false)
-    setAddPartOpen(false)
     await loadDetail(order.id)
   }
 
   function closeDetail() {
     setDetailTarget(null)
     setDetailHistory(null)
-    setAddSvcOpen(false)
-    setAddPartOpen(false)
   }
 
   // ── Add service ───────────────────────────────────────────
@@ -373,7 +407,7 @@ export function OrdenesTrabajo() {
 
     setAddingSvc(true)
     try {
-      await ordersApi.addService(detailTarget.id, {
+      await ordersApi.addService(editTarget.id, {
         service_catalog_id: svcForm.service_catalog_id ? Number(svcForm.service_catalog_id) : undefined,
         service_name:       svcForm.service_name.trim() || undefined,
         description:        svcForm.description.trim()  || undefined,
@@ -385,7 +419,7 @@ export function OrdenesTrabajo() {
       if (!mountedRef.current) return
       toast.success('Servicio agregado')
       setAddSvcOpen(false)
-      loadDetail(detailTarget.id)
+      loadDetail(editTarget.id)
       loadOrders({ silent: true })
     } catch (err) {
       if (!mountedRef.current) return
@@ -397,10 +431,10 @@ export function OrdenesTrabajo() {
 
   async function handleRemoveSvc(serviceId) {
     try {
-      await ordersApi.removeService(detailTarget.id, serviceId)
+      await ordersApi.removeService(editTarget.id, serviceId)
       if (!mountedRef.current) return
       toast.success('Servicio eliminado')
-      loadDetail(detailTarget.id)
+      loadDetail(editTarget.id)
       loadOrders({ silent: true })
     } catch (err) {
       if (!mountedRef.current) return
@@ -431,7 +465,7 @@ export function OrdenesTrabajo() {
 
     setAddingPart(true)
     try {
-      await ordersApi.addPart(detailTarget.id, {
+      await ordersApi.addPart(editTarget.id, {
         inventory_id: Number(partForm.inventory_id),
         quantity:     Number(partForm.quantity),
       })
@@ -440,7 +474,7 @@ export function OrdenesTrabajo() {
       setPartForm({ inventory_id: '', quantity: '1' })
       setPartSearch('')
       setPartErrors({})
-      loadDetail(detailTarget.id)
+      loadDetail(editTarget.id)
       loadOrders({ silent: true })
     } catch (err) {
       if (!mountedRef.current) return
@@ -452,10 +486,10 @@ export function OrdenesTrabajo() {
 
   async function handleRemovePart(itemId) {
     try {
-      await ordersApi.removePart(detailTarget.id, itemId)
+      await ordersApi.removePart(editTarget.id, itemId)
       if (!mountedRef.current) return
       toast.success('Repuesto eliminado')
-      loadDetail(detailTarget.id)
+      loadDetail(editTarget.id)
       loadOrders({ silent: true })
     } catch (err) {
       if (!mountedRef.current) return
@@ -519,6 +553,27 @@ export function OrdenesTrabajo() {
   // ── Stats ─────────────────────────────────────────────────
   const totalCount  = pagination?.total ?? orders.length
   const activeCount = orders.filter((o) => o.status !== 'Entregada').length
+
+  // ── Comboboxes buscables (crear orden) ────────────────────
+  const selectedClient = clients.find((c) => String(c.id) === String(createForm.client_id))
+  const selectedMoto   = motorcycles.find((m) => String(m.id) === String(createForm.motorcycle_id))
+
+  const clientQuery = clientSearch.toLowerCase().trim()
+  const filteredClients = clientQuery
+    ? clients.filter((c) =>
+        `${c.name} ${c.last_name}`.toLowerCase().includes(clientQuery) ||
+        (c.document ?? '').toLowerCase().includes(clientQuery) ||
+        (c.phone ?? '').includes(clientQuery)
+      ).slice(0, 10)
+    : []
+
+  const motoQuery = motoSearch.toLowerCase().trim()
+  const filteredMotos = motoQuery
+    ? motorcycles.filter((m) =>
+        m.plate.toLowerCase().includes(motoQuery) ||
+        `${m.brand} ${m.model}`.toLowerCase().includes(motoQuery)
+      ).slice(0, 10)
+    : motorcycles.slice(0, 10)
 
   // ── Render ────────────────────────────────────────────────
   return (
@@ -740,39 +795,126 @@ export function OrdenesTrabajo() {
               <button className={styles.iconButton} type="button" onClick={() => setCreateOpen(false)}>×</button>
             </div>
             <form className={styles.form} onSubmit={handleCreateSubmit}>
-              <label className={styles.formField}>
-                Cliente <span className={styles.required}>*</span>
-                <select value={createForm.client_id} onChange={handleClientChange}>
-                  <option value="">Selecciona un cliente…</option>
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} {c.last_name} — {c.phone || c.document}
-                    </option>
-                  ))}
-                </select>
+              <div className={styles.formField}>
+                <span className={styles.addFormLabel}>
+                  Cliente <span className={styles.required}>*</span>
+                </span>
+                {selectedClient ? (
+                  <div className={styles.partSelected}>
+                    <span>
+                      {selectedClient.name} {selectedClient.last_name}
+                      {selectedClient.document ? ` — ${selectedClient.document}` : ''}
+                    </span>
+                    <button
+                      type="button"
+                      className={styles.partClearBtn}
+                      onClick={() => {
+                        setCreateForm((p) => ({ ...p, client_id: '', motorcycle_id: '' }))
+                        setMotorcycles([])
+                        setClientSearch('')
+                        setMotoSearch('')
+                      }}
+                    >
+                      Cambiar
+                    </button>
+                  </div>
+                ) : (
+                  <div className={styles.partAutocomplete}>
+                    <input
+                      type="search"
+                      className={styles.partSearchInput}
+                      placeholder="Escribe nombre, documento o teléfono…"
+                      value={clientSearch}
+                      onChange={(e) => setClientSearch(e.target.value)}
+                      autoComplete="off"
+                    />
+                    {clientQuery.length > 0 ? (
+                      <ul className={styles.partDropdown}>
+                        {filteredClients.map((c) => (
+                          <li key={c.id}>
+                            <button
+                              type="button"
+                              className={styles.partDropdownItem}
+                              onClick={() => handleClientSelect(c.id)}
+                            >
+                              <strong>{c.name} {c.last_name}</strong>
+                              <span className={styles.partMeta}>
+                                {[c.document, c.phone].filter(Boolean).join(' · ') || 'Sin datos de contacto'}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                        {filteredClients.length === 0 ? (
+                          <li className={styles.partNoResults}>Sin resultados</li>
+                        ) : null}
+                      </ul>
+                    ) : null}
+                  </div>
+                )}
                 {createErrors.client_id ? <span>{createErrors.client_id}</span> : null}
-              </label>
+              </div>
 
-              <label className={styles.formField}>
-                Motocicleta <span className={styles.required}>*</span>
-                <select
-                  value={createForm.motorcycle_id}
-                  disabled={!createForm.client_id}
-                  onChange={(e) => setCreateForm((p) => ({ ...p, motorcycle_id: e.target.value }))}
-                >
-                  <option value="">
-                    {createForm.client_id
-                      ? (motorcycles.length ? 'Selecciona una moto…' : 'Sin motos registradas')
-                      : 'Selecciona cliente primero'}
-                  </option>
-                  {motorcycles.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.plate} — {m.brand} {m.model} {m.year}
-                    </option>
-                  ))}
-                </select>
+              <div className={styles.formField}>
+                <span className={styles.addFormLabel}>
+                  Motocicleta <span className={styles.required}>*</span>
+                </span>
+                {selectedMoto ? (
+                  <div className={styles.partSelected}>
+                    <span>{selectedMoto.plate} — {selectedMoto.brand} {selectedMoto.model} {selectedMoto.year}</span>
+                    <button
+                      type="button"
+                      className={styles.partClearBtn}
+                      onClick={() => {
+                        setCreateForm((p) => ({ ...p, motorcycle_id: '' }))
+                        setMotoSearch('')
+                      }}
+                    >
+                      Cambiar
+                    </button>
+                  </div>
+                ) : !createForm.client_id ? (
+                  <div className={styles.partSelected}>
+                    <span>Selecciona el cliente primero</span>
+                  </div>
+                ) : motorcycles.length === 0 ? (
+                  <div className={styles.partSelected}>
+                    <span>El cliente no tiene motos registradas</span>
+                  </div>
+                ) : (
+                  <div className={styles.partAutocomplete}>
+                    <input
+                      type="search"
+                      className={styles.partSearchInput}
+                      placeholder="Escribe placa, marca o modelo…"
+                      value={motoSearch}
+                      onChange={(e) => setMotoSearch(e.target.value)}
+                      autoComplete="off"
+                    />
+                    <ul className={styles.partDropdown}>
+                      {filteredMotos.map((m) => (
+                        <li key={m.id}>
+                          <button
+                            type="button"
+                            className={styles.partDropdownItem}
+                            onClick={() => {
+                              setCreateForm((p) => ({ ...p, motorcycle_id: String(m.id) }))
+                              setMotoSearch('')
+                              setCreateErrors((p) => ({ ...p, motorcycle_id: undefined }))
+                            }}
+                          >
+                            <strong>{m.plate}</strong> — {m.brand} {m.model}
+                            <span className={styles.partMeta}>Año {m.year}</span>
+                          </button>
+                        </li>
+                      ))}
+                      {filteredMotos.length === 0 ? (
+                        <li className={styles.partNoResults}>Sin resultados</li>
+                      ) : null}
+                    </ul>
+                  </div>
+                )}
                 {createErrors.motorcycle_id ? <span>{createErrors.motorcycle_id}</span> : null}
-              </label>
+              </div>
 
               <label className={styles.formField}>
                 Técnico asignado
@@ -787,16 +929,6 @@ export function OrdenesTrabajo() {
                     </option>
                   ))}
                 </select>
-              </label>
-
-              <label className={styles.formField}>
-                Fecha estimada de entrega
-                <input
-                  type="date"
-                  value={createForm.estimated_delivery_date}
-                  min={new Date().toISOString().split('T')[0]}
-                  onChange={(e) => setCreateForm((p) => ({ ...p, estimated_delivery_date: e.target.value }))}
-                />
               </label>
 
               <label className={styles.formField}>
@@ -850,14 +982,14 @@ export function OrdenesTrabajo() {
 
       {/* ── Edit modal ───────────────────────────────────── */}
       {editTarget ? (
-        <div className={styles.modalBackdrop} role="presentation">
-          <section className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="edit-title">
+        <div className={`${styles.modalBackdrop} ${styles.detailBackdrop}`} role="presentation">
+          <section className={`${styles.modal} ${styles.detailModal}`} role="dialog" aria-modal="true" aria-labelledby="edit-title">
             <div className={styles.modalHeader}>
               <div>
                 <p className={styles.eyebrow}>Edición</p>
                 <h2 id="edit-title">Editar {editTarget.order_number}</h2>
               </div>
-              <button className={styles.iconButton} type="button" onClick={() => setEditTarget(null)}>×</button>
+              <button className={styles.iconButton} type="button" onClick={closeEdit}>×</button>
             </div>
             <form className={styles.form} onSubmit={handleEditSubmit}>
               <label className={styles.formField}>
@@ -873,15 +1005,6 @@ export function OrdenesTrabajo() {
                     </option>
                   ))}
                 </select>
-              </label>
-
-              <label className={styles.formField}>
-                Fecha estimada de entrega
-                <input
-                  type="date"
-                  value={editForm.estimated_delivery_date}
-                  onChange={(e) => setEditForm((p) => ({ ...p, estimated_delivery_date: e.target.value }))}
-                />
               </label>
 
               <label className={styles.formField}>
@@ -916,18 +1039,56 @@ export function OrdenesTrabajo() {
                 />
               </label>
 
-              <label className={`${styles.formField} ${styles.fullWidth}`}>
-                Notas de trabajo
-                <textarea
-                  rows={3}
-                  maxLength={2000}
-                  value={editForm.work_notes}
-                  onChange={(e) => setEditForm((p) => ({ ...p, work_notes: e.target.value }))}
-                />
-              </label>
+              <div className={`${styles.formField} ${styles.fullWidth}`}>
+                <span className={styles.addFormLabel}>Trabajos realizados (bitácora)</span>
+                {workLogEntries.length > 0 ? (
+                  <div className={styles.itemList}>
+                    {workLogEntries.map((entry, idx) => (
+                      <div key={`${idx}-${entry}`} className={styles.itemRow}>
+                        <div className={styles.itemInfo}>
+                          <span>• {entry}</span>
+                        </div>
+                        <button
+                          className={styles.removeItemBtn}
+                          type="button"
+                          title="Quitar trabajo"
+                          onClick={() => setWorkLogEntries((prev) => prev.filter((_, i) => i !== idx))}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className={styles.emptyItems}>Sin trabajos registrados aún.</p>
+                )}
+                <div className={styles.workLogAddRow}>
+                  <input
+                    type="text"
+                    maxLength={200}
+                    placeholder="Ej: Cambio de aceite, ajuste de frenos…"
+                    value={workLogInput}
+                    onChange={(e) => setWorkLogInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        handleAddWorkLogEntry()
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className={styles.secondaryButton}
+                    onClick={handleAddWorkLogEntry}
+                    disabled={!workLogInput.trim()}
+                  >
+                    Añadir
+                  </button>
+                </div>
+              </div>
 
               <div className={styles.formActions}>
-                <button className={styles.secondaryButton} type="button" disabled={editing} onClick={() => setEditTarget(null)}>
+                <button className={styles.secondaryButton} type="button" disabled={editing} onClick={closeEdit}>
                   Cancelar
                 </button>
                 <button className={styles.primaryButton} type="submit" disabled={editing}>
@@ -935,98 +1096,15 @@ export function OrdenesTrabajo() {
                 </button>
               </div>
             </form>
-          </section>
-        </div>
-      ) : null}
 
-      {/* ── Detail modal ─────────────────────────────────── */}
-      {detailTarget ? (
-        <div className={styles.modalBackdrop} role="presentation">
-          <section
-            className={`${styles.modal} ${styles.detailModal}`}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="detail-title"
-          >
-            <div className={styles.modalHeader}>
-              <div>
-                <p className={styles.eyebrow}>Detalle de orden</p>
-                <h2 id="detail-title">
-                  <span className={styles.orderNumber}>{detailTarget.order_number}</span>
-                </h2>
-                <p>{detailTarget.client_name} — {detailTarget.motorcycle_plate} {detailTarget.motorcycle_brand}</p>
-              </div>
-              <div className={styles.modalHeaderActions}>
-                <button
-                  className={styles.pdfButtonLg}
-                  type="button"
-                  onClick={() => ordersApi.downloadPDF(detailTarget.id).catch(() => toast.error('Error al descargar PDF'))}
-                >
-                  <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z" /><path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" /></svg>
-                  Descargar PDF
-                </button>
-                {detailTarget.tracking_token && detailTarget.client_phone ? (
-                  <a
-                    className={styles.whatsappButtonLg}
-                    href={buildWhatsAppUrl(detailTarget)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
-                    Enviar por WhatsApp
-                  </a>
-                ) : null}
-                <button className={styles.iconButton} type="button" onClick={closeDetail}>×</button>
-              </div>
-            </div>
-
+            {/* ── Servicios y repuestos (edición) ────────────── */}
             {detailLoading ? (
               <div className={styles.detailLoading}>
                 <div className={styles.spinner} />
-                Cargando detalle…
+                Cargando servicios y repuestos…
               </div>
             ) : detailHistory ? (
               <div className={styles.detailBody}>
-                {/* Info grid */}
-                <div className={styles.detailGrid}>
-                  <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Estado</span>
-                    <span className={styles.statusBadge} style={STATUS_STYLES[detailHistory.order.status] ?? {}}>
-                      {detailHistory.order.status}
-                    </span>
-                  </div>
-                  <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Técnico</span>
-                    <span>{detailHistory.order.employee_name || '—'}</span>
-                  </div>
-                  <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Fecha ingreso</span>
-                    <span>{formatDate(detailHistory.order.entry_date)}</span>
-                  </div>
-                  <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Entrega estimada</span>
-                    <span>{formatDate(detailHistory.order.estimated_delivery_date)}</span>
-                  </div>
-                </div>
-
-                {/* Notes */}
-                {(detailHistory.order.diagnostic_notes || detailHistory.order.work_notes) ? (
-                  <div className={styles.notesGrid}>
-                    {detailHistory.order.diagnostic_notes ? (
-                      <div className={styles.noteBlock}>
-                        <span className={styles.detailLabel}>Diagnóstico</span>
-                        <p className={styles.noteText}>{detailHistory.order.diagnostic_notes}</p>
-                      </div>
-                    ) : null}
-                    {detailHistory.order.work_notes ? (
-                      <div className={styles.noteBlock}>
-                        <span className={styles.detailLabel}>Notas de trabajo</span>
-                        <p className={styles.noteText}>{detailHistory.order.work_notes}</p>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
-
                 {/* Services */}
                 <div className={styles.detailSection}>
                   <div className={styles.sectionHeader}>
@@ -1316,6 +1394,155 @@ export function OrdenesTrabajo() {
                       </div>
                     </form>
                   ) : null}
+                </div>
+              </div>
+            ) : null}
+          </section>
+        </div>
+      ) : null}
+
+      {/* ── Detail modal ─────────────────────────────────── */}
+      {detailTarget ? (
+        <div className={`${styles.modalBackdrop} ${styles.detailBackdrop}`} role="presentation">
+          <section
+            className={`${styles.modal} ${styles.detailModal}`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="detail-title"
+          >
+            <div className={styles.modalHeader}>
+              <div>
+                <p className={styles.eyebrow}>Detalle de orden</p>
+                <h2 id="detail-title">
+                  <span className={styles.orderNumber}>{detailTarget.order_number}</span>
+                </h2>
+                <p>{detailTarget.client_name} — {detailTarget.motorcycle_plate} {detailTarget.motorcycle_brand}</p>
+              </div>
+              <div className={styles.modalHeaderActions}>
+                <button
+                  className={styles.pdfButtonLg}
+                  type="button"
+                  onClick={() => ordersApi.downloadPDF(detailTarget.id).catch(() => toast.error('Error al descargar PDF'))}
+                >
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z" /><path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" /></svg>
+                  Descargar PDF
+                </button>
+                {detailTarget.tracking_token && detailTarget.client_phone ? (
+                  <a
+                    className={styles.whatsappButtonLg}
+                    href={buildWhatsAppUrl(detailTarget)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+                    Enviar por WhatsApp
+                  </a>
+                ) : null}
+                <button className={styles.iconButton} type="button" onClick={closeDetail}>×</button>
+              </div>
+            </div>
+
+            {detailLoading ? (
+              <div className={styles.detailLoading}>
+                <div className={styles.spinner} />
+                Cargando detalle…
+              </div>
+            ) : detailHistory ? (
+              <div className={styles.detailBody}>
+                {/* Info grid */}
+                <div className={styles.detailGrid}>
+                  <div className={styles.detailItem}>
+                    <span className={styles.detailLabel}>Estado</span>
+                    <span className={styles.statusBadge} style={STATUS_STYLES[detailHistory.order.status] ?? {}}>
+                      {detailHistory.order.status}
+                    </span>
+                  </div>
+                  <div className={styles.detailItem}>
+                    <span className={styles.detailLabel}>Técnico</span>
+                    <span>{detailHistory.order.employee_name || '—'}</span>
+                  </div>
+                  <div className={styles.detailItem}>
+                    <span className={styles.detailLabel}>Fecha ingreso</span>
+                    <span>{formatDate(detailHistory.order.entry_date)}</span>
+                  </div>
+                </div>
+
+                {/* Notes */}
+                {(detailHistory.order.diagnostic_notes || detailHistory.order.work_notes) ? (
+                  <div className={styles.notesGrid}>
+                    {detailHistory.order.diagnostic_notes ? (
+                      <div className={styles.noteBlock}>
+                        <span className={styles.detailLabel}>Diagnóstico</span>
+                        <p className={styles.noteText}>{detailHistory.order.diagnostic_notes}</p>
+                      </div>
+                    ) : null}
+                    {detailHistory.order.work_notes ? (
+                      <div className={styles.noteBlock}>
+                        <span className={styles.detailLabel}>Trabajos realizados</span>
+                        <ul className={styles.workLogList}>
+                          {parseWorkLog(detailHistory.order.work_notes).map((entry, idx) => (
+                            <li key={`${idx}-${entry}`} className={styles.noteText}>{entry}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {/* Services (solo lectura) */}
+                <div className={styles.detailSection}>
+                  <div className={styles.sectionHeader}>
+                    <h3 className={styles.sectionTitle}>
+                      Servicios ({detailHistory.services.length})
+                    </h3>
+                  </div>
+
+                  {detailHistory.services.length > 0 ? (
+                    <div className={styles.itemList}>
+                      {detailHistory.services.map((svc) => (
+                        <div key={svc.id} className={styles.itemRow}>
+                          <div className={styles.itemInfo}>
+                            <strong>{svc.service_name}</strong>
+                            {svc.description
+                              ? <span className={styles.itemDesc}>{svc.description}</span>
+                              : null}
+                            <span className={styles.itemMeta}>
+                              x{svc.quantity} × {formatCurrency(svc.unit_price)} = {formatCurrency(svc.total_price)}
+                              {svc.employee_name ? ` · ${svc.employee_name}` : ''}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className={styles.emptyItems}>Sin servicios registrados.</p>
+                  )}
+                </div>
+
+                {/* Parts (solo lectura) */}
+                <div className={styles.detailSection}>
+                  <div className={styles.sectionHeader}>
+                    <h3 className={styles.sectionTitle}>
+                      Repuestos ({detailHistory.parts.length})
+                    </h3>
+                  </div>
+
+                  {detailHistory.parts.length > 0 ? (
+                    <div className={styles.itemList}>
+                      {detailHistory.parts.map((part) => (
+                        <div key={part.id} className={styles.itemRow}>
+                          <div className={styles.itemInfo}>
+                            <strong>{part.part_name}</strong>
+                            <span className={styles.itemMeta}>
+                              {part.part_code} · x{part.quantity} × {formatCurrency(part.unit_price)} = {formatCurrency(part.total_price)}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className={styles.emptyItems}>Sin repuestos registrados.</p>
+                  )}
                 </div>
 
                 {/* Totals */}

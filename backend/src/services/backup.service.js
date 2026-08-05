@@ -28,8 +28,17 @@ function formatFilename() {
   return `engines_jds_${now.getFullYear()}_${pad(now.getMonth() + 1)}_${pad(now.getDate())}_${pad(now.getHours())}_${pad(now.getMinutes())}.sql`
 }
 
+function assertBackupsAvailable() {
+  if (process.env.VERCEL) {
+    throw ApiError.badRequest(
+      'Los backups manuales no están disponibles en este entorno. La base de datos gestionada realiza copias de seguridad automáticas.'
+    )
+  }
+}
+
 // ── Crear respaldo ───────────────────────────────────────────
 export async function createBackup(actor = {}) {
+  assertBackupsAvailable()
   await fs.mkdir(BACKUP_DIR, { recursive: true })
 
   const db = getDbConfig()
@@ -88,6 +97,7 @@ export async function createBackup(actor = {}) {
 
 // ── Restaurar respaldo ───────────────────────────────────────
 export async function restoreBackup(file, actor = {}) {
+  assertBackupsAvailable()
   if (!file) throw ApiError.badRequest('Archivo SQL requerido')
   if (!file.originalname.endsWith('.sql')) {
     throw ApiError.badRequest('Solo se permiten archivos .sql')

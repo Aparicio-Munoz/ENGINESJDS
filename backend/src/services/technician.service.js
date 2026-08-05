@@ -2,7 +2,6 @@ import { getPool } from '../config/database.js'
 import * as EmployeeModel from '../models/employee.model.js'
 import { ApiError } from '../utils/ApiError.js'
 import { auditEntity, AUDIT_ACTIONS } from './audit.service.js'
-import { emit, emitToTracking, EVENTS } from '../socket/index.js'
 
 // ── Resolver employee_id del técnico autenticado ─────────────
 export async function resolveEmployeeId(userId) {
@@ -108,7 +107,7 @@ export async function getOrders(employeeId, query = {}) {
   const [rows] = await pool.query(
     `SELECT
        o.id, o.order_number, o.status, o.entry_date,
-       o.estimated_delivery_date, o.actual_delivery_date,
+       o.actual_delivery_date,
        o.labor_cost, o.parts_cost, o.discount, o.subtotal, o.final_price,
        o.diagnostic_notes, o.work_notes,
        o.motorcycle_id, o.client_id, o.assigned_employee_id,
@@ -117,7 +116,7 @@ export async function getOrders(employeeId, query = {}) {
        c.phone AS client_phone,
        m.plate AS motorcycle_plate, m.brand AS motorcycle_brand,
        m.model AS motorcycle_model, m.year AS motorcycle_year,
-       m.color AS motorcycle_color, m.engine_cc
+       m.engine_cc
      FROM orders o
      INNER JOIN clients c     ON c.id = o.client_id
      INNER JOIN motorcycles m ON m.id = o.motorcycle_id
@@ -173,17 +172,6 @@ export async function updateOrderStatus(employeeId, orderId, { status, notes }, 
   )
 
   const updated = rows[0]
-  emit(EVENTS.ORDER_STATUS_CHANGED, {
-    id: orderId, order_number: updated?.order_number,
-    previousStatus: order.status, newStatus: status,
-    updatedAt: new Date().toISOString(),
-  })
-  if (updated?.tracking_token) {
-    emitToTracking(updated.tracking_token, EVENTS.TRACKING_UPDATED, {
-      tracking_token: updated.tracking_token, status,
-    })
-  }
-  emit(EVENTS.DASHBOARD_REFRESH, { trigger: 'tech_status_changed' })
 
   return updated
 }
@@ -223,7 +211,7 @@ export async function getMotorcycles(employeeId) {
   const pool = getPool()
   const [rows] = await pool.query(
     `SELECT DISTINCT
-       m.id, m.plate, m.brand, m.model, m.year, m.color, m.engine_cc, m.vin,
+       m.id, m.plate, m.brand, m.model, m.year, m.engine_cc,
        CONCAT(c.name, ' ', c.last_name) AS client_name, c.phone AS client_phone,
        o.id AS order_id, o.order_number, o.status AS order_status,
        o.diagnostic_notes, o.entry_date

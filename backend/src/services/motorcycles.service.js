@@ -25,13 +25,12 @@ export async function getById(id) {
 }
 
 export async function create(data, actor = {}) {
-  await _assertClientExists(data.client_id)
+  if (data.client_id) {
+    await _assertClientExists(data.client_id)
+  }
 
   if (await MotorcycleModel.plateExists(data.plate)) {
     throw ApiError.conflict(`La placa ${data.plate} ya está registrada`)
-  }
-  if (data.vin && await MotorcycleModel.vinExists(data.vin)) {
-    throw ApiError.conflict(`El VIN ${data.vin} ya está registrado`)
   }
 
   const created = await MotorcycleModel.create(data)
@@ -53,12 +52,6 @@ export async function update(id, data, actor = {}) {
       throw ApiError.conflict(`La placa ${data.plate} ya está registrada`)
     }
   }
-  if (data.vin !== undefined && data.vin) {
-    if (await MotorcycleModel.vinExists(data.vin, id)) {
-      throw ApiError.conflict(`El VIN ${data.vin} ya está registrado`)
-    }
-  }
-
   const updated = await MotorcycleModel.update(id, data)
   await auditEntity(AUDIT_ACTIONS.EDITAR_MOTO, {
     actor, tableName: 'motorcycles', recordId: id, oldValues: before, newValues: updated,
@@ -127,8 +120,8 @@ export async function getHistory(id) {
 
   // Separar datos del cliente del objeto motorcycle para respuesta limpia
   const {
-    client_name, client_last_name, client_document, client_document_type,
-    client_phone, client_email, address, city,
+    client_name, client_last_name, client_document, document_type,
+    client_phone, city,
     ...moto
   } = history.motorcycle
 
@@ -139,10 +132,8 @@ export async function getHistory(id) {
       name:          client_name,
       last_name:     client_last_name,
       document:      client_document,
-      document_type: client_document_type,
+      document_type,
       phone:         client_phone,
-      email:         client_email,
-      address,
       city,
     },
     appointments:  history.appointments,

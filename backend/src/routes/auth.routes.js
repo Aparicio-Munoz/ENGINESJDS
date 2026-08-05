@@ -8,7 +8,13 @@ import {
   publicRegisterRules,
   changePasswordRules,
 } from '../validations/auth.validation.js'
+import {
+  forgotPasswordRules,
+  verifyCodeRules,
+  resetPasswordRules,
+} from '../validations/passwordReset.validation.js'
 import * as AuthController from '../controllers/auth.controller.js'
+import * as PasswordResetController from '../controllers/passwordReset.controller.js'
 
 const router = Router()
 
@@ -26,6 +32,25 @@ router.get('/registration-status', AuthController.getRegistrationStatus)
 
 // POST /api/auth/public-register
 router.post('/public-register', publicRegisterRules, validate, AuthController.publicRegister)
+
+// POST /api/auth/forgot-password
+router.post(
+  '/forgot-password',
+  forgotPasswordRules,
+  validate,
+  PasswordResetController.forgotPassword
+)
+
+// POST /api/auth/verify-code
+router.post('/verify-code', verifyCodeRules, validate, PasswordResetController.verifyCode)
+
+// POST /api/auth/reset-password
+router.post(
+  '/reset-password',
+  resetPasswordRules,
+  validate,
+  PasswordResetController.resetPassword
+)
 
 // GET  /api/auth/me
 router.get('/me', verifyToken, AuthController.me)

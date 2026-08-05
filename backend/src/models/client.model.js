@@ -2,7 +2,7 @@ import { getPool } from '../config/database.js'
 
 const SAFE_FIELDS = `
   id, document_type, document, name, last_name,
-  phone, email, address, city, status, notes,
+  phone, city, status, notes,
   created_at, updated_at
 `
 
@@ -80,17 +80,15 @@ export async function create({
   name,
   last_name,
   phone,
-  email   = null,
-  address = null,
   city    = 'Bogotá',
   status  = 'Activo',
   notes   = null,
 }) {
   const [result] = await getPool().query(
     `INSERT INTO clients
-       (document_type, document, name, last_name, phone, email, address, city, status, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [document_type, document, name, last_name, phone, email, address, city, status, notes]
+       (document_type, document, name, last_name, phone, city, status, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [document_type, document, name, last_name, phone, city, status, notes]
   )
   return findById(result.insertId)
 }
@@ -98,7 +96,7 @@ export async function create({
 export async function update(id, fields) {
   const allowed = [
     'document_type', 'document', 'name', 'last_name',
-    'phone', 'email', 'address', 'city', 'status', 'notes',
+    'phone', 'city', 'status', 'notes',
   ]
   const sets   = []
   const params = []

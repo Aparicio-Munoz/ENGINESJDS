@@ -61,6 +61,16 @@ export async function getPerformance(req, res, next) {
   }
 }
 
+export async function getEarnings(req, res, next) {
+  try {
+    const { from, to } = req.query
+    const result = await EmployeeService.getEarningsByRange(Number(req.params.id), { from, to })
+    ApiResponse.success(res, result)
+  } catch (err) {
+    next(err)
+  }
+}
+
 export async function getSpecialties(req, res, next) {
   try {
     const specialties = await EmployeeService.getSpecialties()

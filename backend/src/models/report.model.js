@@ -262,22 +262,15 @@ export async function getExecutiveKPIs() {
 // ── Dashboard: alertas ───────────────────────────────────────
 export async function getDashboardAlerts() {
   const pool = getPool()
-  const [[lowStock], [upcomingAppts], [delayedOrders]] = await Promise.all([
+  const [[lowStock], [upcomingAppts]] = await Promise.all([
     pool.query(`SELECT id, code, name, brand, quantity, min_stock
                 FROM inventory WHERE quantity <= min_stock ORDER BY quantity ASC LIMIT 5`),
     pool.query(`SELECT id, client_name, service_type, requested_date
                 FROM appointments WHERE status = 'Pendiente'
                 AND requested_date <= DATE_ADD(CURDATE(), INTERVAL 3 DAY)
                 ORDER BY requested_date ASC LIMIT 5`),
-    pool.query(`SELECT o.id, o.order_number, o.status, o.entry_date, o.estimated_delivery_date,
-                CONCAT(c.name, ' ', c.last_name) AS client_name
-                FROM orders o INNER JOIN clients c ON c.id = o.client_id
-                WHERE o.status != 'Entregada'
-                AND o.estimated_delivery_date IS NOT NULL
-                AND o.estimated_delivery_date < CURDATE()
-                ORDER BY o.estimated_delivery_date ASC LIMIT 5`),
   ])
-  return { lowStock, upcomingAppts, delayedOrders }
+  return { lowStock, upcomingAppts }
 }
 
 // ── Chart data: ingresos mensuales (últimos 12 meses) ────────

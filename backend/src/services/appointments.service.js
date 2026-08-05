@@ -40,7 +40,7 @@ export async function getHistory(id) {
   let client = null
   if (appt.client_id) {
     const [rows] = await getPool().query(
-      `SELECT id, document_type, document, name, last_name, phone, email, address, city, status
+      `SELECT id, document_type, document, name, last_name, phone, city, status
        FROM clients WHERE id = ? AND deleted_at IS NULL`,
       [appt.client_id]
     )
@@ -51,7 +51,7 @@ export async function getHistory(id) {
   let motorcycle = null
   if (appt.motorcycle_id) {
     const [rows] = await getPool().query(
-      `SELECT id, plate, brand, model, year, color, engine_cc, vin, status
+      `SELECT id, plate, brand, model, year, engine_cc, status
        FROM motorcycles WHERE id = ? AND deleted_at IS NULL`,
       [appt.motorcycle_id]
     )

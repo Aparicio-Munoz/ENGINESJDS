@@ -1,7 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { authApi } from '../../api/authApi'
 import { ROUTES } from '../../utils/routes'
 import styles from './ForgotPassword.module.css'
+
+const RESEND_COOLDOWN_SECONDS = 30
 
 function EyeIcon({ open }) {
   return open ? (
@@ -29,29 +32,77 @@ export function ForgotPassword() {
   const [confirm, setConfirm] = useState('')
   const [showPwd, setShowPwd] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
-  const [loading] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [resendCooldown] = useState(0)
+  const [resendCooldown, setResendCooldown] = useState(0)
 
   const stepIndex = STEPS.indexOf(step)
 
-  function handleSendEmail(e) {
+  useEffect(() => {
+    if (resendCooldown <= 0) return
+    const timer = setInterval(() => setResendCooldown((s) => Math.max(0, s - 1)), 1000)
+    return () => clearInterval(timer)
+  }, [resendCooldown])
+
+  async function handleSendEmail(e) {
     e.preventDefault()
-    setError('Funcionalidad en construcción')
+    setError('')
+    setLoading(true)
+    try {
+      await authApi.forgotPassword(email)
+      setResendCooldown(RESEND_COOLDOWN_SECONDS)
+      setStep('code')
+    } catch (err) {
+      setError(err.message || 'No se pudo enviar el código. Intenta nuevamente.')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  function handleResend() {
-    setError('Funcionalidad en construcción')
+  async function handleResend() {
+    setError('')
+    setLoading(true)
+    try {
+      await authApi.forgotPassword(email)
+      setResendCooldown(RESEND_COOLDOWN_SECONDS)
+    } catch (err) {
+      setError(err.message || 'No se pudo reenviar el código. Intenta nuevamente.')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  function handleVerifyCode(e) {
+  async function handleVerifyCode(e) {
     e.preventDefault()
-    setError('Funcionalidad en construcción')
+    setError('')
+    setLoading(true)
+    try {
+      await authApi.verifyResetCode(email, code)
+      setStep('password')
+    } catch (err) {
+      setError(err.message || 'Código inválido o expirado')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  function handleReset(e) {
+  async function handleReset(e) {
     e.preventDefault()
-    setError('Funcionalidad en construcción')
+    if (pwd.length < 8) return setError('La contraseña debe tener al menos 8 caracteres')
+    if (!/[A-Z]/.test(pwd)) return setError('La contraseña debe contener al menos una mayúscula')
+    if (!/[0-9]/.test(pwd)) return setError('La contraseña debe contener al menos un número')
+    if (pwd !== confirm) return setError('Las contraseñas no coinciden')
+
+    setError('')
+    setLoading(true)
+    try {
+      await authApi.resetPassword({ email, code, newPassword: pwd, confirmPassword: confirm })
+      setStep('success')
+    } catch (err) {
+      setError(err.message || 'No se pudo restablecer la contraseña. Intenta nuevamente.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   // ── Render ─────────────────────────────────────────────────

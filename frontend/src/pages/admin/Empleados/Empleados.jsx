@@ -30,6 +30,7 @@ function emptyForm() {
     email: '',
     specialty: '',
     daily_rate: '',
+    commission_percent: '',
     status: 'Activo',
     hire_date: todayISO(),
   }
@@ -52,6 +53,9 @@ function validate(form) {
   }
   if (form.daily_rate && (isNaN(Number(form.daily_rate)) || Number(form.daily_rate) < 0)) {
     errors.daily_rate = 'Tarifa inválida.'
+  }
+  if (form.commission_percent && (isNaN(Number(form.commission_percent)) || Number(form.commission_percent) < 0 || Number(form.commission_percent) > 100)) {
+    errors.commission_percent = 'La comisión debe estar entre 0 y 100.'
   }
   return errors
 }
@@ -113,6 +117,15 @@ export function Empleados() {
   const [statusTarget, setStatusTarget] = useState(null)
   const [statusNew, setStatusNew] = useState('')
   const [statusSubmitting, setStatusSubmitting] = useState(false)
+
+  // ── Earnings modal ────────────────────────────────────
+  const [earningsTarget, setEarningsTarget] = useState(null)
+  const [earningsFrom, setEarningsFrom] = useState(todayISO())
+  const [earningsTo, setEarningsTo] = useState(todayISO())
+  const [earningsData, setEarningsData] = useState(null)
+  const [earningsLoading, setEarningsLoading] = useState(false)
+  const [commissionInput, setCommissionInput] = useState('')
+  const [commissionSaving, setCommissionSaving] = useState(false)
 
   useEffect(() => {
     mountedRef.current = true
@@ -217,6 +230,7 @@ export function Empleados() {
         ...(formData.email.trim() ? { email: formData.email.trim() } : {}),
         specialty: formData.specialty.trim(),
         ...(formData.daily_rate ? { daily_rate: Number(formData.daily_rate) } : {}),
+        ...(formData.commission_percent ? { commission_percent: Number(formData.commission_percent) } : {}),
         status: formData.status,
         hire_date: formData.hire_date,
       })
@@ -259,6 +273,65 @@ export function Empleados() {
       toast.error(err.message || 'Error al eliminar el empleado.')
     } finally {
       if (mountedRef.current) setDeleting(false)
+    }
+  }
+
+  // ── Earnings handlers ──────────────────────────────────
+  const loadEarnings = useCallback(async (empId, from, to) => {
+    setEarningsLoading(true)
+    try {
+      const data = await employeesApi.getEarnings(empId, { from, to })
+      if (!mountedRef.current) return
+      setEarningsData(data)
+    } catch (err) {
+      if (!mountedRef.current) return
+      toast.error(err.message || 'Error al calcular las ganancias.')
+    } finally {
+      if (mountedRef.current) setEarningsLoading(false)
+    }
+  }, [toast])
+
+  function openEarningsModal(emp) {
+    const today = todayISO()
+    setEarningsTarget(emp)
+    setEarningsFrom(today)
+    setEarningsTo(today)
+    setEarningsData(null)
+    setCommissionInput(String(Number(emp.commission_percent ?? 0)))
+    loadEarnings(emp.id, today, today)
+  }
+
+  function closeEarningsModal() {
+    setEarningsTarget(null)
+    setEarningsData(null)
+  }
+
+  function handleEarningsRange(from, to) {
+    setEarningsFrom(from)
+    setEarningsTo(to)
+    if (from && to && from <= to) {
+      loadEarnings(earningsTarget.id, from, to)
+    }
+  }
+
+  async function handleSaveCommission() {
+    const pct = Number(commissionInput)
+    if (isNaN(pct) || pct < 0 || pct > 100) {
+      toast.error('La comisión debe ser un número entre 0 y 100.')
+      return
+    }
+    setCommissionSaving(true)
+    try {
+      await employeesApi.update(earningsTarget.id, { commission_percent: pct })
+      if (!mountedRef.current) return
+      toast.success(`Comisión de ${earningsTarget.name} actualizada a ${pct}%`)
+      setEarningsTarget((prev) => prev ? { ...prev, commission_percent: pct } : prev)
+      await loadEarnings(earningsTarget.id, earningsFrom, earningsTo)
+      loadEmployees({ silent: true, targetPage: page })
+    } catch (err) {
+      toast.error(err.message || 'Error al guardar la comisión.')
+    } finally {
+      if (mountedRef.current) setCommissionSaving(false)
     }
   }
 
@@ -379,6 +452,7 @@ export function Empleados() {
                   <th>Teléfono</th>
                   <th>Correo</th>
                   <th>Especialidad</th>
+                  <th>Comisión</th>
                   <th>Estado</th>
                   <th>Acciones</th>
                 </tr>
@@ -396,6 +470,7 @@ export function Empleados() {
                     <td data-label="Teléfono">{emp.phone}</td>
                     <td data-label="Correo">{emp.email ?? '—'}</td>
                     <td data-label="Especialidad">{emp.specialty}</td>
+                    <td data-label="Comisión">{Number(emp.commission_percent ?? 0)}%</td>
                     <td data-label="Estado">
                       <span
                         className={styles.statusBadge}
@@ -409,6 +484,13 @@ export function Empleados() {
                     </td>
                     <td data-label="Acciones">
                       <div className={styles.actionGroup}>
+                        <button
+                          className={styles.statusButton}
+                          type="button"
+                          onClick={() => openEarningsModal(emp)}
+                        >
+                          Ganancias
+                        </button>
                         <button
                           className={styles.statusButton}
                           type="button"
@@ -430,7 +512,7 @@ export function Empleados() {
                 ))}
                 {employees.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className={styles.emptyState}>
+                    <td colSpan={9} className={styles.emptyState}>
                       {hasFilters
                         ? 'Sin resultados para los filtros aplicados.'
                         : 'No hay empleados registrados aún.'}
@@ -765,6 +847,19 @@ export function Empleados() {
               </label>
 
               <label className={styles.formField}>
+                Comisión (%)
+                <input
+                  inputMode="decimal"
+                  name="commission_percent"
+                  value={formData.commission_percent}
+                  onChange={handleInputChange}
+                  placeholder="60"
+                  disabled={submitting}
+                />
+                {formErrors.commission_percent ? <span>{formErrors.commission_percent}</span> : null}
+              </label>
+
+              <label className={styles.formField}>
                 Estado
                 <select name="status" value={formData.status} onChange={handleInputChange} disabled={submitting}>
                   {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -797,6 +892,133 @@ export function Empleados() {
                 </button>
               </div>
             </form>
+          </section>
+        </div>
+      ) : null}
+
+      {/* ── Earnings modal ────────────────────────────────── */}
+      {earningsTarget ? (
+        <div className={styles.modalBackdrop} role="presentation">
+          <section
+            className={styles.modal}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="earnings-modal-title"
+          >
+            <div className={styles.modalHeader}>
+              <div>
+                <p className={styles.eyebrow}>Ganancias por comisión</p>
+                <h2 id="earnings-modal-title">{earningsTarget.name} {earningsTarget.last_name}</h2>
+              </div>
+              <button
+                className={styles.iconButton}
+                type="button"
+                onClick={closeEarningsModal}
+                aria-label="Cerrar"
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true">
+                  <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                </svg>
+              </button>
+            </div>
+
+            <div className={styles.form}>
+              <label className={styles.formField}>
+                Desde
+                <input
+                  type="date"
+                  value={earningsFrom}
+                  max={earningsTo || undefined}
+                  onChange={(e) => handleEarningsRange(e.target.value, earningsTo)}
+                />
+              </label>
+
+              <label className={styles.formField}>
+                Hasta
+                <input
+                  type="date"
+                  value={earningsTo}
+                  min={earningsFrom || undefined}
+                  onChange={(e) => handleEarningsRange(earningsFrom, e.target.value)}
+                />
+              </label>
+
+              <div className={`${styles.formField} ${styles.fullWidth}`}>
+                <span>Comisión del empleado (%)</span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    style={{ flex: 1 }}
+                    value={commissionInput}
+                    onChange={(e) => setCommissionInput(e.target.value)}
+                    disabled={commissionSaving}
+                  />
+                  <button
+                    className={styles.secondaryButton}
+                    type="button"
+                    onClick={handleSaveCommission}
+                    disabled={commissionSaving || Number(commissionInput) === Number(earningsTarget.commission_percent ?? 0)}
+                  >
+                    {commissionSaving ? 'Guardando…' : 'Guardar %'}
+                  </button>
+                </div>
+              </div>
+
+              {earningsLoading ? (
+                <div className={`${styles.fullWidth} ${styles.loadingState}`}>
+                  <div className={styles.spinner} aria-hidden="true" />
+                  <p>Calculando…</p>
+                </div>
+              ) : earningsData ? (
+                <div className={styles.fullWidth}>
+                  <div className={styles.earningsSummary}>
+                    <div className={styles.earningTab}>
+                      <span className={styles.earningValue}>{fmtCOP(earningsData.order_total)}</span>
+                      <span className={styles.earningLabel}>Total generado (mano de obra + repuestos − descuento)</span>
+                    </div>
+                    <div className={styles.earningTab}>
+                      <span className={styles.earningValue} style={{ color: '#34d399' }}>
+                        {fmtCOP(earningsData.commission_amount)}
+                      </span>
+                      <span className={styles.earningLabel}>
+                        Comisión ({Number(earningsData.employee.commission_percent)}%)
+                      </span>
+                    </div>
+                    <div className={styles.earningTab}>
+                      <span className={styles.earningValue}>{earningsData.orders_count}</span>
+                      <span className={styles.earningLabel}>Órdenes atendidas</span>
+                    </div>
+                  </div>
+
+                  {earningsData.orders.length > 0 ? (
+                    <div className={styles.earningsOrders}>
+                      {earningsData.orders.map((o) => (
+                        <div key={o.id} className={styles.earningsOrderRow}>
+                          <div>
+                            <strong>{o.order_number}</strong>
+                            <span className={styles.earningsOrderMeta}>
+                              {' '}· {o.motorcycle_plate} {o.motorcycle_brand} · {o.status}
+                            </span>
+                            <span className={styles.earningsOrderMeta}>
+                              {' '}· Mano de obra {fmtCOP(o.labor_cost)} + Repuestos {fmtCOP(o.parts_cost)}
+                              {Number(o.discount) > 0 ? ` − Descuento ${fmtCOP(o.discount)}` : ''}
+                            </span>
+                          </div>
+                          <span>{fmtCOP(o.final_price)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className={styles.emptyHint}>
+                      Sin órdenes asignadas a este empleado en el rango seleccionado.
+                    </p>
+                  )}
+                </div>
+              ) : null}
+            </div>
           </section>
         </div>
       ) : null}

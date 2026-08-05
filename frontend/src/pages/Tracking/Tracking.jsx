@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { io } from 'socket.io-client'
 import { apiClient } from '../../api/apiClient'
 import styles from './Tracking.module.css'
 
 const STATUS_ORDER = ['Recibida', 'En reparación', 'Esperando repuesto', 'Lista para entrega', 'Entregada']
+const POLL_INTERVAL_MS = 8000
 
 const STATUS_ICONS = {
   Recibida:             '1',
@@ -37,27 +37,18 @@ export function Tracking() {
 
   useEffect(() => {
     mountedRef.current = true
-    loadTracking()
+    loadTracking({ showLoading: true })
 
-    const { protocol, hostname } = window.location
-    const socket = io(`${protocol}//${hostname}:3000`, {
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-      reconnectionDelay: 2000,
-      reconnectionDelayMax: 10000,
-    })
-    socket.emit('join-tracking', token)
-    socket.on('TRACKING_UPDATED', () => { loadTracking() })
+    const timer = setInterval(() => loadTracking({ showLoading: false }), POLL_INTERVAL_MS)
 
     return () => {
       mountedRef.current = false
-      socket.removeAllListeners()
-      socket.disconnect()
+      clearInterval(timer)
     }
   }, [token])
 
-  async function loadTracking() {
-    setLoading(true)
+  async function loadTracking({ showLoading } = {}) {
+    if (showLoading) setLoading(true)
     setError(null)
     try {
       const res = await apiClient.get(`/public/tracking/${token}`)
@@ -71,7 +62,7 @@ export function Tracking() {
         )
       }
     } finally {
-      if (mountedRef.current) setLoading(false)
+      if (mountedRef.current && showLoading) setLoading(false)
     }
   }
 
@@ -106,7 +97,7 @@ export function Tracking() {
                 </svg>
               </div>
               <p className={styles.errorText}>{error}</p>
-              <button className={styles.retryBtn} type="button" onClick={loadTracking}>
+              <button className={styles.retryBtn} type="button" onClick={() => loadTracking({ showLoading: true })}>
                 Reintentar
               </button>
             </div>
@@ -122,7 +113,6 @@ export function Tracking() {
                   {data.motorcycle.brand} {data.motorcycle.model} {data.motorcycle.year}
                 </h2>
                 <div className={styles.motoMeta}>
-                  {data.motorcycle.color ? <span>{data.motorcycle.color}</span> : null}
                   {data.motorcycle.engine_cc ? <span>{data.motorcycle.engine_cc}cc</span> : null}
                 </div>
               </section>
@@ -161,10 +151,6 @@ export function Tracking() {
                 <div className={styles.infoCard}>
                   <span className={styles.infoLabel}>Fecha de ingreso</span>
                   <span className={styles.infoValue}>{formatDate(data.entry_date) || '—'}</span>
-                </div>
-                <div className={styles.infoCard}>
-                  <span className={styles.infoLabel}>Entrega estimada</span>
-                  <span className={styles.infoValue}>{formatDate(data.estimated_delivery_date) || 'Por confirmar'}</span>
                 </div>
                 {data.actual_delivery_date ? (
                   <div className={styles.infoCard}>

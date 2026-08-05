@@ -17,14 +17,6 @@ const sharedRules = [
     .trim()
     .notEmpty().withMessage('El teléfono es requerido')
     .isMobilePhone('es-CO').withMessage('Ingresa un teléfono colombiano válido'),
-  body('email')
-    .optional({ checkFalsy: true })
-    .isEmail().withMessage('Correo electrónico inválido')
-    .normalizeEmail(),
-  body('address')
-    .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 200 }).withMessage('Máximo 200 caracteres'),
   body('city')
     .optional({ checkFalsy: true })
     .trim()
@@ -55,14 +47,6 @@ const sharedOptional = [
     .trim()
     .notEmpty().withMessage('El teléfono no puede estar vacío')
     .isMobilePhone('es-CO').withMessage('Ingresa un teléfono colombiano válido'),
-  body('email')
-    .optional({ checkFalsy: true })
-    .isEmail().withMessage('Correo electrónico inválido')
-    .normalizeEmail(),
-  body('address')
-    .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 200 }).withMessage('Máximo 200 caracteres'),
   body('city')
     .optional({ checkFalsy: true })
     .trim()

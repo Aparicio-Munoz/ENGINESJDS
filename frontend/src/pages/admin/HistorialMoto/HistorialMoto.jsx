@@ -90,8 +90,8 @@ export function HistorialMoto() {
         <div>
           <p className={styles.eyebrow}>Historial clínico</p>
           <h1 className={styles.title}><span className={styles.plate}>{m.plate}</span></h1>
-          <p className={styles.subtitle}>{m.brand} {m.model} {m.year} — {m.color ?? ''} {m.engine_cc ? m.engine_cc + 'cc' : ''}</p>
-          <p className={styles.clientInfo}>Cliente: <strong>{m.client_name}</strong> · {m.client_phone ?? '—'}</p>
+          <p className={styles.subtitle}>{m.brand} {m.model} {m.year} {m.engine_cc ? `— ${m.engine_cc}cc` : ''}</p>
+          <p className={styles.clientInfo}>Cliente: <strong>{m.client_name ?? 'Sin propietario asignado'}</strong> · {m.client_phone ?? '—'}</p>
         </div>
         <div className={styles.headerActions}>
           <button className={styles.exportBtn} onClick={handlePDF}>PDF</button>

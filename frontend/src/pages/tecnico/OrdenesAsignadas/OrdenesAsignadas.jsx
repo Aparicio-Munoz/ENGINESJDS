@@ -270,7 +270,7 @@ export function OrdenesAsignadas() {
 
       {/* Detail modal */}
       {detailTarget ? (
-        <div className={styles.modalBackdrop}>
+        <div className={`${styles.modalBackdrop} ${styles.detailBackdrop}`}>
           <section className={`${styles.modal} ${styles.detailModal}`}>
             <div className={styles.modalHeader}>
               <div>
@@ -293,10 +293,6 @@ export function OrdenesAsignadas() {
                   <div className={styles.detailItem}>
                     <span className={styles.detailLabel}>Fecha ingreso</span>
                     <span>{formatDate(detailHistory.order.entry_date)}</span>
-                  </div>
-                  <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Entrega estimada</span>
-                    <span>{formatDate(detailHistory.order.estimated_delivery_date)}</span>
                   </div>
                   <div className={styles.detailItem}>
                     <span className={styles.detailLabel}>Total</span>

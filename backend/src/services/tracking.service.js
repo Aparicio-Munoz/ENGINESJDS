@@ -17,9 +17,9 @@ export async function getByToken(token) {
   const [orderRows] = await pool.query(
     `SELECT
        o.id, o.order_number, o.status, o.entry_date,
-       o.estimated_delivery_date, o.actual_delivery_date,
+       o.actual_delivery_date,
        o.diagnostic_notes,
-       m.plate, m.brand, m.model, m.year, m.color, m.engine_cc
+       m.plate, m.brand, m.model, m.year, m.engine_cc
      FROM orders o
      INNER JOIN motorcycles m ON m.id = o.motorcycle_id
      WHERE o.tracking_token = ?`,
@@ -53,7 +53,6 @@ export async function getByToken(token) {
     status: STATUS_MAP[order.status] ?? order.status,
     status_raw: order.status,
     entry_date: order.entry_date,
-    estimated_delivery_date: order.estimated_delivery_date,
     actual_delivery_date: order.actual_delivery_date,
     diagnostic: order.diagnostic_notes,
     motorcycle: {
@@ -61,7 +60,6 @@ export async function getByToken(token) {
       brand: order.brand,
       model: order.model,
       year: order.year,
-      color: order.color,
       engine_cc: order.engine_cc,
     },
     services: services.map((s) => ({

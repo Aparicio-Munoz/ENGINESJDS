@@ -54,6 +54,9 @@
 .modalBackdrop { position: fixed; z-index: 20; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(15,23,42,.46); }
 .modal { width: min(720px, 100%); max-height: min(86vh, 820px); overflow: auto; border-radius: 8px; padding: 24px; background: #fff; box-shadow: 0 24px 60px rgba(15,23,42,.24); }
 .detailModal { width: min(900px, 100%); max-height: min(90vh, 960px); }
+/* z-index por encima del sidebar (200) para que el overlay cubra toda
+   la vista y el modal quede realmente centrado, no pegado al costado */
+.modalBackdrop.detailBackdrop { z-index: 500; }
 .modalHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
 .modalHeader h2 { color: #101828; font-size: 1.5rem; }
 .iconButton { width: 36px; height: 36px; border: 0; border-radius: 8px; color: #344054; background: #eef2f6; cursor: pointer; font-weight: 800; }

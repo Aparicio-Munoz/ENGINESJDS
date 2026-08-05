@@ -3,9 +3,9 @@ import { getPool } from '../config/database.js'
 export async function getMotorcycleInfo(motorcycleId) {
   const [rows] = await getPool().query(
     `SELECT m.*, CONCAT(c.name, ' ', c.last_name) AS client_name,
-            c.phone AS client_phone, c.document AS client_document, c.email AS client_email
+            c.phone AS client_phone, c.document AS client_document
      FROM motorcycles m
-     INNER JOIN clients c ON c.id = m.client_id
+     LEFT JOIN clients c ON c.id = m.client_id
      WHERE m.id = ? AND m.deleted_at IS NULL`,
     [motorcycleId]
   )

@@ -10,7 +10,7 @@ const router = Router()
 router.use(verifyToken)
 
 // GET  /api/motorcycles
-//   ?search=    busca en placa, VIN, marca, modelo, nombre del cliente
+//   ?search=    busca en placa, marca, modelo, nombre del cliente
 //   ?brand=     filtro exacto de marca
 //   ?model=     filtro parcial de modelo
 //   ?year=      filtro por año

@@ -79,8 +79,7 @@ export function MotosAsignadas() {
                 </div>
                 <h3 className={styles.cardTitle}>{m.brand} {m.model} {m.year}</h3>
                 <div className={styles.cardMeta}>
-                  <span>{m.color || '—'} · {m.engine_cc ? `${m.engine_cc}cc` : '—'}</span>
-                  {m.vin ? <span className={styles.vin}>VIN: {m.vin}</span> : null}
+                  <span>{m.engine_cc ? `${m.engine_cc}cc` : '—'}</span>
                 </div>
                 <div className={styles.cardInfo}>
                   <div className={styles.infoRow}>

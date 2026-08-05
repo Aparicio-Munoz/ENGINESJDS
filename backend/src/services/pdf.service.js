@@ -63,7 +63,6 @@ export async function generateOrderPDF(orderId) {
   doc.fillColor(MUTED)
   doc.text(`${o.document_type ?? 'CC'}: ${o.document ?? '—'}`)
   doc.text(`Tel: ${o.client_phone ?? '—'}`)
-  if (o.client_email) doc.text(`Email: ${o.client_email}`)
 
   // ── Motocicleta ────────────────────────────────────
   const motoX = leftCol + colW + 20
@@ -71,8 +70,7 @@ export async function generateOrderPDF(orderId) {
   doc.fontSize(9).fillColor(DARK).text(`${o.brand ?? ''} ${o.model ?? ''} ${o.year ?? ''}`, motoX)
   doc.fillColor(MUTED)
   doc.text(`Placa: ${o.plate ?? '—'}`, motoX)
-  doc.text(`Color: ${o.color ?? '—'} · ${o.engine_cc ? o.engine_cc + 'cc' : '—'}`, motoX)
-  if (o.vin) doc.text(`VIN: ${o.vin}`, motoX)
+  doc.text(`Cilindrada: ${o.engine_cc ? o.engine_cc + 'cc' : '—'}`, motoX)
 
   doc.y = Math.max(doc.y, clientY + 80)
   doc.moveDown(0.5)
@@ -90,7 +88,6 @@ export async function generateOrderPDF(orderId) {
   doc.fontSize(10).fillColor(ORANGE).text('FECHAS', motoX, statusY)
   doc.fontSize(9).fillColor(MUTED)
   doc.text(`Ingreso: ${fmtDate(o.entry_date)}`, motoX)
-  doc.text(`Entrega estimada: ${fmtDate(o.estimated_delivery_date)}`, motoX)
   if (o.actual_delivery_date) doc.text(`Entregada: ${fmtDate(o.actual_delivery_date)}`, motoX)
 
   doc.y = Math.max(doc.y, statusY + 55)

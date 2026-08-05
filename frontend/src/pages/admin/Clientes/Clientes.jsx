@@ -16,8 +16,6 @@ const INITIAL_FORM = {
   document_type: 'CC',
   document:      '',
   phone:         '',
-  email:         '',
-  address:       '',
 }
 
 function validate(form) {
@@ -35,9 +33,6 @@ function validate(form) {
   const phone = form.phone.trim()
   if (!phone) errors.phone = 'El teléfono es obligatorio.'
   else if (!/^\d{7,15}$/.test(phone)) errors.phone = 'Entre 7 y 15 dígitos numéricos.'
-
-  if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()))
-    errors.email = 'Formato de correo inválido.'
 
   return errors
 }
@@ -157,8 +152,6 @@ export function Clientes() {
         document_type: formData.document_type,
         document:      formData.document.trim(),
         phone:         formData.phone.trim(),
-        email:         formData.email.trim()   || undefined,
-        address:       formData.address.trim() || undefined,
       })
       toast.success(`Cliente "${created.name} ${created.last_name}" registrado`)
       closeModal()
@@ -276,19 +269,17 @@ export function Clientes() {
                   <th>Tipo Doc.</th>
                   <th>Documento</th>
                   <th>Teléfono</th>
-                  <th>Correo</th>
-                  <th>Dirección</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className={styles.emptyState}>Cargando clientes…</td>
+                    <td colSpan={5} className={styles.emptyState}>Cargando clientes…</td>
                   </tr>
                 ) : clients.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className={styles.emptyState}>
+                    <td colSpan={5} className={styles.emptyState}>
                       {search
                         ? `Sin resultados para "${search}"`
                         : 'No hay clientes registrados aún'}
@@ -302,11 +293,9 @@ export function Clientes() {
                           {client.name} {client.last_name}
                         </span>
                       </td>
-                      <td data-label="Tipo Doc.">{client.document_type}</td>
-                      <td data-label="Documento">{client.document}</td>
+                      <td data-label="Tipo Doc.">{client.document_type || '—'}</td>
+                      <td data-label="Documento">{client.document || '—'}</td>
                       <td data-label="Teléfono">{client.phone || '—'}</td>
-                      <td data-label="Correo">{client.email || '—'}</td>
-                      <td data-label="Dirección">{client.address || '—'}</td>
                       <td data-label="Acciones">
                         <button
                           className={styles.deleteButton}
@@ -428,29 +417,6 @@ export function Clientes() {
                   placeholder="3001234567"
                 />
                 {formErrors.phone ? <span className={styles.fieldError}>{formErrors.phone}</span> : <span className={styles.fieldHint}>7–15 dígitos</span>}
-              </label>
-
-              <label className={styles.formField}>
-                Correo electrónico <span className={styles.optional}>(opcional)</span>
-                <input
-                  inputMode="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  placeholder="correo@email.com"
-                />
-                {formErrors.email ? <span className={styles.fieldError}>{formErrors.email}</span> : null}
-              </label>
-
-              <label className={`${styles.formField} ${styles.fullWidth}`}>
-                Dirección <span className={styles.optional}>(opcional)</span>
-                <input
-                  name="address"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                  placeholder="Cra 5 # 12-34, Ciudad"
-                />
-                {formErrors.address ? <span className={styles.fieldError}>{formErrors.address}</span> : null}
               </label>
 
               <div className={styles.formActions}>

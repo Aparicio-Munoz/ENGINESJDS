@@ -12,9 +12,10 @@ import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
 import { reportsApi } from '../../api/reportsApi'
 import { useAuth } from '../../hooks/useAuth'
-import { useSocket } from '../../context/SocketContext'
 import { ROUTES } from '../../utils/routes'
 import styles from './DashboardAdmin.module.css'
+
+const POLL_INTERVAL_MS = 30_000
 
 ChartJS.register(
   CategoryScale, LinearScale, BarElement, LineElement,
@@ -62,26 +63,26 @@ export function DashboardAdmin() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const mountedRef = useRef(true)
-  const { refreshKey } = useSocket() ?? {}
 
-  const loadData = useCallback(async () => {
-    setLoading(true); setError(null)
+  const loadData = useCallback(async ({ showLoading } = {}) => {
+    if (showLoading) setLoading(true)
+    setError(null)
     try {
       const result = await reportsApi.getExecutiveDashboard()
       if (mountedRef.current) setData(result)
     } catch {
       if (mountedRef.current) setError('Error al cargar el dashboard.')
     } finally {
-      if (mountedRef.current) setLoading(false)
+      if (mountedRef.current && showLoading) setLoading(false)
     }
   }, [])
 
   useEffect(() => {
     mountedRef.current = true
-    loadData()
-    const iv = setInterval(loadData, 120_000)
+    loadData({ showLoading: true })
+    const iv = setInterval(() => loadData({ showLoading: false }), POLL_INTERVAL_MS)
     return () => { mountedRef.current = false; clearInterval(iv) }
-  }, [loadData, refreshKey])
+  }, [loadData])
 
   const now = new Date()
   const hour = now.getHours()
@@ -183,7 +184,7 @@ export function DashboardAdmin() {
   if (error) {
     return (
       <section className={styles.page}>
-        <div className={styles.loadingState}><p>{error}</p><button className={styles.retryBtn} onClick={loadData}>Reintentar</button></div>
+        <div className={styles.loadingState}><p>{error}</p><button className={styles.retryBtn} onClick={() => loadData({ showLoading: true })}>Reintentar</button></div>
       </section>
     )
   }
@@ -309,16 +310,6 @@ export function DashboardAdmin() {
                 <span className={styles.alertTag} style={{ background: '#FEE2E2', color: '#DC2626' }}>Stock bajo</span>
               </div>
             ))}
-            {al?.delayedOrders?.map((o) => (
-              <div key={`do-${o.id}`} className={styles.alertRow}>
-                <span className={styles.alertDot} style={{ background: '#D97706' }} />
-                <div className={styles.alertInfo}>
-                  <span className={styles.alertName}>{o.order_number} — {o.client_name}</span>
-                  <span className={styles.alertSub}>Vencida: {fmtDate(o.estimated_delivery_date)}</span>
-                </div>
-                <span className={styles.alertTag} style={{ background: '#FEF3C7', color: '#D97706' }}>Retrasada</span>
-              </div>
-            ))}
             {al?.upcomingAppts?.map((a) => (
               <div key={`ua-${a.id}`} className={styles.alertRow}>
                 <span className={styles.alertDot} style={{ background: '#2563EB' }} />
@@ -329,7 +320,7 @@ export function DashboardAdmin() {
                 <span className={styles.alertTag} style={{ background: '#DBEAFE', color: '#2563EB' }}>Cita</span>
               </div>
             ))}
-            {(!al?.lowStock?.length && !al?.delayedOrders?.length && !al?.upcomingAppts?.length) ? (
+            {(!al?.lowStock?.length && !al?.upcomingAppts?.length) ? (
               <p className={styles.noAlerts}>Todo bajo control</p>
             ) : null}
           </div>
