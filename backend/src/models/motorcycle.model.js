@@ -96,12 +96,12 @@ export async function plateExists(plate, excludeId = null) {
 // ── CRUD ─────────────────────────────────────────────────────
 export async function create({
   client_id = null,
-  plate,
-  brand,
-  model,
-  year,
+  plate     = null,
+  brand     = null,
+  model     = null,
+  year      = null,
   engine_cc = null,
-  status    = 'Disponible',
+  status    = 'En servicio',
   notes     = null,
 }) {
   const [result] = await getPool().query(
@@ -137,9 +137,20 @@ export async function update(id, fields) {
   return findById(id)
 }
 
+// plate y vin tienen UNIQUE KEY a nivel de tabla, sin importar deleted_at —
+// si no se liberan al eliminar, esa placa/VIN queda bloqueada para siempre
+// (ni el mismo cliente ni otro podrán volver a registrarla), aunque
+// plateExists() diga que está libre por ignorar los soft-deleted.
+// El valor original queda preservado en deletion_logs.entity_data.
 export async function softDelete(id) {
+  // plate es VARCHAR(10) — el placeholder debe caber siempre, por eso
+  // solo usa el id (máx. 9 dígitos + 1 letra = 10) y no el valor original.
   const [result] = await getPool().query(
-    'UPDATE motorcycles SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL',
+    `UPDATE motorcycles
+     SET deleted_at = NOW(),
+         plate = CONCAT('D', id),
+         vin   = NULL
+     WHERE id = ? AND deleted_at IS NULL`,
     [id]
   )
   return result.affectedRows > 0

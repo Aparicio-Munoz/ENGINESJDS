@@ -1,14 +1,17 @@
 import { body } from 'express-validator'
 
-const VALID_STATUS  = ['Pendiente', 'En proceso', 'En reparación', 'Esperando repuesto', 'Listo', 'Lista para entrega', 'Entregada']
-const VALID_PAYMENT = ['Efectivo', 'Transferencia', 'Tarjeta', 'Nequi', 'Daviplata', 'Otro']
+const VALID_STATUS      = ['Pendiente', 'En proceso', 'En reparación', 'Esperando repuesto', 'Listo', 'Lista para entrega', 'Entregada']
+const VALID_MOTO_STATUS = ['En servicio', 'En reparación', 'Lista para entrega', 'Entregada']
+const VALID_PAYMENT     = ['Efectivo', 'Transferencia', 'Tarjeta', 'Nequi', 'Daviplata', 'Otro']
 
 // ── POST /api/orders ─────────────────────────────────────────
 export const createOrderRules = [
   body('client_id')
-    .isInt({ min: 1 }).withMessage('client_id es requerido y debe ser un entero positivo'),
+    .optional({ checkFalsy: true })
+    .isInt({ min: 1 }).withMessage('client_id debe ser un entero positivo'),
   body('motorcycle_id')
-    .isInt({ min: 1 }).withMessage('motorcycle_id es requerido y debe ser un entero positivo'),
+    .optional({ checkFalsy: true })
+    .isInt({ min: 1 }).withMessage('motorcycle_id debe ser un entero positivo'),
   body('problem_description')
     .trim()
     .notEmpty().withMessage('La descripción del problema es requerida')
@@ -47,6 +50,10 @@ export const updateOrderRules = [
   body('discount')
     .optional()
     .isFloat({ min: 0 }).withMessage('discount debe ser >= 0'),
+  body('motorcycle_status')
+    .optional({ checkFalsy: true })
+    .isIn(VALID_MOTO_STATUS)
+    .withMessage(`motorcycle_status inválido — válidos: ${VALID_MOTO_STATUS.join(', ')}`),
 ]
 
 // ── POST /api/orders/:id/change-status ───────────────────────

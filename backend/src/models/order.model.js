@@ -2,17 +2,35 @@ import { getPool } from '../config/database.js'
 
 // subtotal y final_price son GENERATED ALWAYS AS — nunca en INSERT/UPDATE
 // parts_cost gestionado por trigger trg_order_items_after_insert/delete — nunca en INSERT/UPDATE
+// services_cost gestionado por trigger trg_order_services_after_insert/delete — nunca en INSERT/UPDATE
 // order_number generado por trigger trg_orders_before_insert — nunca en INSERT
 // trg_orders_after_insert  → crea order_status_history automáticamente al crear
 // trg_orders_after_update  → crea order_status_history al cambiar status, crea sales si → Entregada
 // trg_order_items_after_insert → descuenta stock, actualiza parts_cost, registra movimiento
 // trg_order_items_after_delete → devuelve stock, actualiza parts_cost, registra movimiento
+// trg_order_services_after_insert/delete → recalcula services_cost
+
+// ── Sincronización orders.status ↔ motorcycles.status ─────────
+// orders.status (7 fases del flujo de trabajo) y motorcycles.status
+// (4 estados de alto nivel, migración 27) son ENUMs independientes.
+// Este mapeo garantiza que, ante cualquier cambio de orders.status,
+// motorcycles.status quede siempre en el estado equivalente —
+// usado por orders.service.js y technician.service.js.
+export const ORDER_TO_MOTO_STATUS = {
+  'Pendiente':           'En servicio',
+  'En proceso':          'En servicio',
+  'En reparación':       'En reparación',
+  'Esperando repuesto':  'En reparación',
+  'Listo':               'Lista para entrega',
+  'Lista para entrega':  'Lista para entrega',
+  'Entregada':           'Entregada',
+}
 
 const LIST_SELECT = `
   SELECT
     o.id, o.order_number, o.tracking_token, o.status, o.entry_date,
     o.actual_delivery_date,
-    o.labor_cost, o.parts_cost, o.discount, o.subtotal, o.final_price,
+    o.labor_cost, o.parts_cost, o.services_cost, o.discount, o.subtotal, o.final_price,
     o.diagnostic_notes, o.work_notes,
     o.motorcycle_id, o.client_id, o.appointment_id, o.assigned_employee_id,
     o.created_by, o.created_at, o.updated_at,
@@ -21,11 +39,12 @@ const LIST_SELECT = `
     m.plate AS motorcycle_plate,
     m.brand AS motorcycle_brand,
     m.model AS motorcycle_model,
+    m.status AS motorcycle_status,
     CONCAT(e.name, ' ', e.last_name) AS employee_name,
     e.specialty AS employee_specialty
   FROM orders o
-  INNER JOIN clients c    ON c.id = o.client_id
-  INNER JOIN motorcycles m ON m.id = o.motorcycle_id
+  LEFT JOIN clients c    ON c.id = o.client_id
+  LEFT JOIN motorcycles m ON m.id = o.motorcycle_id
   LEFT JOIN employees e   ON e.id = o.assigned_employee_id AND e.deleted_at IS NULL
 `
 
@@ -75,8 +94,8 @@ export async function findAll({
   const [[{ total }]] = await getPool().query(
     `SELECT COUNT(*) AS total
      FROM orders o
-     INNER JOIN clients c    ON c.id = o.client_id
-     INNER JOIN motorcycles m ON m.id = o.motorcycle_id
+     LEFT JOIN clients c    ON c.id = o.client_id
+     LEFT JOIN motorcycles m ON m.id = o.motorcycle_id
      LEFT JOIN employees e   ON e.id = o.assigned_employee_id AND e.deleted_at IS NULL
      ${where}`,
     params
@@ -107,12 +126,12 @@ export async function findById(id) {
        c.phone AS client_phone,
        m.plate AS motorcycle_plate, m.brand AS motorcycle_brand,
        m.model AS motorcycle_model, m.year AS motorcycle_year,
-       m.engine_cc,
+       m.engine_cc, m.status AS motorcycle_status,
        CONCAT(e.name, ' ', e.last_name) AS employee_name,
        e.specialty AS employee_specialty, e.phone AS employee_phone
      FROM orders o
-     INNER JOIN clients c    ON c.id = o.client_id
-     INNER JOIN motorcycles m ON m.id = o.motorcycle_id
+     LEFT JOIN clients c    ON c.id = o.client_id
+     LEFT JOIN motorcycles m ON m.id = o.motorcycle_id
      LEFT JOIN employees e   ON e.id = o.assigned_employee_id AND e.deleted_at IS NULL
      WHERE o.id = ?`,
     [id]
@@ -140,11 +159,12 @@ export async function findHistory(id) {
          c.name AS client_name, c.last_name AS client_last_name,
          c.phone AS client_phone, c.document,
          m.plate, m.brand, m.model, m.year, m.engine_cc,
+         m.status AS motorcycle_status,
          CONCAT(e.name, ' ', e.last_name) AS employee_name,
          e.specialty AS employee_specialty
        FROM orders o
-       INNER JOIN clients c    ON c.id = o.client_id
-       INNER JOIN motorcycles m ON m.id = o.motorcycle_id
+       LEFT JOIN clients c    ON c.id = o.client_id
+       LEFT JOIN motorcycles m ON m.id = o.motorcycle_id
        LEFT JOIN employees e   ON e.id = o.assigned_employee_id AND e.deleted_at IS NULL
        WHERE o.id = ?`,
       [id]
@@ -196,8 +216,8 @@ export async function findHistory(id) {
 
 // ── Creación ──────────────────────────────────────────────────
 export async function create({
-  motorcycle_id,
-  client_id,
+  motorcycle_id           = null,
+  client_id               = null,
   appointment_id          = null,
   assigned_employee_id    = null,
   diagnostic_notes        = null,

@@ -1,4 +1,4 @@
-.page { display: grid; gap: 24px; }
+.page { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
 .pageHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
 .pageHeader h1, .pageHeader p, .modalHeader h2, .modalHeader p { margin: 0; }
 .pageHeader h1 { color: #101828; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.1; }
@@ -21,7 +21,7 @@
 .table td { color: #172033; font-size: 0.95rem; }
 .table tbody tr:last-child td { border-bottom: 0; }
 
-.orderNumber { font-family: ui-monospace, monospace; font-weight: 800; font-size: 0.88rem; color: #1d4ed8; }
+.orderNumber { font-family: ui-monospace, monospace; font-weight: 800; font-size: 0.88rem; color: #1d4ed8; white-space: nowrap; }
 .subText { font-size: 0.82rem; color: #667085; margin-top: 2px; }
 
 .statusBadge { display: inline-flex; align-items: center; border-radius: 999px; padding: 4px 10px; font-size: 0.82rem; font-weight: 800; white-space: nowrap; }

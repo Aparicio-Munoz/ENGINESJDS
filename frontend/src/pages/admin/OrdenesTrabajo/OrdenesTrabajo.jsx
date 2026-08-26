@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ordersApi, clientsApi, motorcyclesApi, employeesApi, inventoryApi } from '../../../api'
+import { ordersApi, clientsApi, motorcyclesApi, employeesApi, inventoryApi, quickJobsApi } from '../../../api'
 import { Pagination } from '../../../components/Pagination/Pagination'
 import { useToast } from '../../../hooks/useToast'
 import styles from './OrdenesTrabajo.module.css'
 
 const TRACKING_BASE_URL = `${window.location.origin}/tracking`
 const WHATSAPP_NUMBER   = '573000000000'
+const LIMIT              = 10
 
 const VALID_STATUSES    = ['Pendiente', 'En proceso', 'En reparación', 'Esperando repuesto', 'Listo', 'Lista para entrega', 'Entregada']
 const CHANGEABLE        = ['Pendiente', 'En proceso', 'En reparación', 'Esperando repuesto', 'Listo', 'Lista para entrega']
@@ -64,12 +65,15 @@ function emptyCreate() {
   }
 }
 
+const MOTO_STATUSES = ['En servicio', 'En reparación', 'Lista para entrega', 'Entregada']
+
 function emptyEdit(order = {}) {
   return {
     assigned_employee_id: order.assigned_employee_id  ?? '',
     diagnostic_notes:     order.diagnostic_notes ?? '',
     labor_cost:           order.labor_cost       ?? '',
     discount:             order.discount         ?? '',
+    motorcycle_status:    order.motorcycle_status ?? '',
   }
 }
 
@@ -126,6 +130,7 @@ export function OrdenesTrabajo() {
   // ── Edit modal ────────────────────────────────────────────
   const [editTarget, setEditTarget]   = useState(null)
   const [editForm, setEditForm]       = useState({})
+  const [editErrors, setEditErrors]   = useState({})
   const [editing, setEditing]         = useState(false)
   const [workLogEntries, setWorkLogEntries] = useState([])
   const [workLogInput, setWorkLogInput]     = useState('')
@@ -167,6 +172,12 @@ export function OrdenesTrabajo() {
   const [deleteReasonError, setDeleteReasonError] = useState('')
   const [deleting, setDeleting]                 = useState(false)
 
+  // ── Quick job modal ("Trabajos rápidos") ───────────────────
+  const [quickJobOpen, setQuickJobOpen]       = useState(false)
+  const [quickJobForm, setQuickJobForm]       = useState({ description: '', price: '', employee_id: '' })
+  const [quickJobErrors, setQuickJobErrors]   = useState({})
+  const [quickJobSubmitting, setQuickJobSubmitting] = useState(false)
+
   useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false } }, [])
 
   // ── Load orders ───────────────────────────────────────────
@@ -180,7 +191,7 @@ export function OrdenesTrabajo() {
         employee_id: filterEmployee || undefined,
         sort:        'entry_date',
         page,
-        limit:       20,
+        limit:       LIMIT,
       })
       if (!mountedRef.current) return
       setOrders(res.data ?? [])
@@ -225,8 +236,14 @@ export function OrdenesTrabajo() {
     setMotoSearch('')
     setCreateOpen(true)
     try {
-      const res = await clientsApi.getAll({ limit: 200 })
-      if (mountedRef.current) setClients(res.data ?? [])
+      const [clientsRes, motosRes] = await Promise.all([
+        clientsApi.getAll({ limit: 200 }),
+        motorcyclesApi.getAll({ limit: 200 }),
+      ])
+      if (mountedRef.current) {
+        setClients(clientsRes.data ?? [])
+        setMotorcycles(motosRes.data ?? [])
+      }
     } catch { /* ignore */ }
   }
 
@@ -234,7 +251,6 @@ export function OrdenesTrabajo() {
     setCreateForm((p) => ({ ...p, client_id: String(client_id), motorcycle_id: '' }))
     setClientSearch('')
     setMotoSearch('')
-    setMotorcycles([])
     setCreateErrors((p) => ({ ...p, client_id: undefined }))
     try {
       const res = await motorcyclesApi.getAll({ client_id, limit: 100 })
@@ -245,8 +261,6 @@ export function OrdenesTrabajo() {
   async function handleCreateSubmit(e) {
     e.preventDefault()
     const errs = {}
-    if (!createForm.client_id) errs.client_id = 'Selecciona un cliente.'
-    if (!createForm.motorcycle_id) errs.motorcycle_id = 'Selecciona una motocicleta.'
     if (!createForm.problem_description.trim()) errs.problem_description = 'La descripción es obligatoria.'
     else if (createForm.problem_description.trim().length < 10) errs.problem_description = 'Mínimo 10 caracteres.'
     if (Object.keys(errs).length) { setCreateErrors(errs); return }
@@ -254,8 +268,8 @@ export function OrdenesTrabajo() {
     setCreating(true)
     try {
       const newOrder = await ordersApi.create({
-        client_id:              Number(createForm.client_id),
-        motorcycle_id:          Number(createForm.motorcycle_id),
+        ...(createForm.client_id     ? { client_id: Number(createForm.client_id) }         : {}),
+        ...(createForm.motorcycle_id ? { motorcycle_id: Number(createForm.motorcycle_id) } : {}),
         problem_description:    createForm.problem_description.trim(),
         assigned_employee_id:   createForm.assigned_employee_id ? Number(createForm.assigned_employee_id) : undefined,
         labor_cost:             createForm.labor_cost !== '' ? Number(createForm.labor_cost) : undefined,
@@ -276,10 +290,50 @@ export function OrdenesTrabajo() {
     }
   }
 
+  // ── Quick job ("Trabajo rápido") ────────────────────────────
+  function openQuickJob() {
+    setQuickJobForm({ description: '', price: '', employee_id: '' })
+    setQuickJobErrors({})
+    setQuickJobOpen(true)
+  }
+
+  function closeQuickJob() {
+    setQuickJobOpen(false)
+  }
+
+  async function handleQuickJobSubmit(e) {
+    e.preventDefault()
+    const errs = {}
+    if (!quickJobForm.description.trim()) errs.description = 'Describe el trabajo realizado.'
+    if (quickJobForm.price === '' || isNaN(Number(quickJobForm.price)) || Number(quickJobForm.price) < 0) {
+      errs.price = 'Ingresa un precio válido.'
+    }
+    if (!quickJobForm.employee_id) errs.employee_id = 'Selecciona quién hizo el trabajo.'
+    if (Object.keys(errs).length) { setQuickJobErrors(errs); return }
+
+    setQuickJobSubmitting(true)
+    try {
+      await quickJobsApi.create({
+        description: quickJobForm.description.trim(),
+        price:       Number(quickJobForm.price),
+        employee_id: Number(quickJobForm.employee_id),
+      })
+      if (!mountedRef.current) return
+      toast.success('Trabajo rápido registrado exitosamente')
+      setQuickJobOpen(false)
+    } catch (err) {
+      if (!mountedRef.current) return
+      toast.error(err?.response?.data?.message ?? 'No se pudo registrar el trabajo')
+    } finally {
+      if (mountedRef.current) setQuickJobSubmitting(false)
+    }
+  }
+
   // ── Edit ──────────────────────────────────────────────────
   async function openEdit(order) {
     setEditTarget(order)
     setEditForm(emptyEdit(order))
+    setEditErrors({})
     setWorkLogEntries(parseWorkLog(order.work_notes))
     setWorkLogInput('')
     setAddSvcOpen(false)
@@ -291,6 +345,7 @@ export function OrdenesTrabajo() {
 
   function closeEdit() {
     setEditTarget(null)
+    setEditErrors({})
     setAddSvcOpen(false)
     setAddPartOpen(false)
   }
@@ -303,15 +358,32 @@ export function OrdenesTrabajo() {
   }
 
   async function handleEditSubmit(e) {
-    e.preventDefault()
+    e?.preventDefault?.()
+
+    const laborCost      = editForm.labor_cost !== '' ? Number(editForm.labor_cost) : 0
+    const discount        = editForm.discount   !== '' ? Number(editForm.discount)   : 0
+    const servicesCost    = (detailHistory?.services ?? []).reduce((sum, s) => sum + Number(s.total_price), 0)
+    const partsCost       = (detailHistory?.parts    ?? []).reduce((sum, p) => sum + Number(p.total_price), 0)
+    const maxDiscount     = laborCost + servicesCost + partsCost
+
+    const errs = {}
+    if (laborCost < 0) errs.labor_cost = 'La mano de obra no puede ser negativa.'
+    if (discount < 0) errs.discount = 'El descuento no puede ser negativo.'
+    else if (discount > maxDiscount) {
+      errs.discount = `El descuento no puede ser mayor que el total (${formatCurrency(maxDiscount)}).`
+    }
+    if (Object.keys(errs).length) { setEditErrors(errs); return }
+    setEditErrors({})
+
     setEditing(true)
     try {
       const payload = {
         assigned_employee_id:    editForm.assigned_employee_id ? Number(editForm.assigned_employee_id) : null,
         diagnostic_notes:        editForm.diagnostic_notes.trim() || null,
         work_notes:              serializeWorkLog(workLogEntries) || null,
-        labor_cost:              editForm.labor_cost !== '' ? Number(editForm.labor_cost) : undefined,
-        discount:                editForm.discount   !== '' ? Number(editForm.discount)   : undefined,
+        labor_cost:              editForm.labor_cost !== '' ? laborCost : undefined,
+        discount:                editForm.discount   !== '' ? discount  : undefined,
+        motorcycle_status:       editForm.motorcycle_status || undefined,
       }
 
       await ordersApi.update(editTarget.id, payload)
@@ -402,6 +474,12 @@ export function OrdenesTrabajo() {
     if (!svcForm.service_catalog_id) {
       if (!svcForm.service_name.trim()) errs.service_name = 'Nombre del servicio requerido.'
       if (!svcForm.unit_price)          errs.unit_price   = 'Precio unitario requerido.'
+    }
+    if (svcForm.unit_price !== '' && Number(svcForm.unit_price) < 0) {
+      errs.unit_price = 'El precio no puede ser negativo.'
+    }
+    if (svcForm.quantity !== '' && Number(svcForm.quantity) < 1) {
+      errs.quantity = 'La cantidad debe ser al menos 1.'
     }
     if (Object.keys(errs).length) { setSvcErrors(errs); return }
 
@@ -570,10 +648,21 @@ export function OrdenesTrabajo() {
   const motoQuery = motoSearch.toLowerCase().trim()
   const filteredMotos = motoQuery
     ? motorcycles.filter((m) =>
-        m.plate.toLowerCase().includes(motoQuery) ||
-        `${m.brand} ${m.model}`.toLowerCase().includes(motoQuery)
+        (m.plate ?? '').toLowerCase().includes(motoQuery) ||
+        [m.brand, m.model].filter(Boolean).join(' ').toLowerCase().includes(motoQuery)
       ).slice(0, 10)
     : motorcycles.slice(0, 10)
+
+  // ── Totales en vivo (modal Editar) ─────────────────────────
+  // Se recalculan en cada render — mano de obra/descuento cambian con
+  // el formulario, servicios/repuestos con detailHistory (refrescado
+  // tras cada agregar/eliminar) — sin necesidad de cerrar el modal.
+  const liveLaborCost    = editForm.labor_cost !== '' && editForm.labor_cost !== undefined ? Number(editForm.labor_cost) : 0
+  const liveDiscount     = editForm.discount   !== '' && editForm.discount   !== undefined ? Number(editForm.discount)  : 0
+  const liveServicesCost = (detailHistory?.services ?? []).reduce((sum, s) => sum + Number(s.total_price), 0)
+  const livePartsCost    = (detailHistory?.parts    ?? []).reduce((sum, p) => sum + Number(p.total_price), 0)
+  const liveMaxDiscount  = liveLaborCost + liveServicesCost + livePartsCost
+  const liveTotal        = liveMaxDiscount - liveDiscount
 
   // ── Render ────────────────────────────────────────────────
   return (
@@ -585,9 +674,14 @@ export function OrdenesTrabajo() {
           <h1>Órdenes de Trabajo</h1>
           <p>Control de órdenes de reparación y mantenimiento de motocicletas.</p>
         </div>
-        <button className={styles.primaryButton} type="button" onClick={openCreate}>
-          Nueva orden
-        </button>
+        <div className={styles.headerActions}>
+          <button className={styles.secondaryButton} type="button" onClick={openQuickJob}>
+            Trabajos rápidos
+          </button>
+          <button className={styles.primaryButton} type="button" onClick={openCreate}>
+            Nueva orden
+          </button>
+        </div>
       </div>
 
       {/* Summary */}
@@ -671,14 +765,20 @@ export function OrdenesTrabajo() {
                         <span className={styles.orderNumber}>{order.order_number}</span>
                       </td>
                       <td data-label="Cliente">
-                        <div>{order.client_name}</div>
+                        <div>{order.client_name || <span className={styles.subText}>Sin cliente</span>}</div>
                         {order.client_phone
                           ? <div className={styles.subText}>{order.client_phone}</div>
                           : null}
                       </td>
                       <td data-label="Motocicleta">
-                        <div className={styles.plateText}>{order.motorcycle_plate}</div>
-                        <div className={styles.subText}>{order.motorcycle_brand} {order.motorcycle_model}</div>
+                        {order.motorcycle_plate ? (
+                          <>
+                            <div className={styles.plateText}>{order.motorcycle_plate}</div>
+                            <div className={styles.subText}>{order.motorcycle_brand} {order.motorcycle_model}</div>
+                          </>
+                        ) : (
+                          <div className={styles.subText}>Sin motocicleta</div>
+                        )}
                       </td>
                       <td data-label="Técnico">{order.employee_name || '—'}</td>
                       <td data-label="Total">{formatCurrency(order.final_price)}</td>
@@ -777,6 +877,7 @@ export function OrdenesTrabajo() {
             page={page}
             totalPages={pagination?.totalPages}
             total={pagination?.total}
+            limit={LIMIT}
             onPageChange={setPage}
             disabled={loading}
           />
@@ -797,7 +898,7 @@ export function OrdenesTrabajo() {
             <form className={styles.form} onSubmit={handleCreateSubmit}>
               <div className={styles.formField}>
                 <span className={styles.addFormLabel}>
-                  Cliente <span className={styles.required}>*</span>
+                  Cliente <span className={styles.optional}>(opcional)</span>
                 </span>
                 {selectedClient ? (
                   <div className={styles.partSelected}>
@@ -808,11 +909,14 @@ export function OrdenesTrabajo() {
                     <button
                       type="button"
                       className={styles.partClearBtn}
-                      onClick={() => {
+                      onClick={async () => {
                         setCreateForm((p) => ({ ...p, client_id: '', motorcycle_id: '' }))
-                        setMotorcycles([])
                         setClientSearch('')
                         setMotoSearch('')
+                        try {
+                          const res = await motorcyclesApi.getAll({ limit: 200 })
+                          if (mountedRef.current) setMotorcycles(res.data ?? [])
+                        } catch { /* ignore */ }
                       }}
                     >
                       Cambiar
@@ -856,7 +960,7 @@ export function OrdenesTrabajo() {
 
               <div className={styles.formField}>
                 <span className={styles.addFormLabel}>
-                  Motocicleta <span className={styles.required}>*</span>
+                  Motocicleta <span className={styles.optional}>(opcional)</span>
                 </span>
                 {selectedMoto ? (
                   <div className={styles.partSelected}>
@@ -872,13 +976,9 @@ export function OrdenesTrabajo() {
                       Cambiar
                     </button>
                   </div>
-                ) : !createForm.client_id ? (
-                  <div className={styles.partSelected}>
-                    <span>Selecciona el cliente primero</span>
-                  </div>
                 ) : motorcycles.length === 0 ? (
                   <div className={styles.partSelected}>
-                    <span>El cliente no tiene motos registradas</span>
+                    <span>{createForm.client_id ? 'El cliente no tiene motos registradas' : 'No hay motocicletas registradas'}</span>
                   </div>
                 ) : (
                   <div className={styles.partAutocomplete}>
@@ -980,6 +1080,73 @@ export function OrdenesTrabajo() {
         </div>
       ) : null}
 
+      {/* ── Quick job modal ("Trabajos rápidos") ────────────── */}
+      {quickJobOpen ? (
+        <div className={styles.modalBackdrop} role="presentation">
+          <section className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="quick-job-title">
+            <div className={styles.modalHeader}>
+              <div>
+                <p className={styles.eyebrow}>Registro</p>
+                <h2 id="quick-job-title">Trabajo rápido</h2>
+              </div>
+              <button className={styles.iconButton} type="button" onClick={closeQuickJob} aria-label="Cerrar">×</button>
+            </div>
+
+            <form className={styles.form} onSubmit={handleQuickJobSubmit}>
+              <label className={`${styles.formField} ${styles.fullWidth}`}>
+                Trabajo realizado <span className={styles.required}>*</span>
+                <textarea
+                  rows={3}
+                  maxLength={200}
+                  placeholder="Ej: Cambio de bombillo, ajuste de freno, revisión de aceite…"
+                  value={quickJobForm.description}
+                  onChange={(e) => setQuickJobForm((p) => ({ ...p, description: e.target.value }))}
+                />
+                {quickJobErrors.description ? <span>{quickJobErrors.description}</span> : null}
+              </label>
+
+              <label className={styles.formField}>
+                Precio ($) <span className={styles.required}>*</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="1000"
+                  placeholder="0"
+                  value={quickJobForm.price}
+                  onChange={(e) => setQuickJobForm((p) => ({ ...p, price: e.target.value }))}
+                />
+                {quickJobErrors.price ? <span>{quickJobErrors.price}</span> : null}
+              </label>
+
+              <label className={styles.formField}>
+                Quién lo hizo <span className={styles.required}>*</span>
+                <select
+                  value={quickJobForm.employee_id}
+                  onChange={(e) => setQuickJobForm((p) => ({ ...p, employee_id: e.target.value }))}
+                >
+                  <option value="">Selecciona un empleado</option>
+                  {employees.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.name} {emp.last_name} — {emp.specialty}
+                    </option>
+                  ))}
+                </select>
+                {quickJobErrors.employee_id ? <span>{quickJobErrors.employee_id}</span> : null}
+              </label>
+
+              <div className={styles.formActions}>
+                <button className={styles.secondaryButton} type="button" disabled={quickJobSubmitting} onClick={closeQuickJob}>
+                  Cancelar
+                </button>
+                <button className={styles.primaryButton} type="submit" disabled={quickJobSubmitting}>
+                  {quickJobSubmitting ? 'Guardando…' : 'Guardar trabajo'}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      ) : null}
+
       {/* ── Edit modal ───────────────────────────────────── */}
       {editTarget ? (
         <div className={`${styles.modalBackdrop} ${styles.detailBackdrop}`} role="presentation">
@@ -991,46 +1158,79 @@ export function OrdenesTrabajo() {
               </div>
               <button className={styles.iconButton} type="button" onClick={closeEdit}>×</button>
             </div>
-            <form className={styles.form} onSubmit={handleEditSubmit}>
-              <label className={styles.formField}>
-                Técnico asignado
-                <select
-                  value={editForm.assigned_employee_id}
-                  onChange={(e) => setEditForm((p) => ({ ...p, assigned_employee_id: e.target.value }))}
-                >
-                  <option value="">Sin asignar</option>
-                  {employees.map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.name} {emp.last_name} — {emp.specialty}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            {/* Información de la orden */}
+            <div className={styles.detailSection}>
+              <h3 className={styles.sectionTitle}>Información de la orden</h3>
+              <div className={styles.form}>
+                <label className={styles.formField}>
+                  Técnico asignado
+                  <select
+                    value={editForm.assigned_employee_id}
+                    onChange={(e) => setEditForm((p) => ({ ...p, assigned_employee_id: e.target.value }))}
+                  >
+                    <option value="">Sin asignar</option>
+                    {employees.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.name} {emp.last_name} — {emp.specialty}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-              <label className={styles.formField}>
-                Mano de obra ($)
-                <input
-                  type="number"
-                  min="0"
-                  step="1000"
-                  value={editForm.labor_cost}
-                  onChange={(e) => setEditForm((p) => ({ ...p, labor_cost: e.target.value }))}
-                />
-              </label>
+                <label className={styles.formField}>
+                  Estado de la motocicleta
+                  <select
+                    value={editForm.motorcycle_status}
+                    onChange={(e) => setEditForm((p) => ({ ...p, motorcycle_status: e.target.value }))}
+                  >
+                    {MOTO_STATUSES.map((s) => (
+                      <option
+                        key={s}
+                        value={s}
+                        disabled={s === 'Entregada'}
+                        title={s === 'Entregada' ? 'Usa "Cerrar orden y entregar" para finalizar la orden' : undefined}
+                      >
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-              <label className={styles.formField}>
-                Descuento ($)
-                <input
-                  type="number"
-                  min="0"
-                  step="1000"
-                  value={editForm.discount}
-                  onChange={(e) => setEditForm((p) => ({ ...p, discount: e.target.value }))}
-                />
-              </label>
+                <label className={styles.formField}>
+                  Mano de obra ($)
+                  <input
+                    type="number"
+                    min="0"
+                    step="1000"
+                    value={editForm.labor_cost}
+                    onChange={(e) => setEditForm((p) => ({ ...p, labor_cost: e.target.value }))}
+                  />
+                  {editErrors.labor_cost
+                    ? <span className={styles.fieldError}>{editErrors.labor_cost}</span>
+                    : null}
+                </label>
 
-              <label className={`${styles.formField} ${styles.fullWidth}`}>
-                Notas de diagnóstico
+                <label className={styles.formField}>
+                  Descuento ($)
+                  <input
+                    type="number"
+                    min="0"
+                    max={liveMaxDiscount}
+                    step="1000"
+                    value={editForm.discount}
+                    onChange={(e) => setEditForm((p) => ({ ...p, discount: e.target.value }))}
+                  />
+                  {editErrors.discount
+                    ? <span className={styles.fieldError}>{editErrors.discount}</span>
+                    : null}
+                </label>
+              </div>
+            </div>
+
+            {/* Diagnóstico */}
+            <div className={styles.detailSection}>
+              <h3 className={styles.sectionTitle}>Diagnóstico</h3>
+              <label className={styles.formField}>
                 <textarea
                   rows={3}
                   maxLength={2000}
@@ -1038,9 +1238,12 @@ export function OrdenesTrabajo() {
                   onChange={(e) => setEditForm((p) => ({ ...p, diagnostic_notes: e.target.value }))}
                 />
               </label>
+            </div>
 
-              <div className={`${styles.formField} ${styles.fullWidth}`}>
-                <span className={styles.addFormLabel}>Trabajos realizados (bitácora)</span>
+            {/* Trabajos realizados */}
+            <div className={styles.detailSection}>
+              <h3 className={styles.sectionTitle}>Trabajos realizados</h3>
+              <div className={styles.formField}>
                 {workLogEntries.length > 0 ? (
                   <div className={styles.itemList}>
                     {workLogEntries.map((entry, idx) => (
@@ -1086,16 +1289,7 @@ export function OrdenesTrabajo() {
                   </button>
                 </div>
               </div>
-
-              <div className={styles.formActions}>
-                <button className={styles.secondaryButton} type="button" disabled={editing} onClick={closeEdit}>
-                  Cancelar
-                </button>
-                <button className={styles.primaryButton} type="submit" disabled={editing}>
-                  {editing ? 'Guardando…' : 'Guardar cambios'}
-                </button>
-              </div>
-            </form>
+            </div>
 
             {/* ── Servicios y repuestos (edición) ────────────── */}
             {detailLoading ? (
@@ -1153,7 +1347,7 @@ export function OrdenesTrabajo() {
                   {addSvcOpen ? (
                     <form className={styles.addItemForm} onSubmit={handleAddSvc}>
                       <p className={styles.addFormTitle}>Agregar servicio</p>
-                      <div className={styles.addFormGrid}>
+                      <div className={styles.addFormGridService}>
                         <label className={styles.addFormField}>
                           Del catálogo (opcional)
                           <select value={svcForm.service_catalog_id} onChange={handleCatalogSelect}>
@@ -1190,6 +1384,9 @@ export function OrdenesTrabajo() {
                             value={svcForm.quantity}
                             onChange={(e) => setSvcForm((p) => ({ ...p, quantity: e.target.value }))}
                           />
+                          {svcErrors.quantity
+                            ? <span className={styles.fieldError}>{svcErrors.quantity}</span>
+                            : null}
                         </label>
 
                         <label className={styles.addFormField}>
@@ -1395,8 +1592,52 @@ export function OrdenesTrabajo() {
                     </form>
                   ) : null}
                 </div>
+
+                {/* Totales — se recalculan en vivo con cada cambio */}
+                <div className={styles.detailSection}>
+                  <h3 className={styles.sectionTitle}>Totales</h3>
+                  <div className={styles.totalsGrid}>
+                    <div className={styles.totalRow}>
+                      <span>Mano de obra</span>
+                      <strong>{formatCurrency(liveLaborCost)}</strong>
+                    </div>
+                    <div className={styles.totalRow}>
+                      <span>Servicios</span>
+                      <strong>{formatCurrency(liveServicesCost)}</strong>
+                    </div>
+                    <div className={styles.totalRow}>
+                      <span>Repuestos</span>
+                      <strong>{formatCurrency(livePartsCost)}</strong>
+                    </div>
+                    <div className={styles.totalRow}>
+                      <span>Descuento</span>
+                      <strong className={styles.discountText}>
+                        − {formatCurrency(liveDiscount)}
+                      </strong>
+                    </div>
+                    <div className={`${styles.totalRow} ${styles.totalFinal}`}>
+                      <span>Total</span>
+                      <strong>{formatCurrency(liveTotal)}</strong>
+                    </div>
+                  </div>
+                </div>
               </div>
             ) : null}
+
+            {/* Acciones — siempre al final del modal */}
+            <div className={styles.formActions}>
+              <button className={styles.secondaryButton} type="button" disabled={editing} onClick={closeEdit}>
+                Cancelar
+              </button>
+              <button
+                className={styles.primaryButton}
+                type="button"
+                disabled={editing || detailLoading}
+                onClick={handleEditSubmit}
+              >
+                {editing ? 'Guardando…' : 'Guardar cambios'}
+              </button>
+            </div>
           </section>
         </div>
       ) : null}
@@ -1416,7 +1657,7 @@ export function OrdenesTrabajo() {
                 <h2 id="detail-title">
                   <span className={styles.orderNumber}>{detailTarget.order_number}</span>
                 </h2>
-                <p>{detailTarget.client_name} — {detailTarget.motorcycle_plate} {detailTarget.motorcycle_brand}</p>
+                <p>{detailTarget.client_name || 'Sin cliente'} — {detailTarget.motorcycle_plate ? `${detailTarget.motorcycle_plate} ${detailTarget.motorcycle_brand ?? ''}`.trim() : 'Sin motocicleta'}</p>
               </div>
               <div className={styles.modalHeaderActions}>
                 <button
@@ -1554,17 +1795,19 @@ export function OrdenesTrabajo() {
                       <strong>{formatCurrency(detailHistory.order.labor_cost)}</strong>
                     </div>
                     <div className={styles.totalRow}>
+                      <span>Servicios</span>
+                      <strong>{formatCurrency(detailHistory.order.services_cost)}</strong>
+                    </div>
+                    <div className={styles.totalRow}>
                       <span>Repuestos</span>
                       <strong>{formatCurrency(detailHistory.order.parts_cost)}</strong>
                     </div>
-                    {Number(detailHistory.order.discount) > 0 ? (
-                      <div className={styles.totalRow}>
-                        <span>Descuento</span>
-                        <strong className={styles.discountText}>
-                          − {formatCurrency(detailHistory.order.discount)}
-                        </strong>
-                      </div>
-                    ) : null}
+                    <div className={styles.totalRow}>
+                      <span>Descuento</span>
+                      <strong className={styles.discountText}>
+                        − {formatCurrency(detailHistory.order.discount)}
+                      </strong>
+                    </div>
                     <div className={`${styles.totalRow} ${styles.totalFinal}`}>
                       <span>Total</span>
                       <strong>{formatCurrency(detailHistory.order.final_price)}</strong>
@@ -1775,7 +2018,7 @@ export function OrdenesTrabajo() {
                 </svg>
               </div>
               <p className={styles.waText}>
-                La orden para <strong>{whatsappOrder.motorcycle_brand} {whatsappOrder.motorcycle_plate}</strong> fue creada exitosamente.
+                La orden{whatsappOrder.motorcycle_plate ? <> para <strong>{whatsappOrder.motorcycle_brand} {whatsappOrder.motorcycle_plate}</strong></> : null} fue creada exitosamente.
               </p>
               <p className={styles.waSubtext}>
                 ¿Deseas notificar al cliente <strong>{whatsappOrder.client_name}</strong> por WhatsApp con el enlace de seguimiento?

@@ -1,7 +1,26 @@
 import { getPool } from '../config/database.js'
 import * as OrderModel from '../models/order.model.js'
+import * as MotorcycleModel from '../models/motorcycle.model.js'
 import { ApiError } from '../utils/ApiError.js'
 import { auditEntity, AUDIT_ACTIONS } from './audit.service.js'
+
+// Estados seleccionables desde el selector "Estado de la motocicleta"
+// del modal Editar Orden. 'Entregada' se excluye — sólo se alcanza
+// cerrando la orden con close(), que ya exige técnico + servicios.
+const MOTORCYCLE_STATUSES  = ['En servicio', 'En reparación', 'Lista para entrega', 'Entregada']
+const MOTO_TO_ORDER_STATUS = {
+  'En servicio':        'En proceso',
+  'En reparación':      'En reparación',
+  'Lista para entrega': 'Lista para entrega',
+}
+
+// motorcycles y orders deben quedar siempre sincronizados —
+// se invoca en cada cambio de orders.status
+async function _syncMotorcycleStatus(motorcycleId, orderStatus) {
+  const mapped = OrderModel.ORDER_TO_MOTO_STATUS[orderStatus]
+  if (!mapped) return
+  await MotorcycleModel.update(motorcycleId, { status: mapped })
+}
 
 // ── CRUD principal ────────────────────────────────────────────
 
@@ -38,13 +57,24 @@ export async function create(data, createdById, actor = {}) {
     problem_description, labor_cost, discount,
   } = data
 
-  await _assertClientExists(client_id)
-  await _assertMotorcycleExists(motorcycle_id)
+  if (client_id)       await _assertClientExists(client_id)
+  if (motorcycle_id)   await _assertMotorcycleExists(motorcycle_id)
   if (assigned_employee_id) await _assertEmployeeExists(assigned_employee_id)
   if (appointment_id)       await _assertAppointmentExists(appointment_id)
 
-  // Verificar que la moto pertenece al cliente
-  await _assertMotorcycleBelongsToClient(motorcycle_id, client_id)
+  // Verificar que la moto pertenece al cliente — sólo aplica si ambos vienen
+  if (motorcycle_id && client_id) {
+    await _assertMotorcycleBelongsToClient(motorcycle_id, client_id)
+  }
+
+  // Al crear no hay servicios ni repuestos aún — el descuento no puede superar la mano de obra
+  const laborCost   = Number(labor_cost ?? 0)
+  const discountAmt = Number(discount ?? 0)
+  if (discountAmt > laborCost) {
+    throw ApiError.badRequest(
+      `El descuento no puede ser mayor que el total de la orden (${laborCost})`
+    )
+  }
 
   const order = await OrderModel.create({
     motorcycle_id,
@@ -92,7 +122,42 @@ export async function update(id, data) {
     await _assertEmployeeExists(data.assigned_employee_id)
   }
 
-  return OrderModel.update(id, data)
+  const { motorcycle_status, ...orderFields } = data
+
+  if (motorcycle_status !== undefined && motorcycle_status !== null && motorcycle_status !== '') {
+    if (!MOTORCYCLE_STATUSES.includes(motorcycle_status)) {
+      throw ApiError.badRequest(
+        `Estado de motocicleta inválido — válidos: ${MOTORCYCLE_STATUSES.join(', ')}`
+      )
+    }
+    if (motorcycle_status === 'Entregada') {
+      throw ApiError.badRequest(
+        'Para marcar la motocicleta como entregada, cierra la orden con "Cerrar orden y entregar".'
+      )
+    }
+  }
+
+  // El descuento nunca puede superar el total (mano de obra + servicios + repuestos)
+  const laborCost = orderFields.labor_cost !== undefined ? Number(orderFields.labor_cost) : Number(order.labor_cost)
+  const discount   = orderFields.discount  !== undefined ? Number(orderFields.discount)  : Number(order.discount)
+  const maxDiscount = laborCost + Number(order.parts_cost) + Number(order.services_cost)
+  if (discount > maxDiscount) {
+    throw ApiError.badRequest(
+      `El descuento no puede ser mayor que el total de la orden (${maxDiscount})`
+    )
+  }
+
+  await OrderModel.update(id, orderFields)
+
+  if (motorcycle_status && order.motorcycle_id) {
+    await MotorcycleModel.update(order.motorcycle_id, { status: motorcycle_status })
+    const mappedOrderStatus = MOTO_TO_ORDER_STATUS[motorcycle_status]
+    if (mappedOrderStatus && mappedOrderStatus !== order.status) {
+      await OrderModel.updateStatus(id, { status: mappedOrderStatus })
+    }
+  }
+
+  return OrderModel.findById(id)
 }
 
 export async function remove(id, deletedById, reason) {
@@ -141,7 +206,8 @@ export async function changeStatus(id, { status, notes }, changedById, actor = {
     )
   }
 
-  const updated = await OrderModel.updateStatus(id, { status })
+  await OrderModel.updateStatus(id, { status })
+  if (order.motorcycle_id) await _syncMotorcycleStatus(order.motorcycle_id, status)
 
   await auditEntity(AUDIT_ACTIONS.CAMBIAR_ESTADO, {
     actor: { userId: changedById, userName: actor.userName, role: actor.role, ip: actor.ip },
@@ -152,7 +218,7 @@ export async function changeStatus(id, { status, notes }, changedById, actor = {
     description: `Orden #${id}: ${order.status} → ${status}`,
   })
 
-  return updated
+  return OrderModel.findById(id)
 }
 
 // ── Cierre de orden ───────────────────────────────────────────
@@ -182,10 +248,11 @@ export async function close(id, { payment_method, payment_status, notes }, close
   }
 
   // Actualizar status → Entregada (trigger crea sales + status_history automáticamente)
-  const updatedOrder = await OrderModel.updateStatus(id, {
+  await OrderModel.updateStatus(id, {
     status:               'Entregada',
     actual_delivery_date: new Date().toISOString().slice(0, 19).replace('T', ' '),
   })
+  if (order.motorcycle_id) await MotorcycleModel.update(order.motorcycle_id, { status: 'Entregada' })
 
   // Actualizar el registro de venta con datos de pago opcionales
   if (payment_method || payment_status || notes) {
@@ -202,7 +269,7 @@ export async function close(id, { payment_method, payment_status, notes }, close
     )
   }
 
-  return updatedOrder
+  return OrderModel.findById(id)
 }
 
 // ── Servicios ─────────────────────────────────────────────────
@@ -264,10 +331,16 @@ export async function removeService(orderId, serviceId) {
     throw ApiError.conflict('No se pueden eliminar servicios de una orden entregada')
   }
 
-  const removed = await OrderModel.removeService(orderId, serviceId)
-  if (!removed) {
+  const [[svc]] = await getPool().query(
+    'SELECT total_price FROM order_services WHERE id = ? AND order_id = ?',
+    [serviceId, orderId]
+  )
+  if (!svc) {
     throw ApiError.notFound(`Servicio #${serviceId} no encontrado en la orden #${orderId}`)
   }
+  _assertDiscountFitsAfterRemoval(order, svc.total_price)
+
+  await OrderModel.removeService(orderId, serviceId)
 }
 
 // ── Repuestos ─────────────────────────────────────────────────
@@ -300,16 +373,36 @@ export async function removePart(orderId, itemId) {
     throw ApiError.conflict('No se pueden eliminar repuestos de una orden entregada')
   }
 
-  const removed = await OrderModel.removePart(orderId, itemId)
-  if (!removed) {
+  const [[part]] = await getPool().query(
+    'SELECT total_price FROM order_items WHERE id = ? AND order_id = ?',
+    [itemId, orderId]
+  )
+  if (!part) {
     throw ApiError.notFound(`Repuesto #${itemId} no encontrado en la orden #${orderId}`)
   }
+  _assertDiscountFitsAfterRemoval(order, part.total_price)
+
+  await OrderModel.removePart(orderId, itemId)
 }
 
 // ── Catálogo de servicios ─────────────────────────────────────
 
 export async function getServiceCatalog(query = {}) {
   return OrderModel.findServiceCatalog(query)
+}
+
+// ── Validaciones de totales ────────────────────────────────────
+
+// Eliminar un servicio/repuesto reduce el total — si el descuento
+// vigente quedaría por encima del nuevo total, se bloquea la baja
+function _assertDiscountFitsAfterRemoval(order, amountBeingRemoved) {
+  const newTotal = Number(order.labor_cost) + Number(order.parts_cost) +
+    Number(order.services_cost) - Number(amountBeingRemoved)
+  if (Number(order.discount) > newTotal) {
+    throw ApiError.conflict(
+      `No se puede eliminar — el descuento actual (${order.discount}) quedaría por encima del nuevo total (${newTotal}). Reduce el descuento primero.`
+    )
+  }
 }
 
 // ── FK helpers ────────────────────────────────────────────────

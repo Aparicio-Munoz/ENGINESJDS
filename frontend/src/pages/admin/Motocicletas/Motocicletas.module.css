@@ -1,5 +1,6 @@
 .page {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 24px;
 }
 
@@ -32,7 +33,7 @@
 .eyebrow {
   color: #1d4ed8;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -46,11 +47,11 @@
 .summaryBar span {
   border: 1px solid #d9e1ec;
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   color: #344054;
   background: #ffffff;
   font-size: 0.92rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .tableWrapper {
@@ -70,7 +71,7 @@
 .table th,
 .table td {
   border-bottom: 1px solid #eef2f6;
-  padding: 16px;
+  padding: 12px 16px;
   text-align: left;
   vertical-align: middle;
 }
@@ -79,7 +80,7 @@
   color: #475467;
   background: #f8fafc;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -99,7 +100,7 @@
 }
 
 .ownerName {
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .ownerPhone {
@@ -122,7 +123,7 @@
   color: #047857;
   background: #d1fae5;
   font-size: 0.82rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .primaryButton,
@@ -131,7 +132,7 @@
 .iconButton {
   border: 0;
   border-radius: 8px;
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -211,7 +212,7 @@
   display: grid;
   gap: 8px;
   color: #344054;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .formField input {
@@ -232,6 +233,15 @@
   color: #b42318;
   font-size: 0.85rem;
   font-weight: 700;
+}
+
+/* .formField span de arriba es para mensajes de error (spans sin clase) —
+   este span envuelve el texto de una etiqueta (ej. "Propietario (opcional)")
+   y necesita más especificidad para no heredar el rojo de error. */
+.formField span.fieldLabel {
+  color: #344054;
+  font-size: inherit;
+  font-weight: 500;
 }
 
 .formActions {
@@ -290,8 +300,121 @@
 
 .required {
   color: #b42318;
-  font-weight: 800;
+  font-weight: 700;
   margin-left: 2px;
+}
+
+.formField span.optional {
+  font-weight: 400;
+  color: #94a3b8;
+}
+
+.fieldError {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #b42318;
+}
+
+/* ── Combobox buscable de propietario ────────────────── */
+.partAutocomplete {
+  position: relative;
+}
+
+.partSearchInput {
+  width: 100%;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  background: #ffffff;
+  color: #101828;
+  box-sizing: border-box;
+}
+
+.partSearchInput:focus {
+  border-color: #2563eb;
+  outline: 3px solid #bfdbfe;
+}
+
+.partDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  z-index: 50;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.partDropdownItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  color: #101828;
+  cursor: pointer;
+}
+
+.partDropdownItem:hover {
+  background: #f0f7ff;
+}
+
+.partMeta {
+  font-size: 0.78rem;
+  color: #667085;
+  font-weight: 400;
+}
+
+.partNoResults {
+  padding: 10px;
+  font-size: 0.84rem;
+  color: #667085;
+  text-align: center;
+}
+
+.partSelected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid #2563eb;
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: #f0f7ff;
+  font-size: 0.95rem;
+  color: #1d4ed8;
+}
+
+.partClearBtn {
+  flex-shrink: 0;
+  padding: 4px 8px;
+  border: 1px solid #93c5fd;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1d4ed8;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.partClearBtn:hover {
+  background: #dbeafe;
 }
 
 .textarea {
@@ -325,7 +448,7 @@
   padding: 12px 16px;
   border: 0;
   border-radius: 8px;
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
   color: #ffffff;
   background: #dc2626;
@@ -397,11 +520,33 @@
   flex-wrap: wrap;
 }
 
+@media (min-width: 761px) {
+  .actionGroup {
+    flex-wrap: nowrap;
+  }
+}
+
 .statusButton {
   padding: 9px 12px;
   border: 0;
   border-radius: 8px;
-  font-weight: 800;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  color: #7C3AED;
+  background: #EDE9FE;
+  font-size: 0.85rem;
+}
+
+.statusButton:hover {
+  background: #DDD6FE;
+}
+
+.editButton {
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 8px;
+  font-weight: 600;
   cursor: pointer;
   font-family: inherit;
   color: #1d4ed8;
@@ -409,7 +554,7 @@
   font-size: 0.85rem;
 }
 
-.statusButton:hover {
+.editButton:hover {
   background: #bfdbfe;
 }
 
@@ -442,7 +587,7 @@
 
 .statusModalPlate {
   font-size: 1.5rem;
-  font-weight: 900;
+  font-weight: 700;
   color: #0f172a;
   letter-spacing: 0.05em;
 }
@@ -532,7 +677,7 @@
 
 .statusCardName {
   font-size: 0.82rem;
-  font-weight: 800;
+  font-weight: 700;
   color: #1e293b;
   line-height: 1.25;
   transition: color 0.15s;
@@ -572,6 +717,16 @@
 }
 
 @media (max-width: 760px) {
+  .modalBackdrop {
+    padding: 10px;
+  }
+
+  .modal {
+    padding: 16px;
+    border-radius: 12px;
+    max-height: min(92vh, 900px);
+  }
+
   .pageHeader {
     flex-direction: column;
   }
@@ -619,7 +774,7 @@
     content: attr(data-label);
     color: #667085;
     font-size: 0.78rem;
-    font-weight: 800;
+    font-weight: 600;
     letter-spacing: 0.06em;
     text-align: left;
     text-transform: uppercase;

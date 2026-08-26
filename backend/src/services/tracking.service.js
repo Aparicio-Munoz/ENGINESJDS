@@ -21,7 +21,7 @@ export async function getByToken(token) {
        o.diagnostic_notes,
        m.plate, m.brand, m.model, m.year, m.engine_cc
      FROM orders o
-     INNER JOIN motorcycles m ON m.id = o.motorcycle_id
+     LEFT JOIN motorcycles m ON m.id = o.motorcycle_id
      WHERE o.tracking_token = ?`,
     [token]
   )

@@ -76,10 +76,10 @@ export async function documentExists(document, excludeId = null) {
 
 export async function create({
   document_type = 'CC',
-  document,
-  name,
-  last_name,
-  phone,
+  document = null,
+  name     = null,
+  last_name = null,
+  phone    = null,
   city    = 'Bogotá',
   status  = 'Activo',
   notes   = null,

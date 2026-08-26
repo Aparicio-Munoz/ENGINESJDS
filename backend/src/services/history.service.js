@@ -21,7 +21,7 @@ export async function getFullHistory(motorcycleId, actor = {}) {
   await logAudit('VIEW_HISTORY', {
     userId: actor.userId, userName: actor.userName, role: actor.role, ipAddress: actor.ip,
     tableName: 'motorcycles', recordId: motorcycleId,
-    description: `Historial clínico de ${motorcycle.plate} consultado`,
+    description: `Historial clínico de ${motorcycle.plate ?? `moto #${motorcycleId}`} consultado`,
   })
 
   return { motorcycle, stats, timeline, services, parts, yearlyCosts }
@@ -66,9 +66,9 @@ export async function generatePDF(motorcycleId, actor = {}) {
       await logAudit('DOWNLOAD_HISTORY_PDF', {
         userId: actor.userId, userName: actor.userName, role: actor.role, ipAddress: actor.ip,
         tableName: 'motorcycles', recordId: motorcycleId,
-        description: `PDF historial ${motorcycle.plate} generado`,
+        description: `PDF historial ${motorcycle.plate ?? `moto #${motorcycleId}`} generado`,
       })
-      resolve({ buffer: Buffer.concat(chunks), filename: `Historial_${motorcycle.plate}.pdf` })
+      resolve({ buffer: Buffer.concat(chunks), filename: `Historial_${motorcycle.plate ?? motorcycleId}.pdf` })
     })
     doc.on('error', reject)
 
@@ -78,8 +78,8 @@ export async function generatePDF(motorcycleId, actor = {}) {
     doc.moveDown(1.5)
 
     // Motorcycle info
-    doc.fontSize(16).fillColor('#0F172A').text(`${motorcycle.plate}`)
-    doc.fontSize(11).fillColor('#64748B').text(`${motorcycle.brand} ${motorcycle.model} ${motorcycle.year} — ${motorcycle.color ?? ''} ${motorcycle.engine_cc ? motorcycle.engine_cc + 'cc' : ''}`)
+    doc.fontSize(16).fillColor('#0F172A').text(`${motorcycle.plate ?? 'Sin placa'}`)
+    doc.fontSize(11).fillColor('#64748B').text(`${motorcycle.brand ?? ''} ${motorcycle.model ?? ''} ${motorcycle.year ?? ''} — ${motorcycle.color ?? ''} ${motorcycle.engine_cc ? motorcycle.engine_cc + 'cc' : ''}`)
     doc.fontSize(9).text(`Cliente: ${motorcycle.client_name ?? 'Sin propietario asignado'} · Tel: ${motorcycle.client_phone ?? '—'}`)
     doc.moveDown(0.8)
 

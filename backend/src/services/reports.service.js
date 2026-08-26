@@ -79,15 +79,22 @@ export async function getInventoryAlerts() {
 
 // ── Chart data ───────────────────────────────────────────────
 export async function getChartData() {
-  const [monthlyRevenue, topServices, topClients, stockByCategory, ordersByTech, appointmentsByMonth] =
-    await Promise.all([
-      ReportModel.getMonthlyRevenue(),
-      ReportModel.getTopServices(10),
-      ReportModel.getTopClients(10),
-      ReportModel.getStockByCategory(),
-      ReportModel.getOrdersByTechnician(),
-      ReportModel.getAppointmentsByMonth(),
-    ])
+  const [
+    monthlyRevenue, topServices, topClients, stockByCategory, ordersByTech, appointmentsByMonth,
+    dailyRevenueThisMonth, fortnightComparison,
+  ] = await Promise.all([
+    ReportModel.getMonthlyRevenue(),
+    ReportModel.getTopServices(10),
+    ReportModel.getTopClients(10),
+    ReportModel.getStockByCategory(),
+    ReportModel.getOrdersByTechnician(),
+    ReportModel.getAppointmentsByMonth(),
+    ReportModel.getDailyRevenueThisMonth(),
+    ReportModel.getFortnightComparison(),
+  ])
 
-  return { monthlyRevenue, topServices, topClients, stockByCategory, ordersByTech, appointmentsByMonth }
+  return {
+    monthlyRevenue, topServices, topClients, stockByCategory, ordersByTech, appointmentsByMonth,
+    dailyRevenueThisMonth, fortnightComparison,
+  }
 }

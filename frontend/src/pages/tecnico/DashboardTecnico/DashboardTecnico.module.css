@@ -1,4 +1,4 @@
-.page { display: grid; gap: 24px; }
+.page { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
 
 .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .eyebrow { margin: 0 0 6px; color: #1d4ed8; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
@@ -31,7 +31,7 @@
 .orderItem:last-child { border-bottom: 0; }
 .orderItem:hover { background: #f8fafc; }
 .orderInfo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.orderInfo strong { font-size: 0.9rem; color: #1d4ed8; font-family: ui-monospace, monospace; }
+.orderInfo strong { font-size: 0.9rem; color: #1d4ed8; font-family: ui-monospace, monospace; white-space: nowrap; }
 .orderSub { font-size: 0.78rem; color: #64748B; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .statusBadge { display: inline-flex; align-items: center; border-radius: 999px; padding: 4px 10px; font-size: 0.78rem; font-weight: 800; white-space: nowrap; }

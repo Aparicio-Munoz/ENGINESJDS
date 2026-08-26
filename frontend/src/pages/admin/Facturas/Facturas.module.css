@@ -1,4 +1,4 @@
-.page { display: grid; gap: 24px; }
+.page { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
 
 .pageHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
 .pageHeader h1, .pageHeader p, .modalHeader h2 { margin: 0; }
@@ -36,8 +36,8 @@
 .table td { color: #172033; font-size: 0.88rem; }
 .table tbody tr:last-child td { border-bottom: 0; }
 
-.invoiceNum { font-family: ui-monospace, monospace; font-weight: 800; color: #F97316; font-size: 0.85rem; }
-.orderNum { font-family: ui-monospace, monospace; font-weight: 700; color: #1d4ed8; font-size: 0.82rem; }
+.invoiceNum { font-family: ui-monospace, monospace; font-weight: 800; color: #F97316; font-size: 0.85rem; white-space: nowrap; }
+.orderNum { font-family: ui-monospace, monospace; font-weight: 700; color: #1d4ed8; font-size: 0.82rem; white-space: nowrap; }
 .statusBadge { display: inline-flex; padding: 3px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 800; }
 
 .actionsCell { display: flex; gap: 6px; }
@@ -63,12 +63,13 @@
 .modalHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
 .modalHeader h2 { color: #101828; font-size: 1.4rem; }
 .form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.formField { display: grid; gap: 8px; color: #344054; font-weight: 800; }
+.formField { display: grid; align-content: start; gap: 8px; color: #344054; font-weight: 800; }
 .fullWidth { grid-column: 1 / -1; }
 .formField select, .formField textarea { width: 100%; border: 1px solid #d0d5dd; border-radius: 8px; padding: 12px 14px; color: #101828; background: #fff; font-family: inherit; font-size: inherit; box-sizing: border-box; }
 .formField select:focus, .formField textarea:focus { border-color: #2563eb; outline: 3px solid #bfdbfe; }
 .formField textarea { resize: vertical; min-height: 60px; }
 .required { color: #b42318; font-weight: 800; margin-left: 2px; }
+.fieldHint { color: #94A3B8; font-size: 0.8rem; font-weight: 500; }
 .formActions { display: flex; grid-column: 1 / -1; justify-content: flex-end; gap: 12px; margin-top: 8px; }
 
 @media (max-width: 760px) {

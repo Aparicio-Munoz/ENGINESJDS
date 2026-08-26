@@ -1,5 +1,6 @@
 .page {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 24px;
 }
 
@@ -8,6 +9,12 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 20px;
+}
+
+.headerActions {
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
 .pageHeader h1,
@@ -32,7 +39,7 @@
 .eyebrow {
   color: #1d4ed8;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -46,11 +53,11 @@
 .summaryBar span {
   border: 1px solid #d9e1ec;
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   color: #344054;
   background: #ffffff;
   font-size: 0.92rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .tableWrapper {
@@ -70,7 +77,7 @@
 .table th,
 .table td {
   border-bottom: 1px solid #eef2f6;
-  padding: 16px;
+  padding: 12px 16px;
   text-align: left;
   vertical-align: middle;
 }
@@ -79,7 +86,7 @@
   color: #475467;
   background: #f8fafc;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -95,9 +102,10 @@
 
 .orderNumber {
   font-family: ui-monospace, monospace;
-  font-weight: 800;
+  font-weight: 700;
   font-size: 0.88rem;
   color: #1d4ed8;
+  white-space: nowrap;
 }
 
 /* ── Loading / Error ─────────────────────────────── */
@@ -132,7 +140,7 @@
   border: 0;
   border-radius: 8px;
   font-family: inherit;
-  font-weight: 800;
+  font-weight: 600;
   color: #ffffff;
   background: #1d4ed8;
   cursor: pointer;
@@ -174,9 +182,10 @@
 
 .plateText {
   font-family: ui-monospace, monospace;
-  font-weight: 800;
+  font-weight: 700;
   font-size: 0.88rem;
   color: #101828;
+  white-space: nowrap;
 }
 
 /* ── Actions cell ────────────────────────────────── */
@@ -186,13 +195,19 @@
   gap: 6px;
 }
 
+@media (min-width: 761px) {
+  .actionsCell {
+    flex-wrap: nowrap;
+  }
+}
+
 .detailButton,
 .closeButton {
   padding: 9px 12px;
   border: 0;
   border-radius: 8px;
   font-family: inherit;
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -227,7 +242,7 @@
   border: 1px solid #d0d5dd;
   border-radius: 8px;
   font-family: inherit;
-  font-weight: 800;
+  font-weight: 600;
   color: #344054;
   background: #ffffff;
   cursor: pointer;
@@ -252,7 +267,7 @@
   border-radius: 999px;
   padding: 5px 10px;
   font-size: 0.82rem;
-  font-weight: 800;
+  font-weight: 700;
   white-space: nowrap;
 }
 
@@ -264,7 +279,7 @@
   border-radius: 999px;
   padding: 5px 10px;
   font-size: 0.82rem;
-  font-weight: 800;
+  font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
   font-family: inherit;
@@ -302,7 +317,7 @@
 .iconButton {
   border: 0;
   border-radius: 8px;
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -393,7 +408,7 @@
   display: grid;
   gap: 8px;
   color: #344054;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .fullWidth {
@@ -429,6 +444,21 @@
   color: #b42318;
   font-size: 0.85rem;
   font-weight: 700;
+}
+
+/* .formField span de arriba es para mensajes de error (spans sin clase) —
+   estos envuelven texto de una etiqueta (ej. "Cliente (opcional)") y
+   necesitan más especificidad para no heredar el rojo de error. */
+.formField span.addFormLabel {
+  color: #344054;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.formField span.optional {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-weight: 400;
 }
 
 .formActions {
@@ -501,7 +531,7 @@
 
 .detailBody {
   display: grid;
-  gap: 24px;
+  gap: 32px;
 }
 
 .detailGrid {
@@ -517,7 +547,7 @@
 
 .detailLabel {
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #667085;
@@ -545,9 +575,9 @@
 /* ── Detail section ──────────────────────────────── */
 .detailSection {
   display: grid;
-  gap: 12px;
-  border-top: 1px solid #eef2f6;
-  padding-top: 20px;
+  gap: 14px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 24px;
 }
 
 .sectionHeader {
@@ -560,7 +590,7 @@
 .sectionTitle {
   margin: 0;
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 700;
   color: #101828;
 }
 
@@ -570,7 +600,7 @@
   border-radius: 8px;
   font-family: inherit;
   font-size: 0.85rem;
-  font-weight: 800;
+  font-weight: 600;
   color: #1d4ed8;
   background: #dbeafe;
   cursor: pointer;
@@ -627,7 +657,7 @@
   border: 0;
   border-radius: 6px;
   font-size: 1.1rem;
-  font-weight: 800;
+  font-weight: 600;
   line-height: 1;
   color: #b42318;
   background: #fee4e2;
@@ -652,14 +682,15 @@
 .addItemForm {
   border: 1px dashed #bfdbfe;
   border-radius: 8px;
-  padding: 16px;
+  padding: 18px;
+  margin-top: 4px;
   background: #f0f7ff;
 }
 
 .addFormTitle {
   margin: 0 0 12px;
   font-size: 0.9rem;
-  font-weight: 800;
+  font-weight: 700;
   color: #1d4ed8;
 }
 
@@ -670,11 +701,39 @@
   margin-bottom: 12px;
 }
 
+/* Agregar servicio: 5 campos de ancho desigual (catálogo/nombre piden más
+   espacio que cantidad/precio/técnico) — en el modal ancho (900px) van los
+   5 en una sola fila en vez de dejar "Técnico" huérfano con espacio vacío
+   a los lados; en pantallas angostas cae de vuelta al auto-fill responsive. */
+.addFormGridService {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+@media (min-width: 761px) {
+  .addFormGridService {
+    grid-template-columns:
+      minmax(0, 1.6fr) minmax(0, 1.6fr) minmax(0, 0.8fr)
+      minmax(0, 1fr) minmax(0, 1.3fr);
+  }
+
+  .addFormGridService > * {
+    min-width: 0;
+  }
+
+  .addFormGridService select,
+  .addFormGridService input {
+    min-width: 0;
+  }
+}
+
 .addFormField {
   display: grid;
   gap: 6px;
   font-size: 0.85rem;
-  font-weight: 800;
+  font-weight: 500;
   color: #344054;
 }
 
@@ -708,7 +767,7 @@
 .addFormActions button {
   padding: 8px 16px;
   font-family: inherit;
-  font-weight: 800;
+  font-weight: 600;
   border: 0;
   border-radius: 8px;
   cursor: pointer;
@@ -716,7 +775,7 @@
 
 .addFormLabel {
   font-size: 0.85rem;
-  font-weight: 800;
+  font-weight: 500;
   color: #344054;
 }
 
@@ -813,7 +872,7 @@
   background: #ffffff;
   color: #1d4ed8;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
   font-family: inherit;
 }
@@ -872,7 +931,7 @@
 
 .historyArrow {
   font-size: 0.9rem;
-  font-weight: 800;
+  font-weight: 700;
   color: #101828;
 }
 
@@ -900,7 +959,7 @@
   border: 0;
   border-radius: 8px;
   font-family: inherit;
-  font-weight: 800;
+  font-weight: 600;
   font-size: 0.95rem;
   color: #ffffff;
   background: #059669;
@@ -932,7 +991,7 @@
 .deleteLabel {
   display: grid;
   gap: 8px;
-  font-weight: 800;
+  font-weight: 500;
   color: #344054;
   margin-bottom: 20px;
 }
@@ -972,7 +1031,7 @@
   border: 0;
   border-radius: 8px;
   font-family: inherit;
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
   color: #ffffff;
   background: #dc2626;
@@ -1031,7 +1090,7 @@
   background: #DC2626;
   font-family: inherit;
   font-size: 0.82rem;
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.15s;
@@ -1074,7 +1133,7 @@
   background: #25D366;
   font-family: inherit;
   font-size: 0.82rem;
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
   text-decoration: none;
   white-space: nowrap;
@@ -1142,7 +1201,7 @@
   background: #25D366;
   font-family: inherit;
   font-size: 0.95rem;
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
   text-decoration: none;
   transition: background 0.15s;
@@ -1154,16 +1213,40 @@
 
 .required {
   color: #b42318;
-  font-weight: 800;
+  font-weight: 700;
   margin-left: 2px;
 }
 
 @media (max-width: 760px) {
+  .modalBackdrop {
+    padding: 10px;
+  }
+
+  .modal {
+    padding: 16px;
+    border-radius: 12px;
+    max-height: min(92vh, 900px);
+  }
+
+  .detailModal {
+    width: 100%;
+  }
+
+  .modalHeaderActions {
+    flex-wrap: wrap;
+  }
+
   .pageHeader {
     flex-direction: column;
   }
 
-  .pageHeader .primaryButton {
+  .headerActions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .headerActions .primaryButton,
+  .headerActions .secondaryButton {
     width: 100%;
   }
 
@@ -1206,7 +1289,7 @@
     content: attr(data-label);
     color: #667085;
     font-size: 0.78rem;
-    font-weight: 800;
+    font-weight: 600;
     letter-spacing: 0.06em;
     text-align: left;
     text-transform: uppercase;
@@ -1236,15 +1319,16 @@
   flex: 1;
   padding: 9px 12px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
+  border: 1px solid #d0d5dd;
+  background: #ffffff;
+  color: #101828;
+  font-family: inherit;
   font-size: 0.88rem;
 }
 
 .workLogAddRow input:focus {
-  outline: none;
-  border-color: #f97316;
+  border-color: #2563eb;
+  outline: 3px solid #bfdbfe;
 }
 
 .workLogList {

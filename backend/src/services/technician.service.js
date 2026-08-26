@@ -1,5 +1,7 @@
 import { getPool } from '../config/database.js'
 import * as EmployeeModel from '../models/employee.model.js'
+import * as MotorcycleModel from '../models/motorcycle.model.js'
+import { ORDER_TO_MOTO_STATUS } from '../models/order.model.js'
 import { ApiError } from '../utils/ApiError.js'
 import { auditEntity, AUDIT_ACTIONS } from './audit.service.js'
 
@@ -50,8 +52,8 @@ export async function getDashboard(employeeId) {
               m.plate AS motorcycle_plate, m.brand AS motorcycle_brand, m.model AS motorcycle_model,
               CONCAT(c.name, ' ', c.last_name) AS client_name
        FROM orders o
-       INNER JOIN motorcycles m ON m.id = o.motorcycle_id
-       INNER JOIN clients c     ON c.id = o.client_id
+       LEFT JOIN motorcycles m ON m.id = o.motorcycle_id
+       LEFT JOIN clients c     ON c.id = o.client_id
        WHERE o.assigned_employee_id = ? AND o.status != 'Entregada'
        ORDER BY o.entry_date DESC
        LIMIT 5`,
@@ -98,8 +100,8 @@ export async function getOrders(employeeId, query = {}) {
   const [[{ total }]] = await pool.query(
     `SELECT COUNT(*) AS total
      FROM orders o
-     INNER JOIN clients c     ON c.id = o.client_id
-     INNER JOIN motorcycles m ON m.id = o.motorcycle_id
+     LEFT JOIN clients c     ON c.id = o.client_id
+     LEFT JOIN motorcycles m ON m.id = o.motorcycle_id
      ${where}`,
     params
   )
@@ -118,8 +120,8 @@ export async function getOrders(employeeId, query = {}) {
        m.model AS motorcycle_model, m.year AS motorcycle_year,
        m.engine_cc
      FROM orders o
-     INNER JOIN clients c     ON c.id = o.client_id
-     INNER JOIN motorcycles m ON m.id = o.motorcycle_id
+     LEFT JOIN clients c     ON c.id = o.client_id
+     LEFT JOIN motorcycles m ON m.id = o.motorcycle_id
      ${where}
      ORDER BY ${orderBy}
      LIMIT ? OFFSET ?`,
@@ -140,7 +142,7 @@ export async function updateOrderStatus(employeeId, orderId, { status, notes }, 
   }
 
   const [[order]] = await pool.query(
-    'SELECT id, status, assigned_employee_id FROM orders WHERE id = ?',
+    'SELECT id, status, assigned_employee_id, motorcycle_id FROM orders WHERE id = ?',
     [orderId]
   )
   if (!order) throw ApiError.notFound('Orden no encontrada')
@@ -152,6 +154,12 @@ export async function updateOrderStatus(employeeId, orderId, { status, notes }, 
   }
 
   await pool.query('UPDATE orders SET status = ? WHERE id = ?', [status, orderId])
+
+  // motorcycles y orders deben quedar siempre sincronizados
+  const mappedMotoStatus = ORDER_TO_MOTO_STATUS[status]
+  if (mappedMotoStatus && order.motorcycle_id) {
+    await MotorcycleModel.update(order.motorcycle_id, { status: mappedMotoStatus })
+  }
 
   await auditEntity(AUDIT_ACTIONS.CAMBIAR_ESTADO, {
     actor,
@@ -165,8 +173,8 @@ export async function updateOrderStatus(employeeId, orderId, { status, notes }, 
     `SELECT o.*, CONCAT(c.name, ' ', c.last_name) AS client_name,
             m.plate AS motorcycle_plate, m.brand AS motorcycle_brand, m.model AS motorcycle_model
      FROM orders o
-     INNER JOIN clients c     ON c.id = o.client_id
-     INNER JOIN motorcycles m ON m.id = o.motorcycle_id
+     LEFT JOIN clients c     ON c.id = o.client_id
+     LEFT JOIN motorcycles m ON m.id = o.motorcycle_id
      WHERE o.id = ?`,
     [orderId]
   )
@@ -198,8 +206,8 @@ export async function updateOrderNotes(employeeId, orderId, { work_notes }) {
     `SELECT o.*, CONCAT(c.name, ' ', c.last_name) AS client_name,
             m.plate AS motorcycle_plate, m.brand AS motorcycle_brand, m.model AS motorcycle_model
      FROM orders o
-     INNER JOIN clients c     ON c.id = o.client_id
-     INNER JOIN motorcycles m ON m.id = o.motorcycle_id
+     LEFT JOIN clients c     ON c.id = o.client_id
+     LEFT JOIN motorcycles m ON m.id = o.motorcycle_id
      WHERE o.id = ?`,
     [orderId]
   )
@@ -216,8 +224,8 @@ export async function getMotorcycles(employeeId) {
        o.id AS order_id, o.order_number, o.status AS order_status,
        o.diagnostic_notes, o.entry_date
      FROM orders o
-     INNER JOIN motorcycles m ON m.id = o.motorcycle_id
-     INNER JOIN clients c     ON c.id = o.client_id
+     LEFT JOIN motorcycles m ON m.id = o.motorcycle_id
+     LEFT JOIN clients c     ON c.id = o.client_id
      WHERE o.assigned_employee_id = ? AND o.status != 'Entregada'
      ORDER BY o.entry_date DESC`,
     [employeeId]
@@ -252,7 +260,7 @@ export async function getPartRequests(employeeId, query = {}) {
             m.plate AS motorcycle_plate, m.brand AS motorcycle_brand
      FROM part_requests pr
      INNER JOIN orders o      ON o.id = pr.order_id
-     INNER JOIN motorcycles m ON m.id = o.motorcycle_id
+     LEFT JOIN motorcycles m ON m.id = o.motorcycle_id
      ${where}
      ORDER BY pr.created_at DESC
      LIMIT ? OFFSET ?`,
@@ -342,8 +350,8 @@ export async function getEarnings(employeeId) {
         FROM order_services os2
         WHERE os2.order_id = o.id AND os2.employee_id = ?) AS my_earnings
      FROM orders o
-     INNER JOIN motorcycles m ON m.id = o.motorcycle_id
-     INNER JOIN clients c     ON c.id = o.client_id
+     LEFT JOIN motorcycles m ON m.id = o.motorcycle_id
+     LEFT JOIN clients c     ON c.id = o.client_id
      WHERE o.assigned_employee_id = ? AND o.status = 'Entregada'
      ORDER BY o.actual_delivery_date DESC
      LIMIT 20`,

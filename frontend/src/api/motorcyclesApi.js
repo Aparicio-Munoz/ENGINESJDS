@@ -21,7 +21,7 @@ export const motorcyclesApi = {
     return apiClient.get(`/motorcycles/${id}/history`).then((r) => r.data.data)
   },
 
-  // POST /motorcycles — requires: client_id, plate, brand, model, year
+  // POST /motorcycles — todos los campos son opcionales
   create(data) {
     return apiClient.post('/motorcycles', data).then((r) => r.data.data)
   },

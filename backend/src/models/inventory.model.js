@@ -81,16 +81,16 @@ export async function codeExists(code, excludeId = null) {
 
 // ── CRUD ─────────────────────────────────────────────────────
 export async function create({
-  code,
-  name,
-  brand,
-  category,
+  code        = null,
+  name        = null,
+  brand       = null,
+  category    = null,
   description = null,
   unit        = 'unidad',
   quantity    = 0,
   min_stock   = 5,
-  unit_price,
-  sale_price,
+  unit_price  = 0,
+  sale_price  = 0,
   supplier    = null,
   image_url   = null,
 }) {
@@ -269,13 +269,12 @@ export async function findPublicProducts({ brand, category } = {}) {
 
 // ── Catálogos para filtros frontend ─────────────────────────
 export const CATEGORIES = [
-  'Aceites', 'Filtros', 'Llantas', 'Frenos',
-  'Transmisión', 'Eléctricos', 'Accesorios',
+  'Transmisión', 'Eléctrico', 'Rodaje y Suspensión', 'Motor', 'Frenos y Dirección',
 ]
 
 export async function findBrands() {
   const [rows] = await getPool().query(
-    'SELECT DISTINCT brand FROM inventory ORDER BY brand ASC'
+    'SELECT DISTINCT brand FROM inventory WHERE brand IS NOT NULL ORDER BY brand ASC'
   )
   return rows.map((r) => r.brand)
 }

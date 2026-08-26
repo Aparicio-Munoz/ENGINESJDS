@@ -3,8 +3,11 @@ import * as TrackingController from '../controllers/tracking.controller.js'
 import * as CatalogController from '../controllers/catalog.controller.js'
 import * as PdfController from '../controllers/pdf.controller.js'
 import { getPool } from '../config/database.js'
+import { publicLimiter } from '../middlewares/rateLimit.middleware.js'
 
 const router = Router()
+
+router.use(publicLimiter)
 
 // GET /api/public/tracking/:token
 router.get('/tracking/:token', TrackingController.getByToken)

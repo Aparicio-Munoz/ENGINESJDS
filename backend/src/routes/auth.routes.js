@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { verifyToken, requireRole } from '../middlewares/auth.middleware.js'
 import { checkBlockedIp } from '../middlewares/security.middleware.js'
 import { validate } from '../middlewares/validate.middleware.js'
+import { otpLimiter } from '../middlewares/rateLimit.middleware.js'
 import {
   loginRules,
   registerRules,
@@ -36,17 +37,19 @@ router.post('/public-register', publicRegisterRules, validate, AuthController.pu
 // POST /api/auth/forgot-password
 router.post(
   '/forgot-password',
+  otpLimiter,
   forgotPasswordRules,
   validate,
   PasswordResetController.forgotPassword
 )
 
 // POST /api/auth/verify-code
-router.post('/verify-code', verifyCodeRules, validate, PasswordResetController.verifyCode)
+router.post('/verify-code', otpLimiter, verifyCodeRules, validate, PasswordResetController.verifyCode)
 
 // POST /api/auth/reset-password
 router.post(
   '/reset-password',
+  otpLimiter,
   resetPasswordRules,
   validate,
   PasswordResetController.resetPassword

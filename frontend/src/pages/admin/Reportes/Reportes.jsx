@@ -221,6 +221,12 @@ export function Reportes() {
     if (chartData.monthlyRevenue?.length) {
       sheets.push({ name: 'Ingresos', data: chartData.monthlyRevenue.map((r) => ({ Mes: r.label, Órdenes: r.orders_count, Ingresos: Number(r.revenue) })) })
     }
+    if (chartData.dailyRevenueThisMonth?.length) {
+      sheets.push({ name: 'Ganancias diarias', data: chartData.dailyRevenueThisMonth.map((r) => ({ Día: r.day_number, Ingresos: Number(r.revenue) })) })
+    }
+    if (chartData.fortnightComparison?.length) {
+      sheets.push({ name: 'Quincenas', data: chartData.fortnightComparison.map((r) => ({ Quincena: r.fortnight === 'primera' ? 'Quincena 1 (1-15)' : 'Quincena 2 (16-fin)', Órdenes: r.orders_count, Ingresos: Number(r.revenue) })) })
+    }
     if (chartData.ordersByTech?.length) {
       sheets.push({ name: 'Por Técnico', data: chartData.ordersByTech.map((r) => ({ Técnico: r.employee_name, Especialidad: r.specialty, Total: r.total_orders, Completadas: r.completed, Activas: r.active })) })
     }
@@ -253,6 +259,19 @@ export function Reportes() {
         startY: y, head: [['Mes', 'Órdenes', 'Ingresos']],
         body: chartData.monthlyRevenue.map((r) => [r.label, r.orders_count, fmtCOP(r.revenue)]),
         styles: { fontSize: 8 }, headStyles: { fillColor: [249, 115, 22] },
+      })
+      y = doc.lastAutoTable.finalY + 10
+    }
+    if (chartData.fortnightComparison?.length) {
+      const primera = chartData.fortnightComparison.find((r) => r.fortnight === 'primera') ?? { orders_count: 0, revenue: 0 }
+      const segunda = chartData.fortnightComparison.find((r) => r.fortnight === 'segunda') ?? { orders_count: 0, revenue: 0 }
+      autoTable(doc, {
+        startY: y, head: [['Período', 'Órdenes', 'Ingresos']],
+        body: [
+          ['Quincena 1 (1–15)', primera.orders_count, fmtCOP(primera.revenue)],
+          ['Quincena 2 (16–fin)', segunda.orders_count, fmtCOP(segunda.revenue)],
+        ],
+        styles: { fontSize: 8 }, headStyles: { fillColor: [13, 148, 136] },
       })
       y = doc.lastAutoTable.finalY + 10
     }
@@ -303,7 +322,7 @@ export function Reportes() {
 
   const clientsChart = chartData?.topClients?.length ? {
     data: {
-      labels: chartData.topClients.slice(0, 6).map((r) => r.client_name.split(' ')[0]),
+      labels: chartData.topClients.slice(0, 6).map((r) => (r.client_name || 'Sin nombre').split(' ')[0]),
       datasets: [{
         label: 'Órdenes',
         data: chartData.topClients.slice(0, 6).map((r) => r.orders_count),
@@ -312,6 +331,26 @@ export function Reportes() {
       }],
     },
     options: { ...chartDefaults, plugins: { ...chartDefaults.plugins, legend: { display: false } } },
+  } : null
+
+  const dailyRevenueChart = chartData?.dailyRevenueThisMonth?.length ? {
+    data: {
+      labels: chartData.dailyRevenueThisMonth.map((r) => r.day_number),
+      datasets: [{
+        label: 'Ganancias',
+        data: chartData.dailyRevenueThisMonth.map((r) => Number(r.revenue)),
+        borderColor: '#0D9488', backgroundColor: 'rgba(13,148,136,0.1)',
+        tension: 0.3, fill: true, pointBackgroundColor: '#0D9488', pointRadius: 3,
+      }],
+    },
+    options: {
+      ...chartDefaults,
+      plugins: { ...chartDefaults.plugins, legend: { display: false } },
+      scales: {
+        ...chartDefaults.scales,
+        x: { ...chartDefaults.scales.x, title: { display: true, text: 'Día del mes', color: '#94A3B8', font: { size: 11 } } },
+      },
+    },
   } : null
 
   const stockChart = chartData?.stockByCategory?.length ? {
@@ -367,6 +406,14 @@ export function Reportes() {
               </div>
             </div>
 
+            {/* Ganancias diarias del mes en curso */}
+            <div className={`${styles.chartCard} ${styles.chartWide}`}>
+              <h3 className={styles.chartTitle}>Ganancias diarias — mes en curso</h3>
+              <div className={styles.chartWrap}>
+                {dailyRevenueChart ? <Line data={dailyRevenueChart.data} options={dailyRevenueChart.options} /> : <p className={styles.noData}>Sin datos de ganancias diarias</p>}
+              </div>
+            </div>
+
             {/* Servicios más vendidos */}
             <div className={styles.chartCard}>
               <h3 className={styles.chartTitle}>Servicios más vendidos</h3>
@@ -394,6 +441,43 @@ export function Reportes() {
 
           {/* ── Tablas de detalle ──────────────────────── */}
           <div className={styles.detailGrid}>
+            {/* Quincena 1 vs Quincena 2 */}
+            {chartData?.fortnightComparison?.length ? (() => {
+              const primera = chartData.fortnightComparison.find((r) => r.fortnight === 'primera') ?? { orders_count: 0, revenue: 0 }
+              const segunda = chartData.fortnightComparison.find((r) => r.fortnight === 'segunda') ?? { orders_count: 0, revenue: 0 }
+              const diff = Number(segunda.revenue) - Number(primera.revenue)
+              return (
+                <div className={styles.detailCard}>
+                  <div className={styles.detailCardHeader}>
+                    <h3 className={styles.chartTitle}>Quincena 1 vs Quincena 2</h3>
+                    <button type="button" className={styles.miniExport} onClick={() => exportToPDF(
+                      'Quincena 1 vs Quincena 2',
+                      ['Período', 'Órdenes', 'Ingresos'],
+                      [
+                        ['Quincena 1 (1–15)', primera.orders_count, fmtCOP(primera.revenue)],
+                        ['Quincena 2 (16–fin)', segunda.orders_count, fmtCOP(segunda.revenue)],
+                      ],
+                      'Quincena_1_vs_2.pdf'
+                    )}>PDF</button>
+                  </div>
+                  <table className={styles.miniTable}>
+                    <thead><tr><th>Período</th><th>Órdenes</th><th>Ingresos</th></tr></thead>
+                    <tbody>
+                      <tr><td>Quincena 1 (1–15)</td><td>{primera.orders_count}</td><td>{fmtCOP(primera.revenue)}</td></tr>
+                      <tr><td>Quincena 2 (16–fin)</td><td>{segunda.orders_count}</td><td>{fmtCOP(segunda.revenue)}</td></tr>
+                      <tr>
+                        <td>Diferencia (Q2 − Q1)</td>
+                        <td>—</td>
+                        <td style={{ color: diff >= 0 ? '#059669' : '#DC2626', fontWeight: 800 }}>
+                          {diff >= 0 ? '+' : ''}{fmtCOP(diff)}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )
+            })() : null}
+
             {/* Órdenes por técnico */}
             {chartData?.ordersByTech?.length ? (
               <div className={styles.detailCard}>

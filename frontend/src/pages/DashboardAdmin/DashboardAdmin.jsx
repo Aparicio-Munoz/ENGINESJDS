@@ -101,6 +101,7 @@ export function DashboardAdmin() {
         ['Total clientes', k.totalClients], ['Total motos', k.totalMotorcycles],
         ['Órdenes activas', k.activeOrders], ['Órdenes entregadas', k.deliveredOrders],
         ['Ingresos del mes', fmtCOP(k.monthlyRevenue)], ['Ingresos del año', fmtCOP(k.yearlyRevenue)],
+        ['Ganancias de hoy', fmtCOP(k.dailyRevenue)], ['Ganancias de la quincena', fmtCOP(k.fortnightRevenue)],
         ['Citas pendientes', k.pendingAppts], ['Stock bajo', k.lowStockItems],
       ],
       headStyles: { fillColor: [249, 115, 22] },
@@ -119,6 +120,8 @@ export function DashboardAdmin() {
       { Métrica: 'Órdenes entregadas', Valor: k.deliveredOrders },
       { Métrica: 'Ingresos del mes', Valor: k.monthlyRevenue },
       { Métrica: 'Ingresos del año', Valor: k.yearlyRevenue },
+      { Métrica: 'Ganancias de hoy', Valor: k.dailyRevenue },
+      { Métrica: 'Ganancias de la quincena', Valor: k.fortnightRevenue },
       { Métrica: 'Citas pendientes', Valor: k.pendingAppts },
       { Métrica: 'Stock bajo', Valor: k.lowStockItems },
     ]), 'KPIs')
@@ -216,6 +219,8 @@ export function DashboardAdmin() {
           { label: 'Entregadas',        value: k.deliveredOrders,  icon: '✅', color: '#059669' },
           { label: 'Ingresos del mes',  value: fmtCOP(k.monthlyRevenue),  icon: '💰', color: '#F97316' },
           { label: 'Ingresos del año',  value: fmtCOP(k.yearlyRevenue),   icon: '📊', color: '#2563EB' },
+          { label: 'Ganancias de hoy',      value: fmtCOP(k.dailyRevenue),     icon: '💵', color: '#0D9488' },
+          { label: 'Ganancias de la quincena', value: fmtCOP(k.fortnightRevenue), icon: '🗓️', color: '#DB2777' },
           { label: 'Citas pendientes',  value: k.pendingAppts,     icon: '📅', color: '#D97706' },
           { label: 'Stock bajo',        value: k.lowStockItems,    icon: '⚠️', color: '#DC2626' },
         ].map((kpi) => (
@@ -249,7 +254,7 @@ export function DashboardAdmin() {
             {statusChart ? <Doughnut data={statusChart} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#CBD5E1', font: { size: 10 } } }, tooltip: baseOpts.plugins.tooltip } }} /> : <p className={styles.noData}>Sin órdenes</p>}
           </div>
         </div>
-        <div className={styles.chartCard}>
+        <div className={`${styles.chartCard} ${styles.chartWide}`}>
           <h3 className={styles.chartTitle}>Inventario por categoría</h3>
           <div className={styles.chartWrap}>
             {stockChart ? <Bar data={stockChart} options={{ ...baseOpts, plugins: { ...baseOpts.plugins, legend: { display: false } } }} /> : <p className={styles.noData}>Sin datos</p>}

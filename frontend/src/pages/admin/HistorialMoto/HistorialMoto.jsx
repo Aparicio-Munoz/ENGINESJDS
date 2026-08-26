@@ -69,7 +69,7 @@ export function HistorialMoto() {
       ), 'Servicios')
     }
     const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
-    saveAs(new Blob([buf]), `Historial_${data.motorcycle.plate}.xlsx`)
+    saveAs(new Blob([buf]), `Historial_${data.motorcycle.plate ?? data.motorcycle.id}.xlsx`)
   }
 
   if (loading) return <section className={styles.page}><div className={styles.loadingState}><div className={styles.spinner} />Cargando historial…</div></section>
@@ -89,8 +89,8 @@ export function HistorialMoto() {
       <div className={styles.header}>
         <div>
           <p className={styles.eyebrow}>Historial clínico</p>
-          <h1 className={styles.title}><span className={styles.plate}>{m.plate}</span></h1>
-          <p className={styles.subtitle}>{m.brand} {m.model} {m.year} {m.engine_cc ? `— ${m.engine_cc}cc` : ''}</p>
+          <h1 className={styles.title}><span className={styles.plate}>{m.plate || `Moto #${m.id}`}</span></h1>
+          <p className={styles.subtitle}>{[m.brand, m.model, m.year].filter(Boolean).join(' ')} {m.engine_cc ? `— ${m.engine_cc}cc` : ''}</p>
           <p className={styles.clientInfo}>Cliente: <strong>{m.client_name ?? 'Sin propietario asignado'}</strong> · {m.client_phone ?? '—'}</p>
         </div>
         <div className={styles.headerActions}>

@@ -4,31 +4,17 @@ import { Pagination } from '../../../components/Pagination/Pagination'
 import { useToast } from '../../../hooks/useToast'
 import styles from './Motocicletas.module.css'
 
-const LIMIT = 20
+const LIMIT = 10
 const CURRENT_YEAR = new Date().getFullYear()
 
 const MOTO_STATUS_COLORS = {
   'En servicio':       { bg: '#d1fae5', color: '#065f46' },
-  'Disponible':        { bg: '#dbeafe', color: '#1d4ed8' },
   'Lista para entrega':{ bg: '#fef3c7', color: '#d97706' },
   'En reparación':     { bg: '#fee2e2', color: '#dc2626' },
-  'Esperando repuesto':{ bg: '#f3e8ff', color: '#7c3aed' },
   'Entregada':         { bg: '#f3f4f6', color: '#374151' },
 }
 
 const MOTO_STATUSES = [
-  {
-    key: 'Disponible',
-    desc: 'Sin asignación activa',
-    accent: '#1d4ed8',
-    bg: '#eff6ff',
-    border: '#93c5fd',
-    icon: (
-      <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-        <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clipRule="evenodd" />
-      </svg>
-    ),
-  },
   {
     key: 'En servicio',
     desc: 'En atención de taller',
@@ -50,18 +36,6 @@ const MOTO_STATUSES = [
     icon: (
       <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
         <path fillRule="evenodd" d="M19 5.5a4.5 4.5 0 0 1-4.791 4.49c-.873-.055-1.808.128-2.368.8l-6.024 7.23a2.724 2.724 0 1 1-3.837-3.837L9.21 8.16c.672-.56.855-1.495.8-2.368a4.5 4.5 0 0 1 5.873-4.575c.324.105.39.51.15.752L13.34 4.66a.455.455 0 0 0-.11.494 3.01 3.01 0 0 0 1.617 1.617c.17.07.363.02.493-.111l2.692-2.692c.241-.241.647-.174.752.15.14.435.216.9.216 1.382ZM4 17a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
-      </svg>
-    ),
-  },
-  {
-    key: 'Esperando repuesto',
-    desc: 'Detenida por falta de partes',
-    accent: '#7c3aed',
-    bg: '#faf5ff',
-    border: '#c4b5fd',
-    icon: (
-      <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-        <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-13a.75.75 0 0 0-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 0 0 0-1.5h-3.25V5Z" clipRule="evenodd" />
       </svg>
     ),
   },
@@ -104,19 +78,22 @@ const EMPTY_FORM = {
 function validate(form) {
   const errors = {}
   const plate = form.plate.trim().toUpperCase()
-  if (!plate) errors.plate = 'La placa es obligatoria.'
-  else if (!/^[A-Z]{3}[0-9]{2}[A-Z0-9]$/.test(plate)) errors.plate = 'Placa colombiana: 3 letras + 2 números + 1 letra o número (ej. ABC12D).'
-  if (!form.brand.trim()) errors.brand = 'La marca es obligatoria.'
-  if (!form.model.trim()) errors.model = 'El modelo es obligatorio.'
-  const year = Number(form.year)
-  if (!form.year.trim()) errors.year = 'El año es obligatorio.'
-  else if (!Number.isInteger(year) || year < 1970 || year > CURRENT_YEAR + 1) {
-    errors.year = `Año válido: 1970–${CURRENT_YEAR + 1}.`
+  if (plate && !/^[A-Z]{3}[0-9]{2}[A-Z0-9]$/.test(plate)) errors.plate = 'Placa colombiana: 3 letras + 2 números + 1 letra o número (ej. ABC12D).'
+  const year = form.year.trim()
+  if (year) {
+    const yearNum = Number(year)
+    if (!Number.isInteger(yearNum) || yearNum < 1970 || yearNum > CURRENT_YEAR + 1) {
+      errors.year = `Año válido: 1970–${CURRENT_YEAR + 1}.`
+    }
   }
   if (form.engine_cc && (isNaN(Number(form.engine_cc)) || Number(form.engine_cc) <= 0)) {
     errors.engine_cc = 'Cilindraje inválido.'
   }
   return errors
+}
+
+function motoLabel(m) {
+  return m?.plate || [m?.brand, m?.model].filter(Boolean).join(' ') || `Moto #${m?.id}`
 }
 
 export function Motocicletas() {
@@ -135,11 +112,13 @@ export function Motocicletas() {
   // ── Clients for selector ──────────────────────────────
   const [clients, setClients] = useState([])
 
-  // ── Create modal ──────────────────────────────────────
+  // ── Create / edit modal ────────────────────────────────
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState(null) // null = crear, moto = editar
   const [formData, setFormData] = useState(EMPTY_FORM)
   const [formErrors, setFormErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
+  const [ownerSearch, setOwnerSearch] = useState('')
 
   // ── Status change modal ───────────────────────────────
   const [statusTarget, setStatusTarget] = useState(null)
@@ -214,7 +193,7 @@ export function Motocicletas() {
     setStatusSubmitting(true)
     try {
       await motorcyclesApi.update(statusTarget.id, { status: statusNew })
-      toast.success(`Estado de ${statusTarget.plate} cambiado a ${statusNew}`)
+      toast.success(`Estado de ${motoLabel(statusTarget)} cambiado a ${statusNew}`)
       setStatusTarget(null)
       await loadMotorcycles({ silent: true, targetPage: page, q: search })
     } catch (err) {
@@ -224,16 +203,35 @@ export function Motocicletas() {
     }
   }
 
-  // ── Create modal ───────────────────────────────────────
+  // ── Create / edit modal ─────────────────────────────────
   function openModal() {
+    setEditTarget(null)
     setFormData(EMPTY_FORM)
     setFormErrors({})
+    setOwnerSearch('')
+    setIsModalOpen(true)
+  }
+
+  function openEdit(m) {
+    setEditTarget(m)
+    setFormData({
+      client_id: m.client_id ? String(m.client_id) : '',
+      plate:     m.plate ?? '',
+      brand:     m.brand ?? '',
+      model:     m.model ?? '',
+      year:      m.year ? String(m.year) : '',
+      engine_cc: m.engine_cc ? String(m.engine_cc) : '',
+    })
+    setFormErrors({})
+    setOwnerSearch('')
     setIsModalOpen(true)
   }
 
   function closeModal() {
     setIsModalOpen(false)
+    setEditTarget(null)
     setFormErrors({})
+    setOwnerSearch('')
   }
 
   function handleInputChange(e) {
@@ -242,36 +240,49 @@ export function Motocicletas() {
     if (formErrors[name]) setFormErrors((prev) => ({ ...prev, [name]: undefined }))
   }
 
-  async function handleCreate(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
-    console.log('[Motocicletas] handleCreate ejecutado', formData)
     const errs = validate(formData)
     if (Object.keys(errs).length > 0) {
-      console.log('[Motocicletas] Errores de validación:', errs)
       setFormErrors(errs)
-      toast.error('Revisa los campos obligatorios antes de guardar.')
+      toast.error('Revisa los campos marcados antes de guardar.')
       return
     }
-    console.log('[Motocicletas] Validación OK, enviando al backend...')
     setSubmitting(true)
     try {
-      const payload = {
-        ...(formData.client_id ? { client_id: Number(formData.client_id) } : {}),
-        plate: formData.plate.trim().toUpperCase(),
-        brand: formData.brand.trim(),
-        model: formData.model.trim(),
-        year: Number(formData.year),
-        ...(formData.engine_cc ? { engine_cc: Number(formData.engine_cc) } : {}),
+      if (editTarget) {
+        // En edición se manda el valor actual de cada campo (incluso
+        // vacío) — el backend lo normaliza a NULL, permitiendo "borrar"
+        // un campo opcional (ej. quitar el propietario o la placa).
+        const payload = {
+          client_id: formData.client_id ? Number(formData.client_id) : '',
+          plate:     formData.plate.trim().toUpperCase(),
+          brand:     formData.brand.trim(),
+          model:     formData.model.trim(),
+          year:      formData.year.trim() ? Number(formData.year) : '',
+          engine_cc: formData.engine_cc ? Number(formData.engine_cc) : '',
+        }
+        const updated = await motorcyclesApi.update(editTarget.id, payload)
+        toast.success(`Motocicleta ${motoLabel(updated)} actualizada exitosamente`)
+        closeModal()
+        await loadMotorcycles({ silent: true, targetPage: page, q: search })
+      } else {
+        const payload = {
+          ...(formData.client_id ? { client_id: Number(formData.client_id) } : {}),
+          ...(formData.plate.trim() ? { plate: formData.plate.trim().toUpperCase() } : {}),
+          ...(formData.brand.trim() ? { brand: formData.brand.trim() } : {}),
+          ...(formData.model.trim() ? { model: formData.model.trim() } : {}),
+          ...(formData.year.trim() ? { year: Number(formData.year) } : {}),
+          ...(formData.engine_cc ? { engine_cc: Number(formData.engine_cc) } : {}),
+        }
+        const created = await motorcyclesApi.create(payload)
+        toast.success(`Motocicleta ${motoLabel(created)} registrada exitosamente`)
+        closeModal()
+        setPage(1)
+        await loadMotorcycles({ silent: true, targetPage: 1, q: search })
       }
-      await motorcyclesApi.create(payload)
-      console.log('[Motocicletas] Creada exitosamente')
-      toast.success(`Motocicleta ${payload.plate} registrada exitosamente`)
-      closeModal()
-      setPage(1)
-      await loadMotorcycles({ silent: true, targetPage: 1, q: search })
     } catch (err) {
-      console.error('[Motocicletas] Error al crear:', err)
-      toast.error(err.message || 'Error al registrar la motocicleta.')
+      toast.error(err.message || `Error al ${editTarget ? 'actualizar' : 'registrar'} la motocicleta.`)
     } finally {
       if (mountedRef.current) setSubmitting(false)
     }
@@ -296,8 +307,7 @@ export function Motocicletas() {
     setDeleting(true)
     try {
       await motorcyclesApi.remove(deleteTarget.id, reason)
-      const label = `${deleteTarget.plate} — ${deleteTarget.brand} ${deleteTarget.model}`
-      toast.success(`Motocicleta ${label} eliminada exitosamente`)
+      toast.success(`Motocicleta ${motoLabel(deleteTarget)} eliminada exitosamente`)
       setDeleteTarget(null)
       await loadMotorcycles({ silent: true, targetPage: page, q: search })
     } catch (err) {
@@ -309,6 +319,17 @@ export function Motocicletas() {
 
   // ── Derived ────────────────────────────────────────────
   const inService = motorcycles.filter((m) => m.status === 'En servicio').length
+
+  // ── Combobox buscable de propietario (crear moto) ───────
+  const selectedOwner = clients.find((c) => String(c.id) === String(formData.client_id))
+  const ownerQuery = ownerSearch.toLowerCase().trim()
+  const filteredOwners = ownerQuery
+    ? clients.filter((c) =>
+        `${c.name} ${c.last_name}`.toLowerCase().includes(ownerQuery) ||
+        (c.document ?? '').toLowerCase().includes(ownerQuery) ||
+        (c.phone ?? '').includes(ownerQuery)
+      ).slice(0, 10)
+    : []
 
   return (
     <section className={styles.page}>
@@ -372,10 +393,10 @@ export function Motocicletas() {
               <tbody>
                 {motorcycles.map((m) => (
                   <tr key={m.id}>
-                    <td data-label="Placa">{m.plate}</td>
-                    <td data-label="Marca">{m.brand}</td>
-                    <td data-label="Modelo">{m.model}</td>
-                    <td data-label="Año">{m.year}</td>
+                    <td data-label="Placa">{m.plate || '—'}</td>
+                    <td data-label="Marca">{m.brand || '—'}</td>
+                    <td data-label="Modelo">{m.model || '—'}</td>
+                    <td data-label="Año">{m.year ?? '—'}</td>
                     <td data-label="Cliente">
                       {m.client_name ? (
                         <span className={styles.ownerName}>
@@ -401,6 +422,13 @@ export function Motocicletas() {
                     </td>
                     <td data-label="Acciones">
                       <div className={styles.actionGroup}>
+                        <button
+                          className={styles.editButton}
+                          type="button"
+                          onClick={() => openEdit(m)}
+                        >
+                          Editar
+                        </button>
                         <button
                           className={styles.statusButton}
                           type="button"
@@ -438,6 +466,7 @@ export function Motocicletas() {
             page={page}
             totalPages={pagination.totalPages}
             total={pagination.total}
+            limit={LIMIT}
             onPageChange={setPage}
             disabled={loading}
           />
@@ -455,8 +484,8 @@ export function Motocicletas() {
           >
             <div className={styles.modalHeader}>
               <div>
-                <p className={styles.eyebrow}>Registro</p>
-                <h2 id="motorcycle-modal-title">Nueva motocicleta</h2>
+                <p className={styles.eyebrow}>{editTarget ? 'Edición' : 'Registro'}</p>
+                <h2 id="motorcycle-modal-title">{editTarget ? 'Editar motocicleta' : 'Nueva motocicleta'}</h2>
               </div>
               <button
                 className={styles.iconButton}
@@ -471,22 +500,68 @@ export function Motocicletas() {
               </button>
             </div>
 
-            <form className={styles.form} onSubmit={handleCreate}>
-              <label className={`${styles.formField} ${styles.fullWidth}`}>
-                Propietario
-                <select name="client_id" value={formData.client_id} onChange={handleInputChange}>
-                  <option value="">Sin propietario asignado (opcional)</option>
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} {c.last_name} — {c.document}
-                    </option>
-                  ))}
-                </select>
-                {formErrors.client_id ? <span>{formErrors.client_id}</span> : null}
-              </label>
+            <form className={styles.form} onSubmit={handleSubmit}>
+              <div className={`${styles.formField} ${styles.fullWidth}`}>
+                <span className={styles.fieldLabel}>Propietario <span className={styles.optional}>(opcional)</span></span>
+                {selectedOwner ? (
+                  <div className={styles.partSelected}>
+                    <span>
+                      {selectedOwner.name} {selectedOwner.last_name}
+                      {selectedOwner.document ? ` — ${selectedOwner.document}` : ''}
+                    </span>
+                    <button
+                      type="button"
+                      className={styles.partClearBtn}
+                      onClick={() => {
+                        setFormData((p) => ({ ...p, client_id: '' }))
+                        setOwnerSearch('')
+                      }}
+                    >
+                      Cambiar
+                    </button>
+                  </div>
+                ) : (
+                  <div className={styles.partAutocomplete}>
+                    <input
+                      type="search"
+                      className={styles.partSearchInput}
+                      placeholder="Escribe nombre, documento o teléfono…"
+                      value={ownerSearch}
+                      onChange={(e) => setOwnerSearch(e.target.value)}
+                      autoComplete="off"
+                    />
+                    {ownerQuery.length > 0 ? (
+                      <ul className={styles.partDropdown}>
+                        {filteredOwners.map((c) => (
+                          <li key={c.id}>
+                            <button
+                              type="button"
+                              className={styles.partDropdownItem}
+                              onClick={() => {
+                                setFormData((p) => ({ ...p, client_id: String(c.id) }))
+                                setOwnerSearch('')
+                                setFormErrors((p) => ({ ...p, client_id: undefined }))
+                              }}
+                            >
+                              <strong>{c.name} {c.last_name}</strong>
+                              <span className={styles.partMeta}>
+                                {[c.document, c.phone].filter(Boolean).join(' · ') || 'Sin datos de contacto'}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                        {filteredOwners.length === 0 ? (
+                          <li className={styles.partNoResults}>Sin resultados</li>
+                        ) : null}
+                      </ul>
+                    ) : null}
+                  </div>
+                )}
+                {formErrors.client_id ? <span className={styles.fieldError}>{formErrors.client_id}</span> : null}
+              </div>
 
               <label className={styles.formField}>
-                Placa *
+                Placa
                 <input
                   name="plate"
                   value={formData.plate}
@@ -498,7 +573,7 @@ export function Motocicletas() {
               </label>
 
               <label className={styles.formField}>
-                Marca *
+                Marca
                 <input
                   name="brand"
                   value={formData.brand}
@@ -510,7 +585,7 @@ export function Motocicletas() {
               </label>
 
               <label className={styles.formField}>
-                Modelo *
+                Modelo
                 <input
                   name="model"
                   value={formData.model}
@@ -522,7 +597,7 @@ export function Motocicletas() {
               </label>
 
               <label className={styles.formField}>
-                Año *
+                Año
                 <input
                   inputMode="numeric"
                   name="year"
@@ -557,7 +632,7 @@ export function Motocicletas() {
                   Cancelar
                 </button>
                 <button className={styles.primaryButton} type="submit" disabled={submitting}>
-                  {submitting ? 'Guardando...' : 'Guardar motocicleta'}
+                  {submitting ? 'Guardando...' : editTarget ? 'Guardar cambios' : 'Guardar motocicleta'}
                 </button>
               </div>
             </form>
@@ -596,7 +671,7 @@ export function Motocicletas() {
             <p id="delete-moto-desc" className={styles.deleteDesc}>
               Estás a punto de eliminar{' '}
               <strong>
-                &ldquo;{deleteTarget.plate} — {deleteTarget.brand} {deleteTarget.model}&rdquo;
+                &ldquo;{motoLabel(deleteTarget)}&rdquo;
               </strong>
               . Esta acción no se puede deshacer.
             </p>
@@ -652,10 +727,11 @@ export function Motocicletas() {
             <div className={styles.statusModalHeader}>
               <div className={styles.statusModalMotoInfo}>
                 <span id="status-moto-title" className={styles.statusModalPlate}>
-                  {statusTarget.plate}
+                  {motoLabel(statusTarget)}
                 </span>
                 <span className={styles.statusModalBrand}>
-                  {statusTarget.brand} {statusTarget.model} · {statusTarget.year}
+                  {[statusTarget.brand, statusTarget.model].filter(Boolean).join(' ')}
+                  {statusTarget.year ? ` · ${statusTarget.year}` : ''}
                 </span>
               </div>
               <button

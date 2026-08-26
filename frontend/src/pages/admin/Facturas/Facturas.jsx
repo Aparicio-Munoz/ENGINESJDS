@@ -77,7 +77,9 @@ export function Facturas() {
     try {
       const res = await ordersApi.getAll({ limit: 100, status: 'Entregada' })
       if (mountedRef.current) setActiveOrders(res.data ?? [])
-    } catch { /* ignore */ }
+    } catch {
+      if (mountedRef.current) toast.error('Error al cargar las órdenes de trabajo')
+    }
   }
 
   async function handleCreate(e) {
@@ -231,13 +233,18 @@ export function Facturas() {
             </div>
             <form className={styles.form} onSubmit={handleCreate}>
               <label className={styles.formField}>
-                Orden de trabajo <span className={styles.required}>*</span>
+                <span>Orden de trabajo <span className={styles.required}>*</span></span>
                 <select value={createForm.order_id} onChange={(e) => setCreateForm((p) => ({ ...p, order_id: e.target.value }))}>
                   <option value="">Selecciona una orden…</option>
                   {activeOrders.map((o) => (
                     <option key={o.id} value={o.id}>{o.order_number} — {o.client_name} — {o.motorcycle_plate} — {fmtCOP(o.final_price)}</option>
                   ))}
                 </select>
+                {activeOrders.length === 0 ? (
+                  <span className={styles.fieldHint}>
+                    No hay órdenes entregadas listas para facturar. Cierra una orden desde Órdenes de trabajo primero.
+                  </span>
+                ) : null}
               </label>
               <label className={styles.formField}>
                 Método de pago

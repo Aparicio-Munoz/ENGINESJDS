@@ -17,7 +17,10 @@ const STATUS_COLORS = {
 }
 
 function todayISO() {
-  return new Date().toISOString().slice(0, 10)
+  // Fecha local (no UTC) — toISOString() se adelanta un día cuando la
+  // zona horaria local va detrás de UTC, desalineando el rango del
+  // modal de Ganancias con el "hoy" real del servidor.
+  return new Date().toLocaleDateString('en-CA')
 }
 
 function emptyForm() {
@@ -469,7 +472,7 @@ export function Empleados() {
                     <td data-label="Apellido">{emp.last_name}</td>
                     <td data-label="Teléfono">{emp.phone}</td>
                     <td data-label="Correo">{emp.email ?? '—'}</td>
-                    <td data-label="Especialidad">{emp.specialty}</td>
+                    <td data-label="Especialidad"><span className={styles.specialtyText}>{emp.specialty}</span></td>
                     <td data-label="Comisión">{Number(emp.commission_percent ?? 0)}%</td>
                     <td data-label="Estado">
                       <span
@@ -976,8 +979,8 @@ export function Empleados() {
                 <div className={styles.fullWidth}>
                   <div className={styles.earningsSummary}>
                     <div className={styles.earningTab}>
-                      <span className={styles.earningValue}>{fmtCOP(earningsData.order_total)}</span>
-                      <span className={styles.earningLabel}>Total generado (mano de obra + repuestos − descuento)</span>
+                      <span className={styles.earningValue}>{fmtCOP(earningsData.labor_total)}</span>
+                      <span className={styles.earningLabel}>Mano de obra generada</span>
                     </div>
                     <div className={styles.earningTab}>
                       <span className={styles.earningValue} style={{ color: '#34d399' }}>
@@ -991,6 +994,17 @@ export function Empleados() {
                       <span className={styles.earningValue}>{earningsData.orders_count}</span>
                       <span className={styles.earningLabel}>Órdenes atendidas</span>
                     </div>
+                    <div className={styles.earningTab}>
+                      <span className={styles.earningValue} style={{ color: '#34d399' }}>
+                        {fmtCOP(earningsData.quick_jobs_total)}
+                      </span>
+                      <span className={styles.earningLabel}>Trabajos rápidos</span>
+                    </div>
+                  </div>
+
+                  <div className={styles.earningsOrderRow} style={{ fontWeight: 700 }}>
+                    <span>Total a pagar en el rango</span>
+                    <span>{fmtCOP(earningsData.total_earnings)}</span>
                   </div>
 
                   {earningsData.orders.length > 0 ? (
@@ -1003,8 +1017,7 @@ export function Empleados() {
                               {' '}· {o.motorcycle_plate} {o.motorcycle_brand} · {o.status}
                             </span>
                             <span className={styles.earningsOrderMeta}>
-                              {' '}· Mano de obra {fmtCOP(o.labor_cost)} + Repuestos {fmtCOP(o.parts_cost)}
-                              {Number(o.discount) > 0 ? ` − Descuento ${fmtCOP(o.discount)}` : ''}
+                              {' '}· Mano de obra {fmtCOP(o.labor_cost)}
                             </span>
                           </div>
                           <span>{fmtCOP(o.final_price)}</span>
@@ -1014,6 +1027,27 @@ export function Empleados() {
                   ) : (
                     <p className={styles.emptyHint}>
                       Sin órdenes asignadas a este empleado en el rango seleccionado.
+                    </p>
+                  )}
+
+                  <p className={styles.eyebrow} style={{ marginTop: 16 }}>Trabajos rápidos del rango</p>
+                  {earningsData.quick_jobs.length > 0 ? (
+                    <div className={styles.earningsOrders}>
+                      {earningsData.quick_jobs.map((j) => (
+                        <div key={j.id} className={styles.earningsOrderRow}>
+                          <div>
+                            <strong>{j.description}</strong>
+                            <span className={styles.earningsOrderMeta}>
+                              {' '}· {new Date(j.created_at).toLocaleString('es-CO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <span>{fmtCOP(j.price)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className={styles.emptyHint}>
+                      Sin trabajos rápidos registrados en el rango seleccionado.
                     </p>
                   )}
                 </div>

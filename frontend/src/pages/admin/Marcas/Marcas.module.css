@@ -1,4 +1,4 @@
-.page { display: grid; gap: 24px; }
+.page { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
 
 .pageHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
 .pageHeader h1, .pageHeader p, .modalHeader h2, .modalHeader p { margin: 0; }
@@ -50,6 +50,7 @@
 .statusInactive { background: #f1f5f9; color: #64748b; }
 
 .actionsCell { display: flex; flex-wrap: wrap; gap: 6px; }
+@media (min-width: 761px) { .actionsCell { flex-wrap: nowrap; } }
 .editButton, .deleteButton { padding: 9px 12px; border: 0; border-radius: 8px; font-family: inherit; font-weight: 800; cursor: pointer; }
 .editButton { color: #1d4ed8; background: #dbeafe; }
 .editButton:hover { background: #bfdbfe; }

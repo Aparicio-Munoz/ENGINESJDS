@@ -33,10 +33,21 @@ function getPageNumbers(current, total, maxVisible = 5) {
   return pages
 }
 
-export function Pagination({ page, totalPages, total, onPageChange, disabled }) {
+export function Pagination({ page, totalPages, total, limit, onPageChange, disabled }) {
   if (!totalPages || totalPages <= 1) return null
 
   const pages = getPageNumbers(page, totalPages)
+
+  let rangeLabel = null
+  if (total != null) {
+    if (limit) {
+      const start = total === 0 ? 0 : (page - 1) * limit + 1
+      const end = Math.min(page * limit, total)
+      rangeLabel = `Mostrando ${start}–${end} de ${total} registros`
+    } else {
+      rangeLabel = `${total} registros`
+    }
+  }
 
   return (
     <nav className={styles.pagination} aria-label="Paginación">
@@ -86,8 +97,8 @@ export function Pagination({ page, totalPages, total, onPageChange, disabled }) 
         </svg>
       </button>
 
-      {total != null ? (
-        <span className={styles.info}>{total} registros</span>
+      {rangeLabel ? (
+        <span className={styles.info}>{rangeLabel}</span>
       ) : null}
     </nav>
   )

@@ -8,7 +8,7 @@ import styles from './Clientes.module.css'
 // ── Constantes ──────────────────────────────────────────────────
 const DOCUMENT_TYPES = ['CC', 'CE', 'NIT', 'Pasaporte']
 
-const ITEMS_PER_PAGE = 20
+const ITEMS_PER_PAGE = 10
 
 const INITIAL_FORM = {
   name:          '',
@@ -20,19 +20,17 @@ const INITIAL_FORM = {
 
 function validate(form) {
   const errors = {}
-  if (!form.name.trim()) errors.name = 'El nombre es obligatorio.'
-  else if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñüÜ\s]+$/.test(form.name.trim())) errors.name = 'Solo letras y espacios.'
-  if (!form.last_name.trim()) errors.last_name = 'El apellido es obligatorio.'
-  else if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñüÜ\s]+$/.test(form.last_name.trim())) errors.last_name = 'Solo letras y espacios.'
-  if (!form.document_type) errors.document_type = 'Selecciona el tipo de documento.'
+  const name = form.name.trim()
+  if (name && !/^[A-Za-zÁÉÍÓÚáéíóúÑñüÜ\s]+$/.test(name)) errors.name = 'Solo letras y espacios.'
+
+  const lastName = form.last_name.trim()
+  if (lastName && !/^[A-Za-zÁÉÍÓÚáéíóúÑñüÜ\s]+$/.test(lastName)) errors.last_name = 'Solo letras y espacios.'
 
   const doc = form.document.trim()
-  if (!doc) errors.document = 'El documento es obligatorio.'
-  else if (!/^[A-Za-z0-9-]{5,20}$/.test(doc)) errors.document = 'Entre 5 y 20 caracteres alfanuméricos.'
+  if (doc && !/^[A-Za-z0-9-]{5,20}$/.test(doc)) errors.document = 'Entre 5 y 20 caracteres alfanuméricos.'
 
   const phone = form.phone.trim()
-  if (!phone) errors.phone = 'El teléfono es obligatorio.'
-  else if (!/^\d{7,15}$/.test(phone)) errors.phone = 'Entre 7 y 15 dígitos numéricos.'
+  if (phone && !/^\d{7,15}$/.test(phone)) errors.phone = 'Entre 7 y 15 dígitos numéricos.'
 
   return errors
 }
@@ -61,8 +59,9 @@ export function Clientes() {
   const [loading,    setLoading]    = useState(true)
   const [error,      setError]      = useState(null)
 
-  // Modal creación
+  // Modal creación / edición
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editTarget,  setEditTarget]  = useState(null) // null = crear, cliente = editar
   const [formData,    setFormData]    = useState(INITIAL_FORM)
   const [formErrors,  setFormErrors]  = useState({})
   const [submitting,  setSubmitting]  = useState(false)
@@ -120,15 +119,30 @@ export function Clientes() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  // ── Modal creación ───────────────────────────────────────────
+  // ── Modal creación / edición ─────────────────────────────────
   function openModal() {
+    setEditTarget(null)
     setFormData(INITIAL_FORM)
+    setFormErrors({})
+    setIsModalOpen(true)
+  }
+
+  function openEdit(client) {
+    setEditTarget(client)
+    setFormData({
+      name:          client.name ?? '',
+      last_name:     client.last_name ?? '',
+      document_type: client.document_type || 'CC',
+      document:      client.document ?? '',
+      phone:         client.phone ?? '',
+    })
     setFormErrors({})
     setIsModalOpen(true)
   }
 
   function closeModal() {
     setIsModalOpen(false)
+    setEditTarget(null)
     setFormErrors({})
   }
 
@@ -138,25 +152,35 @@ export function Clientes() {
     if (formErrors[name]) setFormErrors((prev) => ({ ...prev, [name]: undefined }))
   }
 
-  async function handleSubmitCreate(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     const errs = validate(formData)
     if (Object.keys(errs).length > 0) { setFormErrors(errs); return }
 
     setSubmitting(true)
     setFormErrors({})
+    const payload = {
+      name:          formData.name.trim(),
+      last_name:     formData.last_name.trim(),
+      document_type: formData.document_type,
+      document:      formData.document.trim(),
+      phone:         formData.phone.trim(),
+    }
     try {
-      const created = await clientsApi.create({
-        name:          formData.name.trim(),
-        last_name:     formData.last_name.trim(),
-        document_type: formData.document_type,
-        document:      formData.document.trim(),
-        phone:         formData.phone.trim(),
-      })
-      toast.success(`Cliente "${created.name} ${created.last_name}" registrado`)
-      closeModal()
-      setPage(1)
-      loadClients(1, search)
+      if (editTarget) {
+        const updated = await clientsApi.update(editTarget.id, payload)
+        const updatedLabel = [updated.name, updated.last_name].filter(Boolean).join(' ') || `#${updated.id}`
+        toast.success(`Cliente "${updatedLabel}" actualizado`)
+        closeModal()
+        loadClients(page, search)
+      } else {
+        const created = await clientsApi.create(payload)
+        const createdLabel = [created.name, created.last_name].filter(Boolean).join(' ') || `#${created.id}`
+        toast.success(`Cliente "${createdLabel}" registrado`)
+        closeModal()
+        setPage(1)
+        loadClients(1, search)
+      }
     } catch (err) {
       const parsed = extractApiError(err)
       if (parsed.fieldErrors) {
@@ -174,7 +198,7 @@ export function Clientes() {
     setDeleteReason('')
     setDeleteTarget({
       id:    client.id,
-      label: `${client.name} ${client.last_name}`,
+      label: [client.name, client.last_name].filter(Boolean).join(' ') || `Cliente #${client.id}`,
     })
   }
 
@@ -290,20 +314,29 @@ export function Clientes() {
                     <tr key={client.id}>
                       <td data-label="Nombre">
                         <span className={styles.clientName}>
-                          {client.name} {client.last_name}
+                          {[client.name, client.last_name].filter(Boolean).join(' ') || '—'}
                         </span>
                       </td>
                       <td data-label="Tipo Doc.">{client.document_type || '—'}</td>
                       <td data-label="Documento">{client.document || '—'}</td>
                       <td data-label="Teléfono">{client.phone || '—'}</td>
                       <td data-label="Acciones">
-                        <button
-                          className={styles.deleteButton}
-                          type="button"
-                          onClick={() => requestDelete(client)}
-                        >
-                          Eliminar
-                        </button>
+                        <div className={styles.actionsCell}>
+                          <button
+                            className={styles.editButton}
+                            type="button"
+                            onClick={() => openEdit(client)}
+                          >
+                            Editar
+                          </button>
+                          <button
+                            className={styles.deleteButton}
+                            type="button"
+                            onClick={() => requestDelete(client)}
+                          >
+                            Eliminar
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -316,6 +349,7 @@ export function Clientes() {
             page={page}
             totalPages={pagination.totalPages}
             total={pagination.total}
+            limit={ITEMS_PER_PAGE}
             onPageChange={handlePageChange}
             disabled={loading}
           />
@@ -333,8 +367,8 @@ export function Clientes() {
           >
             <div className={styles.modalHeader}>
               <div>
-                <p className={styles.eyebrow}>Registro</p>
-                <h2 id="client-modal-title">Nuevo cliente</h2>
+                <p className={styles.eyebrow}>{editTarget ? 'Edición' : 'Registro'}</p>
+                <h2 id="client-modal-title">{editTarget ? 'Editar cliente' : 'Nuevo cliente'}</h2>
               </div>
               <button className={styles.iconButton} type="button" onClick={closeModal} aria-label="Cerrar">
                 <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true">
@@ -343,23 +377,16 @@ export function Clientes() {
               </button>
             </div>
 
-            <form className={styles.form} onSubmit={handleSubmitCreate} noValidate>
+            <form className={styles.form} onSubmit={handleSubmit} noValidate>
 
               {formErrors._general ? (
-                <div
-                  role="alert"
-                  style={{
-                    gridColumn: '1 / -1', padding: '0.75rem',
-                    background: '#FEE2E2', borderRadius: '8px',
-                    color: '#DC2626', fontSize: '0.875rem',
-                  }}
-                >
+                <div role="alert" className={styles.formAlert}>
                   {formErrors._general}
                 </div>
               ) : null}
 
               <label className={styles.formField}>
-                Nombre <span className={styles.required}>*</span>
+                <span>Nombre</span>
                 <input
                   name="name"
                   value={formData.name}
@@ -371,7 +398,7 @@ export function Clientes() {
               </label>
 
               <label className={styles.formField}>
-                Apellido <span className={styles.required}>*</span>
+                <span>Apellido</span>
                 <input
                   name="last_name"
                   value={formData.last_name}
@@ -382,7 +409,7 @@ export function Clientes() {
               </label>
 
               <label className={styles.formField}>
-                Tipo de documento <span className={styles.required}>*</span>
+                <span>Tipo de documento</span>
                 <select
                   name="document_type"
                   value={formData.document_type}
@@ -392,11 +419,10 @@ export function Clientes() {
                     <option key={t} value={t}>{t}</option>
                   ))}
                 </select>
-                {formErrors.document_type ? <span className={styles.fieldError}>{formErrors.document_type}</span> : null}
               </label>
 
               <label className={styles.formField}>
-                Número de documento <span className={styles.required}>*</span>
+                <span>Número de documento</span>
                 <input
                   inputMode="text"
                   name="document"
@@ -407,8 +433,8 @@ export function Clientes() {
                 {formErrors.document ? <span className={styles.fieldError}>{formErrors.document}</span> : <span className={styles.fieldHint}>5–20 caracteres alfanuméricos</span>}
               </label>
 
-              <label className={styles.formField}>
-                Teléfono <span className={styles.required}>*</span>
+              <label className={`${styles.formField} ${styles.fullWidth}`}>
+                <span>Teléfono</span>
                 <input
                   inputMode="tel"
                   name="phone"
@@ -433,7 +459,7 @@ export function Clientes() {
                   type="submit"
                   disabled={submitting}
                 >
-                  {submitting ? 'Guardando…' : 'Guardar cliente'}
+                  {submitting ? 'Guardando…' : editTarget ? 'Guardar cambios' : 'Guardar cliente'}
                 </button>
               </div>
             </form>

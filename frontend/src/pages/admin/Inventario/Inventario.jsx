@@ -4,8 +4,7 @@ import { Pagination } from '../../../components/Pagination/Pagination'
 import { useToast } from '../../../hooks/useToast'
 import styles from './Inventario.module.css'
 
-const LIMIT = 20
-const CATEGORIES = ['Aceites', 'Filtros', 'Llantas', 'Frenos', 'Transmisión', 'Eléctricos', 'Accesorios']
+const LIMIT = 10
 const STATUS_OPTIONS = ['Disponible', 'Stock bajo', 'Agotado']
 const SORT_OPTIONS = [
   { value: '', label: 'Ordenar por…' },
@@ -29,33 +28,42 @@ const EMPTY_FORM = {
 function validate(form) {
   const errors = {}
   const code = form.code.trim().toUpperCase()
-  if (!code) errors.code = 'El código es obligatorio.'
-  else if (!/^[A-Z0-9-]{3,20}$/.test(code)) errors.code = 'Código: 3–20 caracteres alfanuméricos o guiones.'
+  if (code && !/^[A-Z0-9-]{3,20}$/.test(code)) {
+    errors.code = 'Código: 3–20 caracteres alfanuméricos o guiones.'
+  }
 
-  if (!form.name.trim()) errors.name = 'El nombre es obligatorio.'
-  if (!form.brand.trim()) errors.brand = 'La marca es obligatoria.'
-  if (!form.category) errors.category = 'Selecciona una categoría.'
+  let unitPrice = null
+  if (form.quantity !== '') {
+    const qty = Number(form.quantity)
+    if (!Number.isInteger(qty) || qty < 0) errors.quantity = 'Entero mayor o igual a 0.'
+  }
 
-  const qty = Number(form.quantity)
-  if (form.quantity === '') errors.quantity = 'La cantidad es obligatoria.'
-  else if (!Number.isInteger(qty) || qty < 0) errors.quantity = 'Entero mayor o igual a 0.'
+  if (form.min_stock !== '') {
+    const minStock = Number(form.min_stock)
+    if (!Number.isInteger(minStock) || minStock < 0) errors.min_stock = 'Entero mayor o igual a 0.'
+  }
 
-  const minStock = Number(form.min_stock)
-  if (form.min_stock === '') errors.min_stock = 'El stock mínimo es obligatorio.'
-  else if (!Number.isInteger(minStock) || minStock < 0) errors.min_stock = 'Entero mayor o igual a 0.'
+  if (form.unit_price !== '') {
+    unitPrice = Number(form.unit_price)
+    if (isNaN(unitPrice) || unitPrice < 0) errors.unit_price = 'Precio de compra inválido.'
+  }
 
-  const unitPrice = Number(form.unit_price)
-  if (form.unit_price === '') errors.unit_price = 'El precio de compra es obligatorio.'
-  else if (isNaN(unitPrice) || unitPrice < 0) errors.unit_price = 'Precio de compra inválido.'
-
-  const salePrice = Number(form.sale_price)
-  if (form.sale_price === '') errors.sale_price = 'El precio de venta es obligatorio.'
-  else if (isNaN(salePrice) || salePrice < 0) errors.sale_price = 'Precio de venta inválido.'
-  else if (!isNaN(unitPrice) && salePrice < unitPrice) {
-    errors.sale_price = 'El precio de venta debe ser ≥ al precio de compra.'
+  if (form.sale_price !== '') {
+    const salePrice = Number(form.sale_price)
+    if (isNaN(salePrice) || salePrice < 0) errors.sale_price = 'Precio de venta inválido.'
+    else if (unitPrice !== null && !isNaN(unitPrice) && salePrice < unitPrice) {
+      errors.sale_price = 'El precio de venta debe ser ≥ al precio de compra.'
+    }
   }
 
   return errors
+}
+
+// Etiqueta legible para un repuesto aunque falten datos
+function itemLabel(item) {
+  if (!item) return 'este repuesto'
+  if (item.code && item.name) return `${item.code} — ${item.name}`
+  return item.name || item.code || 'este repuesto'
 }
 
 function fmt(n) {
@@ -101,6 +109,9 @@ export function Inventario() {
   // ── Brands for dropdown ───────────────────────────────
   const [brands, setBrands] = useState([])
 
+  // ── Categories for tabs/select ─────────────────────────
+  const [categories, setCategories] = useState([])
+
   // ── Alerts ────────────────────────────────────────────
   const [alerts, setAlerts] = useState([])
 
@@ -130,6 +141,13 @@ export function Inventario() {
       mountedRef.current = false
       clearTimeout(searchTimerRef.current)
     }
+  }, [])
+
+  // Load categories once on mount
+  useEffect(() => {
+    inventoryApi.getCategories()
+      .then((data) => { if (mountedRef.current) setCategories(data ?? []) })
+      .catch(() => {})
   }, [])
 
   // Load brands once on mount
@@ -237,17 +255,17 @@ export function Inventario() {
     if (Object.keys(errs).length > 0) { setFormErrors(errs); return }
     setSubmitting(true)
     try {
-      await inventoryApi.create({
-        code: formData.code.trim().toUpperCase(),
-        name: formData.name.trim(),
-        brand: formData.brand.trim(),
-        category: formData.category,
-        quantity: Number(formData.quantity),
-        min_stock: Number(formData.min_stock),
-        unit_price: Number(formData.unit_price),
-        sale_price: Number(formData.sale_price),
+      const created = await inventoryApi.create({
+        ...(formData.code.trim() ? { code: formData.code.trim().toUpperCase() } : {}),
+        ...(formData.name.trim() ? { name: formData.name.trim() } : {}),
+        ...(formData.brand.trim() ? { brand: formData.brand.trim() } : {}),
+        ...(formData.category ? { category: formData.category } : {}),
+        ...(formData.quantity !== '' ? { quantity: Number(formData.quantity) } : {}),
+        ...(formData.min_stock !== '' ? { min_stock: Number(formData.min_stock) } : {}),
+        ...(formData.unit_price !== '' ? { unit_price: Number(formData.unit_price) } : {}),
+        ...(formData.sale_price !== '' ? { sale_price: Number(formData.sale_price) } : {}),
       })
-      toast.success(`Repuesto "${formData.name.trim()}" registrado exitosamente`)
+      toast.success(`Repuesto "${itemLabel(created)}" registrado exitosamente`)
       closeModal()
       await loadItems({ silent: true, targetPage: 1 })
       setPage(1)
@@ -278,7 +296,7 @@ export function Inventario() {
     setDeleting(true)
     try {
       await inventoryApi.remove(deleteTarget.id, reason)
-      toast.success(`Repuesto "${deleteTarget.name}" eliminado exitosamente`)
+      toast.success(`Repuesto "${itemLabel(deleteTarget)}" eliminado exitosamente`)
       setDeleteTarget(null)
       await loadItems({ silent: true, targetPage: page })
       loadAlerts()
@@ -327,13 +345,13 @@ export function Inventario() {
     try {
       if (stockAction === 'entrada') {
         await inventoryApi.recordEntry(stockTarget.id, { qty, notes: stockNotes.trim() })
-        toast.success(`Entrada de ${qty} unidad(es) registrada para "${stockTarget.name}"`)
+        toast.success(`Entrada de ${qty} unidad(es) registrada para "${itemLabel(stockTarget)}"`)
       } else if (stockAction === 'salida') {
         await inventoryApi.recordOutput(stockTarget.id, { qty, notes: stockNotes.trim() })
-        toast.success(`Salida de ${qty} unidad(es) registrada para "${stockTarget.name}"`)
+        toast.success(`Salida de ${qty} unidad(es) registrada para "${itemLabel(stockTarget)}"`)
       } else {
         await inventoryApi.recordAdjustment(stockTarget.id, { quantity: qty, notes: stockNotes.trim() })
-        toast.success(`Stock de "${stockTarget.name}" ajustado a ${qty} unidad(es)`)
+        toast.success(`Stock de "${itemLabel(stockTarget)}" ajustado a ${qty} unidad(es)`)
       }
       closeStockModal()
       await loadItems({ silent: true, targetPage: page })
@@ -443,7 +461,7 @@ export function Inventario() {
           >
             Todos
           </button>
-          {CATEGORIES.map((cat) => (
+          {categories.map((cat) => (
             <button
               key={cat}
               type="button"
@@ -508,10 +526,10 @@ export function Inventario() {
                   {items.map((item) => (
                     <tr key={item.id}>
                       <td data-label="Código">
-                        <span className={styles.itemCode}>{item.code}</span>
+                        <span className={styles.itemCode}>{item.code || '—'}</span>
                       </td>
-                      <td data-label="Nombre">{item.name}</td>
-                      <td data-label="Marca">{item.brand}</td>
+                      <td data-label="Nombre">{item.name || <span className={styles.subText}>Sin nombre</span>}</td>
+                      <td data-label="Marca">{item.brand || '—'}</td>
                       <td data-label="Categoría">
                         {item.category ? (
                           <span className={styles.categoryBadge}>{item.category}</span>
@@ -564,6 +582,7 @@ export function Inventario() {
             page={page}
             totalPages={pagination.totalPages}
             total={pagination.total}
+            limit={LIMIT}
             onPageChange={setPage}
             disabled={loading}
           />
@@ -599,7 +618,7 @@ export function Inventario() {
 
             <form className={styles.form} onSubmit={handleCreate}>
               <label className={styles.formField}>
-                Código *
+                Código <span className={styles.optional}>(opcional)</span>
                 <input
                   name="code"
                   value={formData.code}
@@ -611,7 +630,7 @@ export function Inventario() {
               </label>
 
               <label className={styles.formField}>
-                Marca *
+                Marca <span className={styles.optional}>(opcional)</span>
                 <input
                   name="brand"
                   value={formData.brand}
@@ -623,7 +642,7 @@ export function Inventario() {
               </label>
 
               <label className={`${styles.formField} ${styles.fullWidth}`}>
-                Nombre del repuesto *
+                Nombre del repuesto <span className={styles.optional}>(opcional)</span>
                 <input
                   name="name"
                   value={formData.name}
@@ -635,7 +654,7 @@ export function Inventario() {
               </label>
 
               <label className={`${styles.formField} ${styles.fullWidth}`}>
-                Categoría *
+                Categoría <span className={styles.optional}>(opcional)</span>
                 <select
                   name="category"
                   value={formData.category}
@@ -644,7 +663,7 @@ export function Inventario() {
                   disabled={submitting}
                 >
                   <option value="">Selecciona una categoría…</option>
-                  {CATEGORIES.map((cat) => (
+                  {categories.map((cat) => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
@@ -652,7 +671,7 @@ export function Inventario() {
               </label>
 
               <label className={styles.formField}>
-                Stock inicial *
+                Stock inicial <span className={styles.optional}>(opcional, por defecto 0)</span>
                 <input
                   inputMode="numeric"
                   name="quantity"
@@ -665,7 +684,7 @@ export function Inventario() {
               </label>
 
               <label className={styles.formField}>
-                Stock mínimo *
+                Stock mínimo <span className={styles.optional}>(opcional, por defecto 5)</span>
                 <input
                   inputMode="numeric"
                   name="min_stock"
@@ -678,7 +697,7 @@ export function Inventario() {
               </label>
 
               <label className={styles.formField}>
-                Precio de compra (COP) *
+                Precio de compra (COP) <span className={styles.optional}>(opcional)</span>
                 <input
                   inputMode="decimal"
                   name="unit_price"
@@ -691,7 +710,7 @@ export function Inventario() {
               </label>
 
               <label className={styles.formField}>
-                Precio de venta (COP) *
+                Precio de venta (COP) <span className={styles.optional}>(opcional)</span>
                 <input
                   inputMode="decimal"
                   name="sale_price"
@@ -751,7 +770,7 @@ export function Inventario() {
 
             <p id="delete-inv-desc" className={styles.deleteDesc}>
               Estás a punto de eliminar{' '}
-              <strong>&ldquo;{deleteTarget.code} — {deleteTarget.name}&rdquo;</strong>.
+              <strong>&ldquo;{itemLabel(deleteTarget)}&rdquo;</strong>.
               Esta acción no se puede deshacer. El repuesto no puede tener historial en órdenes.
             </p>
 
@@ -805,7 +824,7 @@ export function Inventario() {
             <div className={styles.modalHeader}>
               <div>
                 <p className={styles.eyebrow}>Gestión de stock</p>
-                <h2 id="stock-modal-title">{stockTarget.name}</h2>
+                <h2 id="stock-modal-title">{itemLabel(stockTarget)}</h2>
               </div>
               <button
                 className={styles.iconButton}

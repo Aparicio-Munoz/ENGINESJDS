@@ -1,5 +1,6 @@
 .page {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 24px;
 }
 
@@ -33,7 +34,7 @@
 .eyebrow {
   color: #1d4ed8;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -48,11 +49,11 @@
 .summaryBar span {
   border: 1px solid #d9e1ec;
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   color: #344054;
   background: #ffffff;
   font-size: 0.92rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .summaryWarn {
@@ -229,7 +230,7 @@
 .table th,
 .table td {
   border-bottom: 1px solid #eef2f6;
-  padding: 14px 16px;
+  padding: 12px 16px;
   text-align: left;
   vertical-align: middle;
 }
@@ -238,7 +239,7 @@
   color: #475467;
   background: #f8fafc;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -301,9 +302,10 @@
 /* ── Cell styles ─────────────────────────────────── */
 .itemCode {
   font-family: ui-monospace, monospace;
-  font-weight: 800;
+  font-weight: 700;
   font-size: 0.88rem;
   color: #1d4ed8;
+  white-space: nowrap;
 }
 
 .categoryBadge {
@@ -317,11 +319,11 @@
 }
 
 .quantity {
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .price {
-  font-weight: 800;
+  font-weight: 700;
   color: #172033;
 }
 
@@ -334,7 +336,7 @@
   border-radius: 999px;
   padding: 5px 10px;
   font-size: 0.82rem;
-  font-weight: 800;
+  font-weight: 700;
   white-space: nowrap;
 }
 
@@ -380,11 +382,17 @@
   flex-wrap: wrap;
 }
 
+@media (min-width: 761px) {
+  .actionGroup {
+    flex-wrap: nowrap;
+  }
+}
+
 .stockButton {
   padding: 9px 12px;
   border: 0;
   border-radius: 8px;
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
   font-family: inherit;
   color: #065f46;
@@ -399,11 +407,11 @@
 .stockCurrentQty {
   margin: 0 0 12px;
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: #667085;
 }
 
 .stockCurrentQty strong {
-  color: #ffffff;
+  color: #101828;
   font-size: 1rem;
 }
 
@@ -414,7 +422,7 @@
 .iconButton {
   border: 0;
   border-radius: 8px;
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
   font-family: inherit;
 }
@@ -502,7 +510,7 @@
   gap: 8px;
   color: #344054;
   font-size: 0.9rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .fullWidth {
@@ -532,6 +540,20 @@
   color: #b42318;
   font-size: 0.85rem;
   font-weight: 700;
+}
+
+/* Combinado con `span` para ganarle en especificidad a `.formField span`
+   de arriba (pensado para mensajes de error) — ver Motocicientas/OrdenesTrabajo
+   para el mismo patrón. */
+.formField span.optional {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+
+.subText {
+  font-size: 0.82rem;
+  color: #667085;
 }
 
 .formActions {
@@ -594,7 +616,7 @@
 
 .required {
   color: #b42318;
-  font-weight: 800;
+  font-weight: 700;
   margin-left: 2px;
 }
 
@@ -627,7 +649,7 @@
   border: 0;
   border-radius: 8px;
   font-family: inherit;
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
   color: #ffffff;
   background: #dc2626;
@@ -659,12 +681,40 @@
 }
 
 @media (max-width: 760px) {
+  .modalBackdrop {
+    padding: 10px;
+  }
+
+  .modal {
+    padding: 16px;
+    border-radius: 12px;
+    max-height: min(92vh, 900px);
+  }
+
   .pageHeader {
     flex-direction: column;
   }
 
   .pageHeader .primaryButton {
     width: 100%;
+    min-height: 44px;
+  }
+
+  .summaryBar {
+    gap: 8px;
+  }
+
+  .summaryBar span {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+
+  /* ── Tabla → tarjetas apiladas (una por repuesto) ─────────── */
+  .tableWrapper {
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+    overflow: visible;
   }
 
   .table {
@@ -683,13 +733,17 @@
     width: 100%;
   }
 
-  .table tr {
-    border-bottom: 1px solid #eef2f6;
-    padding: 12px 0;
+  .table tbody tr {
+    background: #ffffff;
+    border: 1px solid #e4e9f2;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(16, 24, 40, 0.06);
+    overflow: hidden;
+    margin-bottom: 10px;
   }
 
   .table tbody tr:last-child {
-    border-bottom: 0;
+    margin-bottom: 0;
   }
 
   .table td {
@@ -697,20 +751,59 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    border-bottom: 0;
-    padding: 10px 16px;
+    border-bottom: 1px solid #f1f4f8;
+    padding: 10px 14px;
     text-align: right;
+    min-height: 44px;
+    box-sizing: border-box;
   }
 
   .table td::before {
     content: attr(data-label);
     color: #667085;
-    font-size: 0.78rem;
-    font-weight: 800;
+    font-size: 0.75rem;
+    font-weight: 600;
     letter-spacing: 0.06em;
     text-align: left;
     text-transform: uppercase;
     flex-shrink: 0;
+  }
+
+  /* Acciones: fila propia a ancho completo con botones grandes,
+     no compite por espacio contra su propia etiqueta */
+  .table td[data-label="Acciones"] {
+    display: block;
+    background: #fafbfd;
+    padding: 10px 12px 12px;
+    border-top: 1px solid #eef2f6;
+  }
+
+  .table td[data-label="Acciones"]::before {
+    display: none;
+  }
+
+  .actionGroup {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .stockButton,
+  .deleteButton {
+    flex: 1;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  /* Inputs a 16px: evita que iOS haga zoom automático al enfocar */
+  .formField input,
+  .formSelect,
+  .searchInput,
+  .filterSelect,
+  .textarea {
+    font-size: 16px;
   }
 
   .form {
@@ -723,6 +816,7 @@
 
   .formActions button {
     width: 100%;
+    min-height: 44px;
   }
 
   .categoryTabs {
@@ -735,5 +829,40 @@
 
   .categoryTabs::-webkit-scrollbar {
     display: none;
+  }
+
+  .categoryTab {
+    flex-shrink: 0;
+  }
+}
+
+/* ── Pantallas muy pequeñas (celulares gama media/baja) ──── */
+@media (max-width: 420px) {
+  .pageHeader h1 {
+    font-size: 1.6rem;
+  }
+
+  .summaryBar span {
+    font-size: 0.82rem;
+    padding: 7px 10px;
+  }
+
+  .modal {
+    padding: 14px;
+  }
+
+  .modalHeader h2 {
+    font-size: 1.25rem;
+  }
+
+  .table td {
+    padding: 9px 12px;
+    font-size: 0.88rem;
+  }
+
+  .stockButton,
+  .deleteButton {
+    font-size: 0.8rem;
+    padding: 9px 6px;
   }
 }

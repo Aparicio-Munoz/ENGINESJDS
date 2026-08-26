@@ -1,4 +1,4 @@
-.page { display: grid; gap: 24px; }
+.page { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
 .pageHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
 .pageHeader h1, .pageHeader p { margin: 0; }
 .pageHeader h1 { color: #101828; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.1; }

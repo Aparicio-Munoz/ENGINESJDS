@@ -138,7 +138,7 @@ export async function getEmployeePerformance() {
   const pool = getPool()
 
   // Query principal: datos de la vista (totales históricos + últimos 30 días)
-  const [[perfRows], [earningsRows]] = await Promise.all([
+  const [[perfRows], [earningsRows], [quickJobRows]] = await Promise.all([
     pool.query(
       `SELECT
          employee_id, employee_name, specialty,
@@ -149,40 +149,72 @@ export async function getEmployeePerformance() {
        FROM v_employee_performance
        ORDER BY completed_orders DESC`
     ),
-    // Ganancias con granularidad diaria / quincenal / mensual
+    // Ganancias por comisión con granularidad diaria / quincenal / mensual:
+    // SUM(labor_cost de las órdenes asignadas en el período) × commission_percent / 100.
+    // No incluye repuestos ni servicios — igual que el cálculo de /employees/:id/earnings.
+    // entry_date se guarda en hora del servidor (UTC) — se convierte a
+    // -05:00 (Bogotá) antes de comparar contra "hoy", igual que en los
+    // trabajos rápidos más abajo, para no atribuir mal las órdenes de la
+    // noche (7pm-medianoche hora Colombia) al día calendario equivocado.
     pool.query(
       `SELECT
          e.id AS employee_id,
          COALESCE(SUM(
-           CASE WHEN DATE(o.entry_date) = CURDATE()
-           THEN os.total_price END), 0)                         AS daily_earnings,
+           CASE WHEN DATE(CONVERT_TZ(o.entry_date, '+00:00', '-05:00'))
+                     = DATE(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'))
+           THEN o.labor_cost END), 0) * e.commission_percent / 100         AS daily_earnings,
          COALESCE(SUM(
-           CASE WHEN o.entry_date >= DATE_SUB(CURDATE(), INTERVAL 14 DAY)
-           THEN os.total_price END), 0)                         AS biweekly_earnings,
+           CASE WHEN CONVERT_TZ(o.entry_date, '+00:00', '-05:00')
+                     >= DATE_SUB(DATE(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00')), INTERVAL 14 DAY)
+           THEN o.labor_cost END), 0) * e.commission_percent / 100         AS biweekly_earnings,
          COALESCE(SUM(
-           CASE WHEN YEAR(o.entry_date)  = YEAR(CURDATE())
-                AND  MONTH(o.entry_date) = MONTH(CURDATE())
-           THEN os.total_price END), 0)                         AS monthly_earnings
+           CASE WHEN YEAR(CONVERT_TZ(o.entry_date, '+00:00', '-05:00'))
+                      = YEAR(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'))
+                AND  MONTH(CONVERT_TZ(o.entry_date, '+00:00', '-05:00'))
+                      = MONTH(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'))
+           THEN o.labor_cost END), 0) * e.commission_percent / 100         AS monthly_earnings
        FROM employees e
-       LEFT JOIN order_services os ON os.employee_id = e.id
-       LEFT JOIN orders         o  ON o.id = os.order_id
+       LEFT JOIN orders o ON o.assigned_employee_id = e.id
        WHERE e.deleted_at IS NULL
-       GROUP BY e.id`
+       GROUP BY e.id, e.commission_percent`
+    ),
+    // Trabajos rápidos: monto pleno (sin comisión), mismas 3 ventanas.
+    // created_at es TIMESTAMP en UTC real (servidor gestionado corre en
+    // UTC) — se convierte explícitamente a -05:00 (Bogotá, sin horario de
+    // verano) para que "hoy" no se calcule mal entre las 7pm y medianoche
+    // hora Colombia.
+    pool.query(
+      `SELECT
+         employee_id,
+         COALESCE(SUM(CASE WHEN DATE(CONVERT_TZ(created_at, '+00:00', '-05:00'))
+                                = DATE(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'))
+                       THEN price END), 0)                                 AS daily_total,
+         COALESCE(SUM(CASE WHEN CONVERT_TZ(created_at, '+00:00', '-05:00')
+                                >= DATE_SUB(DATE(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00')), INTERVAL 14 DAY)
+                       THEN price END), 0)                                 AS biweekly_total,
+         COALESCE(SUM(CASE WHEN YEAR(CONVERT_TZ(created_at, '+00:00', '-05:00'))
+                                 = YEAR(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'))
+                            AND MONTH(CONVERT_TZ(created_at, '+00:00', '-05:00'))
+                                 = MONTH(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'))
+                       THEN price END), 0)                                 AS monthly_total
+       FROM quick_jobs
+       WHERE deleted_at IS NULL
+       GROUP BY employee_id`
     ),
   ])
 
   // Merge earnings into performance rows usando Map
-  const earningsMap = new Map(
-    earningsRows.map((r) => [r.employee_id, r])
-  )
+  const earningsMap  = new Map(earningsRows.map((r) => [r.employee_id, r]))
+  const quickJobsMap = new Map(quickJobRows.map((r) => [r.employee_id, r]))
 
   return perfRows.map((emp) => {
     const earn = earningsMap.get(emp.employee_id) ?? {}
+    const qj   = quickJobsMap.get(emp.employee_id) ?? {}
     return {
       ...emp,
-      daily_earnings:    Number(earn.daily_earnings    ?? 0),
-      biweekly_earnings: Number(earn.biweekly_earnings ?? 0),
-      monthly_earnings:  Number(earn.monthly_earnings  ?? 0),
+      daily_earnings:    Number(earn.daily_earnings    ?? 0) + Number(qj.daily_total    ?? 0),
+      biweekly_earnings: Number(earn.biweekly_earnings ?? 0) + Number(qj.biweekly_total ?? 0),
+      monthly_earnings:  Number(earn.monthly_earnings  ?? 0) + Number(qj.monthly_total  ?? 0),
       daily_rate:        Number(emp.daily_rate),
       services_revenue:  Number(emp.services_revenue ?? 0),
       revenue_last_30_days: Number(emp.revenue_last_30_days ?? 0),
@@ -226,7 +258,8 @@ export async function getExecutiveKPIs() {
   const pool = getPool()
   const [
     [clientsRow], [motosRow], [activeRow], [deliveredRow],
-    [monthRevenueRow], [yearRevenueRow], [pendingApptsRow], [lowStockRow],
+    [monthRevenueRow], [yearRevenueRow], [dailyRevenueRow], [fortnightRevenueRow],
+    [pendingApptsRow], [lowStockRow],
     [statusRows],
   ] = await Promise.all([
     pool.query('SELECT COUNT(*) AS cnt FROM clients WHERE deleted_at IS NULL'),
@@ -238,6 +271,24 @@ export async function getExecutiveKPIs() {
                 AND MONTH(actual_delivery_date) = MONTH(CURDATE())`),
     pool.query(`SELECT COALESCE(SUM(final_price), 0) AS revenue FROM orders
                 WHERE status = 'Entregada' AND YEAR(actual_delivery_date) = YEAR(CURDATE())`),
+    // Ganancias de hoy — actual_delivery_date se guarda en UTC real; se
+    // convierte a -05:00 (Bogotá, sin horario de verano) antes de comparar
+    // contra "hoy", igual que en getEmployeePerformance() más abajo, para
+    // no perder entregas de la noche (7pm-medianoche hora Colombia).
+    pool.query(`SELECT COALESCE(SUM(final_price), 0) AS revenue FROM orders
+                WHERE status = 'Entregada'
+                  AND DATE(CONVERT_TZ(actual_delivery_date, '+00:00', '-05:00'))
+                    = DATE(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'))`),
+    // Ganancias de la quincena actual — quincena calendario: 1-15 o 16-fin
+    // de mes, según el día de hoy (hora Bogotá).
+    pool.query(`SELECT COALESCE(SUM(final_price), 0) AS revenue FROM orders
+                WHERE status = 'Entregada'
+                  AND YEAR(CONVERT_TZ(actual_delivery_date, '+00:00', '-05:00'))
+                    = YEAR(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'))
+                  AND MONTH(CONVERT_TZ(actual_delivery_date, '+00:00', '-05:00'))
+                    = MONTH(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'))
+                  AND (DAY(CONVERT_TZ(actual_delivery_date, '+00:00', '-05:00')) <= 15)
+                    = (DAY(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00')) <= 15)`),
     pool.query("SELECT COUNT(*) AS cnt FROM appointments WHERE status = 'Pendiente'"),
     pool.query('SELECT COUNT(*) AS cnt FROM inventory WHERE quantity <= min_stock'),
     pool.query(`SELECT status, COUNT(*) AS cnt FROM orders GROUP BY status`),
@@ -247,14 +298,16 @@ export async function getExecutiveKPIs() {
   for (const r of statusRows) ordersByStatus[r.status] = Number(r.cnt)
 
   return {
-    totalClients:     Number(clientsRow[0].cnt),
-    totalMotorcycles: Number(motosRow[0].cnt),
-    activeOrders:     Number(activeRow[0].cnt),
-    deliveredOrders:  Number(deliveredRow[0].cnt),
-    monthlyRevenue:   Number(monthRevenueRow[0].revenue),
-    yearlyRevenue:    Number(yearRevenueRow[0].revenue),
-    pendingAppts:     Number(pendingApptsRow[0].cnt),
-    lowStockItems:    Number(lowStockRow[0].cnt),
+    totalClients:      Number(clientsRow[0].cnt),
+    totalMotorcycles:  Number(motosRow[0].cnt),
+    activeOrders:      Number(activeRow[0].cnt),
+    deliveredOrders:   Number(deliveredRow[0].cnt),
+    monthlyRevenue:    Number(monthRevenueRow[0].revenue),
+    yearlyRevenue:     Number(yearRevenueRow[0].revenue),
+    dailyRevenue:      Number(dailyRevenueRow[0].revenue),
+    fortnightRevenue:  Number(fortnightRevenueRow[0].revenue),
+    pendingAppts:      Number(pendingApptsRow[0].cnt),
+    lowStockItems:     Number(lowStockRow[0].cnt),
     ordersByStatus,
   }
 }
@@ -290,6 +343,57 @@ export async function getMonthlyRevenue() {
   return rows
 }
 
+// ── Chart data: ganancias diarias del mes en curso ────────────
+// Un punto por día 1..N del mes actual (hora Bogotá) — los días sin
+// entregas quedan en 0 en vez de faltar, para que el gráfico muestre
+// picos y días bajos reales, no solo los días con ventas.
+export async function getDailyRevenueThisMonth() {
+  const pool = getPool()
+  const [[{ daysInMonth }]] = await pool.query(
+    `SELECT DAY(LAST_DAY(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'))) AS daysInMonth`
+  )
+  const [rows] = await pool.query(
+    `SELECT
+       DAY(CONVERT_TZ(actual_delivery_date, '+00:00', '-05:00')) AS day_number,
+       COALESCE(SUM(final_price), 0)                             AS revenue
+     FROM orders
+     WHERE status = 'Entregada'
+       AND YEAR(CONVERT_TZ(actual_delivery_date, '+00:00', '-05:00'))
+         = YEAR(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'))
+       AND MONTH(CONVERT_TZ(actual_delivery_date, '+00:00', '-05:00'))
+         = MONTH(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'))
+     GROUP BY day_number`
+  )
+  const revenueByDay = new Map(rows.map((r) => [Number(r.day_number), Number(r.revenue)]))
+  return Array.from({ length: Number(daysInMonth) }, (_, i) => ({
+    day_number: i + 1,
+    revenue: revenueByDay.get(i + 1) ?? 0,
+  }))
+}
+
+// ── Chart data: comparación quincena 1 vs quincena 2 del mes ──
+export async function getFortnightComparison() {
+  const [rows] = await getPool().query(
+    `SELECT
+       IF(DAY(CONVERT_TZ(actual_delivery_date, '+00:00', '-05:00')) <= 15, 'primera', 'segunda') AS fortnight,
+       COUNT(*)                         AS orders_count,
+       COALESCE(SUM(final_price), 0)    AS revenue
+     FROM orders
+     WHERE status = 'Entregada'
+       AND YEAR(CONVERT_TZ(actual_delivery_date, '+00:00', '-05:00'))
+         = YEAR(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'))
+       AND MONTH(CONVERT_TZ(actual_delivery_date, '+00:00', '-05:00'))
+         = MONTH(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'))
+     GROUP BY fortnight`
+  )
+  const byFortnight = new Map(rows.map((r) => [r.fortnight, r]))
+  return ['primera', 'segunda'].map((fortnight) => ({
+    fortnight,
+    orders_count: Number(byFortnight.get(fortnight)?.orders_count ?? 0),
+    revenue: Number(byFortnight.get(fortnight)?.revenue ?? 0),
+  }))
+}
+
 // ── Chart data: servicios más vendidos ────────────────────────
 export async function getTopServices(limit = 10) {
   const [rows] = await getPool().query(
@@ -310,7 +414,7 @@ export async function getTopServices(limit = 10) {
 export async function getTopClients(limit = 10) {
   const [rows] = await getPool().query(
     `SELECT
-       CONCAT(c.name, ' ', c.last_name) AS client_name,
+       CONCAT_WS(' ', c.name, c.last_name) AS client_name,
        c.phone,
        COUNT(o.id)                       AS orders_count,
        COALESCE(SUM(o.final_price), 0)  AS total_spent

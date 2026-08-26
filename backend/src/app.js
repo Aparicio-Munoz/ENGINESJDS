@@ -7,6 +7,7 @@ import morgan from 'morgan'
 import { validateEnv } from './config/env.js'
 import { apiRouter } from './routes/index.js'
 import { errorHandler } from './middlewares/error.middleware.js'
+import { apiLimiter } from './middlewares/rateLimit.middleware.js'
 
 validateEnv()
 
@@ -39,7 +40,7 @@ app.use(express.urlencoded({ extended: false }))
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'))
 
 // ── Rutas API ─────────────────────────────────────────────
-app.use('/api', apiRouter)
+app.use('/api', apiLimiter, apiRouter)
 
 // ── Health check ──────────────────────────────────────────
 app.get('/health', (_req, res) => {

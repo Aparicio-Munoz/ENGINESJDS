@@ -1,5 +1,6 @@
 import { getPool } from '../config/database.js'
 import * as EmployeeModel from '../models/employee.model.js'
+import * as QuickJobModel from '../models/quickJob.model.js'
 import { ApiError } from '../utils/ApiError.js'
 import { auditEntity, AUDIT_ACTIONS } from './audit.service.js'
 
@@ -104,8 +105,8 @@ export async function getPerformance(id) {
   }
 }
 
-// Ganancias por comisión: total de las órdenes asignadas
-// (mano de obra + repuestos − descuento) × % de comisión del empleado
+// Ganancias por comisión: mano de obra de las órdenes asignadas
+// × % de comisión del empleado (no incluye repuestos ni servicios)
 export async function getEarningsByRange(id, { from, to } = {}) {
   const employee = await getById(id)
 
@@ -118,11 +119,14 @@ export async function getEarningsByRange(id, { from, to } = {}) {
     throw ApiError.badRequest('El rango de fechas es inválido: "desde" es posterior a "hasta"')
   }
 
-  const { order_total, orders_count, orders } =
-    await EmployeeModel.getOrderEarnings(id, fromDate, toDate)
+  const [{ labor_total, orders_count, orders }, { total: quickJobsTotal, jobs: quickJobs }] =
+    await Promise.all([
+      EmployeeModel.getOrderEarnings(id, fromDate, toDate),
+      QuickJobModel.getRangeByEmployee(id, fromDate, toDate),
+    ])
 
   const commissionPercent = Number(employee.commission_percent ?? 0)
-  const commissionAmount  = Math.round(order_total * commissionPercent) / 100
+  const commissionAmount  = Math.round(labor_total * commissionPercent) / 100
 
   return {
     employee: {
@@ -133,10 +137,13 @@ export async function getEarningsByRange(id, { from, to } = {}) {
     },
     from: fromDate,
     to:   toDate,
-    order_total:       order_total,
+    labor_total:       labor_total,
     orders_count,
     commission_amount: commissionAmount,
     orders,
+    quick_jobs_total: quickJobsTotal,
+    quick_jobs:       quickJobs,
+    total_earnings:   commissionAmount + quickJobsTotal,
   }
 }
 

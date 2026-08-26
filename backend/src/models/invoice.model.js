@@ -45,8 +45,8 @@ export async function findAll({
             m.plate AS motorcycle_plate, m.brand AS motorcycle_brand
      FROM invoices i
      INNER JOIN orders o ON o.id = i.order_id
-     INNER JOIN clients c ON c.id = o.client_id
-     INNER JOIN motorcycles m ON m.id = o.motorcycle_id
+     LEFT JOIN clients c ON c.id = o.client_id
+     LEFT JOIN motorcycles m ON m.id = o.motorcycle_id
      ${where}
      ORDER BY i.created_at DESC
      LIMIT ? OFFSET ?`,
@@ -66,8 +66,8 @@ export async function findById(id) {
             CONCAT(e.name, ' ', e.last_name) AS employee_name
      FROM invoices i
      INNER JOIN orders o ON o.id = i.order_id
-     INNER JOIN clients c ON c.id = o.client_id
-     INNER JOIN motorcycles m ON m.id = o.motorcycle_id
+     LEFT JOIN clients c ON c.id = o.client_id
+     LEFT JOIN motorcycles m ON m.id = o.motorcycle_id
      LEFT JOIN employees e ON e.id = o.assigned_employee_id AND e.deleted_at IS NULL
      WHERE i.id = ?`, [id]
   )
@@ -98,23 +98,39 @@ export async function markCancelled(id) {
   return findById(id)
 }
 
+// Fecha "hoy" en hora de Bogotá — el servidor gestionado (Vercel + Aiven)
+// corre en UTC, así que `new Date().toISOString()` (o CURDATE() sin
+// convertir) calculaban mal "hoy" entre las 7pm y medianoche hora
+// Colombia. Intl.DateTimeFormat con timeZone explícito no depende de la
+// zona horaria del sistema operativo del runtime.
+function bogotaToday() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date())
+}
+
 export async function getDailySummary(date = null) {
-  const targetDate = date ?? new Date().toISOString().slice(0, 10)
+  const targetDate = date ?? bogotaToday()
   const pool = getPool()
 
+  // "Pagado hoy" se mide por paid_at (cuándo entró el dinero), no por
+  // created_at (cuándo se generó la factura) — una factura creada ayer y
+  // pagada hoy debe contar en el total de hoy. "Pendiente" es el total
+  // adeudado en general, sin acotar por fecha (así lo muestra la UI, sin
+  // "hoy" en la etiqueta) — antes quedaba en $0 en cuanto pasaba el día
+  // de creación de la factura pendiente.
+  const paidToday = `status = 'Pagada' AND DATE(CONVERT_TZ(paid_at, '+00:00', '-05:00')) = ?`
   const [[totals]] = await pool.query(
     `SELECT
-       COUNT(*) AS total_invoices,
-       COALESCE(SUM(CASE WHEN status = 'Pagada' THEN total ELSE 0 END), 0) AS total_paid,
-       COALESCE(SUM(CASE WHEN status = 'Pendiente' THEN total ELSE 0 END), 0) AS total_pending,
-       COALESCE(SUM(CASE WHEN status = 'Pagada' AND payment_method = 'Efectivo' THEN total ELSE 0 END), 0) AS efectivo,
-       COALESCE(SUM(CASE WHEN status = 'Pagada' AND payment_method = 'Transferencia' THEN total ELSE 0 END), 0) AS transferencia,
-       COALESCE(SUM(CASE WHEN status = 'Pagada' AND payment_method = 'Nequi' THEN total ELSE 0 END), 0) AS nequi,
-       COALESCE(SUM(CASE WHEN status = 'Pagada' AND payment_method = 'Daviplata' THEN total ELSE 0 END), 0) AS daviplata,
-       COALESCE(SUM(CASE WHEN status = 'Pagada' AND payment_method = 'Tarjeta' THEN total ELSE 0 END), 0) AS tarjeta
-     FROM invoices
-     WHERE DATE(created_at) = ?`,
-    [targetDate]
+       COALESCE(SUM(CASE WHEN DATE(CONVERT_TZ(created_at, '+00:00', '-05:00')) = ?
+                     THEN 1 ELSE 0 END), 0)                                        AS total_invoices,
+       COALESCE(SUM(CASE WHEN ${paidToday} THEN total ELSE 0 END), 0)              AS total_paid,
+       COALESCE(SUM(CASE WHEN status = 'Pendiente' THEN total ELSE 0 END), 0)      AS total_pending,
+       COALESCE(SUM(CASE WHEN ${paidToday} AND payment_method = 'Efectivo'      THEN total ELSE 0 END), 0) AS efectivo,
+       COALESCE(SUM(CASE WHEN ${paidToday} AND payment_method = 'Transferencia' THEN total ELSE 0 END), 0) AS transferencia,
+       COALESCE(SUM(CASE WHEN ${paidToday} AND payment_method = 'Nequi'         THEN total ELSE 0 END), 0) AS nequi,
+       COALESCE(SUM(CASE WHEN ${paidToday} AND payment_method = 'Daviplata'     THEN total ELSE 0 END), 0) AS daviplata,
+       COALESCE(SUM(CASE WHEN ${paidToday} AND payment_method = 'Tarjeta'       THEN total ELSE 0 END), 0) AS tarjeta
+     FROM invoices`,
+    [targetDate, targetDate, targetDate, targetDate, targetDate, targetDate, targetDate]
   )
 
   return {

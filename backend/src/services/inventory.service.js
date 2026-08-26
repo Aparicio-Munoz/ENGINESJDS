@@ -47,11 +47,15 @@ export async function getMovements(id, { page = 1, limit = 30 } = {}) {
 export async function create(data) {
   const { code, unit_price, sale_price } = data
 
-  if (await InventoryModel.codeExists(code)) {
+  if (code && await InventoryModel.codeExists(code)) {
     throw ApiError.conflict(`El código ${code} ya está registrado`)
   }
 
-  _assertPrices(unit_price, sale_price)
+  // Precios sin enviar equivalen al default del modelo (0) — se comparan
+  // con ese valor efectivo para no violar chk_inventory_prices en el INSERT.
+  const unitPrice = unit_price !== undefined ? Number(unit_price) : 0
+  const salePrice = sale_price !== undefined ? Number(sale_price) : 0
+  _assertPrices(unitPrice, salePrice)
 
   return InventoryModel.create(data)
 }

@@ -1,5 +1,6 @@
 .page {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 24px;
 }
 
@@ -32,7 +33,7 @@
 .eyebrow {
   color: #1d4ed8;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -46,11 +47,11 @@
 .summaryBar span {
   border: 1px solid #d9e1ec;
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   color: #344054;
   background: #ffffff;
   font-size: 0.92rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .tableWrapper {
@@ -70,7 +71,7 @@
 .table th,
 .table td {
   border-bottom: 1px solid #eef2f6;
-  padding: 16px;
+  padding: 12px 16px;
   text-align: left;
   vertical-align: middle;
 }
@@ -79,7 +80,7 @@
   color: #475467;
   background: #f8fafc;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -97,10 +98,15 @@
   font-family: ui-monospace, monospace;
   font-size: 0.88rem;
   color: #475467;
+  white-space: nowrap;
+}
+
+.specialtyText {
+  white-space: nowrap;
 }
 
 .employeeName {
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .statusBadge {
@@ -110,7 +116,7 @@
   border-radius: 999px;
   padding: 5px 10px;
   font-size: 0.82rem;
-  font-weight: 800;
+  font-weight: 700;
   white-space: nowrap;
 }
 
@@ -136,11 +142,20 @@
   flex-wrap: wrap;
 }
 
+/* En desktop, evita que los botones se apilen verticalmente y dejen la
+   columna Acciones angosta — el auto-layout de la tabla reserva el ancho
+   real que necesitan en vez de subestimarlo por el flex-wrap. */
+@media (min-width: 761px) {
+  .actionGroup {
+    flex-wrap: nowrap;
+  }
+}
+
 .statusButton {
   padding: 9px 12px;
   border: 0;
   border-radius: 8px;
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
   font-family: inherit;
   color: #1d4ed8;
@@ -183,7 +198,7 @@
 .iconButton {
   border: 0;
   border-radius: 8px;
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -263,7 +278,7 @@
   display: grid;
   gap: 8px;
   color: #344054;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .formField input,
@@ -411,7 +426,7 @@
 
 .required {
   color: #b42318;
-  font-weight: 800;
+  font-weight: 700;
   margin-left: 2px;
 }
 
@@ -444,7 +459,7 @@
   border: 0;
   border-radius: 8px;
   font-family: inherit;
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
   color: #ffffff;
   background: #dc2626;
@@ -477,7 +492,7 @@
 .sectionTitle {
   margin: 0 0 4px;
   font-size: 1.2rem;
-  font-weight: 800;
+  font-weight: 700;
   color: #101828;
 }
 
@@ -559,7 +574,7 @@
 .eomName {
   margin: 0 0 2px;
   font-size: 1.25rem;
-  font-weight: 800;
+  font-weight: 700;
   color: #78350F;
 }
 
@@ -584,7 +599,7 @@
 
 .eomStat strong {
   font-size: 1.6rem;
-  font-weight: 800;
+  font-weight: 700;
   color: #78350F;
   line-height: 1;
 }
@@ -642,7 +657,7 @@
   background: linear-gradient(135deg, #1d4ed8, #3b82f6);
   color: #ffffff;
   font-size: 0.85rem;
-  font-weight: 800;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -703,7 +718,7 @@
 
 .orderStatValue {
   font-size: 1.5rem;
-  font-weight: 800;
+  font-weight: 700;
   color: #101828;
   line-height: 1;
 }
@@ -736,7 +751,7 @@
 
 .progressPct {
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 700;
   color: #101828;
 }
 
@@ -772,7 +787,7 @@
 
 .earningValue {
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 700;
   color: #101828;
 }
 
@@ -805,7 +820,7 @@
 
 .revenueValue {
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 700;
   color: #059669;
 }
 
@@ -838,6 +853,16 @@
 }
 
 @media (max-width: 760px) {
+  .modalBackdrop {
+    padding: 10px;
+  }
+
+  .modal {
+    padding: 16px;
+    border-radius: 12px;
+    max-height: min(92vh, 900px);
+  }
+
   .pageHeader {
     flex-direction: column;
   }
@@ -885,7 +910,7 @@
     content: attr(data-label);
     color: #667085;
     font-size: 0.78rem;
-    font-weight: 800;
+    font-weight: 600;
     letter-spacing: 0.06em;
     text-align: left;
     text-transform: uppercase;

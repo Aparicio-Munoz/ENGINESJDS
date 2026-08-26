@@ -3,7 +3,6 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useSocket } from '../../context/SocketContext'
 import { GlobalSearch } from '../../components/GlobalSearch/GlobalSearch'
-import { NotificationCenter } from '../../components/NotificationCenter/NotificationCenter'
 import { ROUTES } from '../../utils/routes'
 import styles from './DashboardLayout.module.css'
 
@@ -442,7 +441,6 @@ export function DashboardLayout() {
           </button>
           <GlobalSearch />
           <RealtimeBell />
-          <NotificationCenter />
         </div>
 
         {/* Banner de acceso denegado */}

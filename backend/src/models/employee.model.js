@@ -212,16 +212,27 @@ export async function getEarnings(employeeId) {
   return rows[0]
 }
 
-// Total generado (mano de obra + repuestos − descuento) por el empleado
-// (técnico asignado) en un rango de fechas — base para el cálculo de comisión
+// Mano de obra generada por el técnico asignado en un rango de fechas —
+// base para el cálculo de comisión: SUM(labor_cost) × commission_percent / 100.
+// No incluye repuestos ni servicios — la comisión del técnico se calcula
+// únicamente sobre la mano de obra de sus órdenes asignadas.
+// entry_date se guarda en hora del servidor (UTC — el proveedor gestionado
+// corre en UTC). Se convierte explícitamente a -05:00 (Bogotá, sin horario
+// de verano) antes de comparar contra el rango "desde/hasta" que llega del
+// selector de fecha del frontend (ya en hora local), para que no se
+// desalineen entre las 7pm y medianoche hora Colombia.
+function bogotaDateBetween(column) {
+  return `DATE(CONVERT_TZ(${column}, '+00:00', '-05:00')) BETWEEN ? AND ?`
+}
+
 export async function getOrderEarnings(employeeId, from, to) {
   const [[totals]] = await getPool().query(
     `SELECT
-       COALESCE(SUM(final_price), 0) AS order_total,
-       COUNT(*)                      AS orders_count
+       COALESCE(SUM(labor_cost), 0) AS labor_total,
+       COUNT(*)                     AS orders_count
      FROM orders
      WHERE assigned_employee_id = ?
-       AND DATE(entry_date) BETWEEN ? AND ?`,
+       AND ${bogotaDateBetween('entry_date')}`,
     [employeeId, from, to]
   )
 
@@ -231,15 +242,15 @@ export async function getOrderEarnings(employeeId, from, to) {
        o.labor_cost, o.parts_cost, o.discount, o.final_price,
        m.plate AS motorcycle_plate, m.brand AS motorcycle_brand
      FROM orders o
-     INNER JOIN motorcycles m ON m.id = o.motorcycle_id
+     LEFT JOIN motorcycles m ON m.id = o.motorcycle_id
      WHERE o.assigned_employee_id = ?
-       AND DATE(o.entry_date) BETWEEN ? AND ?
+       AND ${bogotaDateBetween('o.entry_date')}
      ORDER BY o.entry_date DESC`,
     [employeeId, from, to]
   )
 
   return {
-    order_total:  Number(totals.order_total),
+    labor_total:  Number(totals.labor_total),
     orders_count: Number(totals.orders_count),
     orders,
   }

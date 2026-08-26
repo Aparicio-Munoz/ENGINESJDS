@@ -1,5 +1,6 @@
 .page {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 24px;
 }
 
@@ -32,7 +33,7 @@
 .eyebrow {
   color: #1d4ed8;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -46,11 +47,11 @@
 .summaryBar span {
   border: 1px solid #d9e1ec;
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   color: #344054;
   background: #ffffff;
   font-size: 0.92rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .tableWrapper {
@@ -70,7 +71,7 @@
 .table th,
 .table td {
   border-bottom: 1px solid #eef2f6;
-  padding: 16px;
+  padding: 12px 16px;
   text-align: left;
   vertical-align: middle;
 }
@@ -79,7 +80,7 @@
   color: #475467;
   background: #f8fafc;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -95,7 +96,7 @@
 
 .clientName {
   display: block;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .primaryButton,
@@ -104,7 +105,7 @@
 .iconButton {
   border: 0;
   border-radius: 8px;
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -132,6 +133,33 @@
 
 .deleteButton:hover {
   background: #fecaca;
+}
+
+.editButton {
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 8px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.editButton:hover {
+  background: #bfdbfe;
+}
+
+.actionsCell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+@media (min-width: 761px) {
+  .actionsCell {
+    flex-wrap: nowrap;
+  }
 }
 
 .iconButton {
@@ -180,11 +208,21 @@
   gap: 16px;
 }
 
+.formAlert {
+  grid-column: 1 / -1;
+  padding: 0.75rem;
+  background: #fee2e2;
+  border-radius: 8px;
+  color: #dc2626;
+  font-size: 0.875rem;
+}
+
 .formField {
   display: grid;
+  align-content: start;
   gap: 8px;
   color: #344054;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .fullWidth {
@@ -221,12 +259,6 @@
   outline: 3px solid #bfdbfe;
 }
 
-.required {
-  color: #b42318;
-  font-weight: 800;
-  margin-left: 2px;
-}
-
 .optional {
   font-weight: 400;
   color: #94A3B8;
@@ -247,7 +279,7 @@
 .eyebrowDanger {
   color: #b42318;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -324,6 +356,16 @@
 }
 
 @media (max-width: 760px) {
+  .modalBackdrop {
+    padding: 10px;
+  }
+
+  .modal {
+    padding: 16px;
+    border-radius: 12px;
+    max-height: min(92vh, 900px);
+  }
+
   .pageHeader {
     flex-direction: column;
   }

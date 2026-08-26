@@ -3,6 +3,11 @@ import { Toast } from '../components/Toast/Toast'
 
 export const ToastContext = createContext(null)
 
+// Los errores llevan información que hay que leer (ej. por qué no se
+// pudo cerrar una orden) — se quedan más tiempo en pantalla que una
+// confirmación rápida de éxito.
+const DEFAULT_DURATIONS = { success: 4000, info: 4000, warning: 6000, error: 7000 }
+
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([])
 
@@ -10,11 +15,12 @@ export function ToastProvider({ children }) {
     setToasts((prev) => prev.filter((t) => t.id !== id))
   }, [])
 
-  const addToast = useCallback((message, type = 'info', duration = 4000) => {
+  const addToast = useCallback((message, type = 'info', duration) => {
     const id = crypto.randomUUID()
     setToasts((prev) => [...prev, { id, message, type }])
-    if (duration > 0) {
-      setTimeout(() => removeToast(id), duration)
+    const effectiveDuration = duration ?? DEFAULT_DURATIONS[type] ?? 4000
+    if (effectiveDuration > 0) {
+      setTimeout(() => removeToast(id), effectiveDuration)
     }
   }, [removeToast])
 

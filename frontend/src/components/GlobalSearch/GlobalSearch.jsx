@@ -35,7 +35,7 @@ const CATEGORIES = [
     ),
     getData: () => getMotorcycles([]),
     match: (item, q) => item.plate?.toLowerCase().includes(q) || item.brand?.toLowerCase().includes(q) || item.model?.toLowerCase().includes(q),
-    getTitle: (item) => `${item.plate} — ${item.brand} ${item.model}`,
+    getTitle: (item) => [item.plate, [item.brand, item.model].filter(Boolean).join(' ')].filter(Boolean).join(' — ') || `Moto #${item.id}`,
     getSub: (item) => item.ownerName || '',
   },
   {

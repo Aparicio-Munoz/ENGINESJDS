@@ -7,7 +7,7 @@
 }
 
 .shellOpen {
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: 240px 1fr;
 }
 
 .shellClosed {
@@ -191,7 +191,7 @@
   background: linear-gradient(135deg, #F97316, #EA580C);
   color: #ffffff;
   font-size: 0.85rem;
-  font-weight: 800;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -254,7 +254,7 @@
   position: absolute; top: 4px; right: 4px;
   min-width: 18px; height: 18px; padding: 0 4px;
   border-radius: 999px; background: #DC2626; color: #fff;
-  font-size: 0.68rem; font-weight: 800; display: flex;
+  font-size: 0.68rem; font-weight: 700; display: flex;
   align-items: center; justify-content: center; line-height: 1;
 }
 .bellDropdown {
@@ -360,9 +360,9 @@
 }
 
 .mainContent {
-  width: min(1180px, calc(100% - 48px));
+  width: min(1520px, calc(100% - 64px));
   margin: 0 auto;
-  padding: 32px 0;
+  padding: 28px 0;
 }
 
 /* ── Mobile: sidebar becomes drawer ───────────────── */

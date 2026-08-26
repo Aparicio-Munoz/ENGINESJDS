@@ -16,6 +16,7 @@ import historyRoutes     from './history.routes.js'
 import reminderRoutes    from './reminders.routes.js'
 import settingsRoutes    from './settings.routes.js'
 import publicRoutes      from './public.routes.js'
+import quickJobsRoutes   from './quickJobs.routes.js'
 import { sendTestEmail } from '../services/email.service.js'
 
 export const apiRouter = Router()
@@ -41,6 +42,7 @@ apiRouter.use('/invoices',     invoiceRoutes)
 apiRouter.use('/history',      historyRoutes)
 apiRouter.use('/reminders',    reminderRoutes)
 apiRouter.use('/settings',     settingsRoutes)
+apiRouter.use('/quick-jobs',   quickJobsRoutes)
 
 // ── Panel Técnico (requiere rol Técnico) ──────────────
 apiRouter.use('/technician',   technicianRoutes)

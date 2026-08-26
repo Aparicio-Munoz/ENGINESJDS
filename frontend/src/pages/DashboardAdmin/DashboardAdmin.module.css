@@ -1,5 +1,6 @@
 .page {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 24px;
 }
 
@@ -16,7 +17,7 @@
   margin: 0 0 6px;
   color: #F97316;
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -24,7 +25,7 @@
 .title {
   margin: 0 0 6px;
   font-size: clamp(1.6rem, 3vw, 2.4rem);
-  font-weight: 800;
+  font-weight: 700;
   color: #0F172A;
   line-height: 1.15;
 }
@@ -55,7 +56,7 @@
   color: #344054;
   font-family: inherit;
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
 }
@@ -75,7 +76,7 @@
   background: #F97316;
   color: #fff;
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 600;
   text-decoration: none;
   transition: background 0.15s, transform 0.15s;
 }
@@ -114,14 +115,14 @@
   background: #F97316;
   color: #fff;
   font-family: inherit;
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
 }
 
 /* ── KPI Grid ─────────────────────────────────────── */
 .kpiGrid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -171,7 +172,7 @@
 
 .kpiValue {
   font-size: 1.6rem;
-  font-weight: 800;
+  font-weight: 700;
   color: #0F172A;
   line-height: 1.1;
 }
@@ -185,7 +186,7 @@
 /* ── Charts Grid ──────────────────────────────────── */
 .chartsGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
 }
 
@@ -215,7 +216,7 @@
 .chartTitle {
   margin: 0;
   font-size: 0.92rem;
-  font-weight: 800;
+  font-weight: 700;
   color: #0F172A;
 }
 
@@ -236,7 +237,7 @@
 /* ── Bottom grid (técnicos, clientes, alertas) ───── */
 .bottomGrid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
 }
 
@@ -259,7 +260,7 @@
   margin: 0;
   padding: 16px 20px 12px;
   font-size: 0.92rem;
-  font-weight: 800;
+  font-weight: 700;
   color: #0F172A;
   border-bottom: 1px solid #E2E8F0;
 }
@@ -290,7 +291,7 @@
   align-items: center;
   justify-content: center;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 700;
   background: #F1F5F9;
   color: #64748B;
   flex-shrink: 0;
@@ -319,7 +320,7 @@
 
 .techCount {
   font-size: 1.1rem;
-  font-weight: 800;
+  font-weight: 700;
   color: #F97316;
 }
 
@@ -388,21 +389,21 @@
 
 /* ── Responsive ──────────────────────────────────── */
 @media (max-width: 1200px) {
-  .bottomGrid { grid-template-columns: 1fr 1fr; }
+  .bottomGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 1024px) {
-  .chartsGrid { grid-template-columns: 1fr; }
+  .chartsGrid { grid-template-columns: minmax(0, 1fr); }
   .chartWide { grid-column: auto; }
 }
 
 @media (max-width: 900px) {
-  .kpiGrid { grid-template-columns: repeat(2, 1fr); }
-  .bottomGrid { grid-template-columns: 1fr; }
+  .kpiGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bottomGrid { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 540px) {
-  .kpiGrid { grid-template-columns: 1fr 1fr; }
+  .kpiGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .kpiValue { font-size: 1.2rem; }
   .kpiIcon { font-size: 1.3rem; }
   .header { flex-direction: column; }

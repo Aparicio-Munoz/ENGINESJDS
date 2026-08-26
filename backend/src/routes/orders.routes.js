@@ -61,7 +61,10 @@ router.get('/:id/pdf', PdfController.getOrderPDF)
 // ── Actualización principal ───────────────────────────────────
 
 // PUT /api/orders/:id
-//   body: { assigned_employee_id?, diagnostic_notes?, work_notes?, labor_cost?, discount? }
+//   body: { assigned_employee_id?, diagnostic_notes?, work_notes?, labor_cost?, discount?, motorcycle_status? }
+//   motorcycle_status ('En servicio'|'En reparación'|'Lista para entrega') sincroniza
+//   motorcycles.status y el orders.status equivalente — 'Entregada' se rechaza aquí,
+//   usar /close
 router.put('/:id', updateOrderRules, validate, OrderController.update)
 
 // ── Transiciones de estado ────────────────────────────────────
