@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { useAuth } from '../../../hooks/useAuth'
 import { useToast } from '../../../hooks/useToast'
 import { authApi } from '../../../api/authApi'
@@ -76,22 +76,16 @@ export function Perfil() {
   const toast = useToast()
 
   // ── Info personal ────────────────────────────────────
-  const [info, setInfo] = useState({ username: '', email: '' })
+  const [info, setInfo] = useState(() => ({ username: user?.username ?? '', email: user?.email ?? '' }))
   const [infoErrors, setInfoErrors] = useState({})
   const [savingInfo, setSavingInfo] = useState(false)
-  const [lastAccess, setLastAccess] = useState('')
+  const [lastAccess] = useState(() => new Date().toLocaleString('es-CO', { dateStyle: 'long', timeStyle: 'short' }))
 
   // ── Cambio de contraseña ──────────────────────────────
   const [pwd, setPwd] = useState({ current: '', newPwd: '', confirm: '' })
   const [pwdErrors, setPwdErrors] = useState({})
   const [savingPwd, setSavingPwd] = useState(false)
 
-  useEffect(() => {
-    if (user) {
-      setInfo({ username: user.username ?? '', email: user.email ?? '' })
-    }
-    setLastAccess(new Date().toLocaleString('es-CO', { dateStyle: 'long', timeStyle: 'short' }))
-  }, [user])
 
   const initials = (user?.username || user?.email || 'U')
     .split(' ')
@@ -132,7 +126,7 @@ export function Perfil() {
   }, [info, user, refreshUser, toast])
 
   // ── Cambiar contraseña ────────────────────────────────
-  const handleSavePwd = useCallback(async (e) => {
+  const handleSavePwd = async (e) => {
     e.preventDefault()
     const errors = {}
     if (!pwd.current.trim()) errors.current = 'Ingresa tu contraseña actual'
@@ -159,7 +153,7 @@ export function Perfil() {
     } finally {
       setSavingPwd(false)
     }
-  }, [pwd, toast])
+  }
 
   return (
     <div className={styles.page}>

@@ -1,10 +1,7 @@
 import PDFDocument from 'pdfkit'
-import QRCode from 'qrcode'
 import * as HistoryModel from '../models/history.model.js'
 import { ApiError } from '../utils/ApiError.js'
 import { logAudit } from './audit.service.js'
-
-const TRACKING_BASE = process.env.TRACKING_BASE_URL ?? 'https://enginesjds.com/tracking'
 
 export async function getFullHistory(motorcycleId, actor = {}) {
   const motorcycle = await HistoryModel.getMotorcycleInfo(motorcycleId)
@@ -52,10 +49,9 @@ export async function generatePDF(motorcycleId, actor = {}) {
   const motorcycle = await HistoryModel.getMotorcycleInfo(motorcycleId)
   if (!motorcycle) throw ApiError.notFound('Motocicleta no encontrada')
 
-  const [stats, timeline, services] = await Promise.all([
+  const [stats, timeline] = await Promise.all([
     HistoryModel.getStats(motorcycleId),
     HistoryModel.getTimeline(motorcycleId),
-    HistoryModel.getServicesHistory(motorcycleId),
   ])
 
   return new Promise((resolve, reject) => {

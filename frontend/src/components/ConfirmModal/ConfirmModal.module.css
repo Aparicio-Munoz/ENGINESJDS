@@ -12,7 +12,7 @@
   display: grid;
   gap: 16px;
   width: min(480px, 100%);
-  border-radius: 8px;
+  border-radius: var(--r-md, 12px);
   padding: 28px 24px 24px;
   background: #ffffff;
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
@@ -60,8 +60,8 @@
 
 .reasonTextarea:focus {
   outline: none;
-  border-color: #7f56d9;
-  box-shadow: 0 0 0 3px rgba(127, 86, 217, 0.15);
+  border-color: var(--accent, #F97316);
+  box-shadow: 0 0 0 3px var(--accent-light, rgba(249, 115, 22, 0.15));
 }
 
 .actions {
@@ -103,4 +103,11 @@
 .deleteButton:disabled {
   background: #f2b8b5;
   cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+  .backdrop { padding: 16px; }
+  .modal { padding: 22px 18px 18px; }
+  .actions { flex-direction: column-reverse; }
+  .cancelButton, .deleteButton { width: 100%; }
 }

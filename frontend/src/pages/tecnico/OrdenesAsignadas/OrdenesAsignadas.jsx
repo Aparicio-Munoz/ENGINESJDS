@@ -77,7 +77,10 @@ export function OrdenesAsignadas() {
     }
   }, [page, searchApplied, filterStatus])
 
-  useEffect(() => { loadOrders() }, [loadOrders])
+  useEffect(() => {
+    const timer = setTimeout(() => loadOrders(), 0)
+    return () => clearTimeout(timer)
+  }, [loadOrders])
 
   function handleSearchChange(e) {
     const val = e.target.value

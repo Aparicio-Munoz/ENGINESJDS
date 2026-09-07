@@ -117,7 +117,8 @@ export function Citas() {
   }, [page, searchApplied, filterStatus, filterDate])
 
   useEffect(() => {
-    loadAppointments()
+    const timer = setTimeout(() => loadAppointments(), 0)
+    return () => clearTimeout(timer)
   }, [loadAppointments])
 
   // ── Debounce ───────────────────────────────────────────────

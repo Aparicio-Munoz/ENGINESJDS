@@ -61,7 +61,10 @@ export function SolicitudRepuestos() {
     }
   }, [page, filterStatus])
 
-  useEffect(() => { loadRequests() }, [loadRequests])
+  useEffect(() => {
+    const timer = setTimeout(() => loadRequests(), 0)
+    return () => clearTimeout(timer)
+  }, [loadRequests])
 
   async function openCreate() {
     setForm(emptyForm())

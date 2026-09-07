@@ -1,4 +1,4 @@
-const CACHE_NAME = 'engines-jds-v2'
+const CACHE_NAME = 'engines-jds-v3'
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -13,7 +13,6 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
   )
-  self.skipWaiting()
 })
 
 // Activate: clean ALL old caches

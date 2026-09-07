@@ -1,7 +1,7 @@
-import { createContext, useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Toast } from '../components/Toast/Toast'
 
-export const ToastContext = createContext(null)
+import { ToastContext } from './ToastContextValue'
 
 // Los errores llevan información que hay que leer (ej. por qué no se
 // pudo cerrar una orden) — se quedan más tiempo en pantalla que una

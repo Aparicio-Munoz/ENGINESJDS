@@ -16,11 +16,6 @@ function formatCurrency(n) {
   return `$ ${Number(n).toLocaleString('es-CO')}`
 }
 
-function formatDate(d) {
-  if (!d) return '—'
-  return new Date(d).toLocaleDateString('es-CO')
-}
-
 export function DashboardTecnico() {
   const { user } = useAuth()
   const [data, setData] = useState(null)
@@ -43,9 +38,9 @@ export function DashboardTecnico() {
 
   useEffect(() => {
     mountedRef.current = true
-    loadData()
+    const initialLoad = setTimeout(() => loadData(), 0)
     const interval = setInterval(loadData, 60_000)
-    return () => { mountedRef.current = false; clearInterval(interval) }
+    return () => { mountedRef.current = false; clearTimeout(initialLoad); clearInterval(interval) }
   }, [loadData])
 
   const now = new Date()

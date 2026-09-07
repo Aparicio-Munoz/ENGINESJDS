@@ -183,6 +183,62 @@
   color: #64748B;
 }
 
+/* ── Resumen financiero ──────────────────────────── */
+.financialSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid #D1FAE5;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #F0FDFA 0%, #FFFFFF 64%);
+}
+
+.financialHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.financialTitle {
+  margin: 0 0 4px;
+  color: #0F172A;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.financialDescription {
+  margin: 0;
+  color: #475569;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.estimateBadge {
+  flex-shrink: 0;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #FEF3C7;
+  color: #92400E;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.financialGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.financialMetricDetail {
+  display: block;
+  margin-top: 3px;
+  color: #64748B;
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
 /* ── Charts Grid ──────────────────────────────────── */
 .chartsGrid {
   display: grid;
@@ -395,6 +451,7 @@
 @media (max-width: 1024px) {
   .chartsGrid { grid-template-columns: minmax(0, 1fr); }
   .chartWide { grid-column: auto; }
+  .financialGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 900px) {
@@ -404,6 +461,8 @@
 
 @media (max-width: 540px) {
   .kpiGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .financialGrid { grid-template-columns: minmax(0, 1fr); }
+  .financialHeader { flex-direction: column; }
   .kpiValue { font-size: 1.2rem; }
   .kpiIcon { font-size: 1.3rem; }
   .header { flex-direction: column; }

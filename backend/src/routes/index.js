@@ -17,6 +17,7 @@ import reminderRoutes    from './reminders.routes.js'
 import settingsRoutes    from './settings.routes.js'
 import publicRoutes      from './public.routes.js'
 import quickJobsRoutes   from './quickJobs.routes.js'
+import searchRoutes      from './search.routes.js'
 import { sendTestEmail } from '../services/email.service.js'
 
 export const apiRouter = Router()
@@ -43,16 +44,20 @@ apiRouter.use('/history',      historyRoutes)
 apiRouter.use('/reminders',    reminderRoutes)
 apiRouter.use('/settings',     settingsRoutes)
 apiRouter.use('/quick-jobs',   quickJobsRoutes)
+apiRouter.use('/search',       searchRoutes)
 
 // ── Panel Técnico (requiere rol Técnico) ──────────────
 apiRouter.use('/technician',   technicianRoutes)
 
 // ── Diagnóstico SMTP (solo desarrollo) ────────────────
-apiRouter.get('/test-email', async (_req, res) => {
-  try {
-    const info = await sendTestEmail()
-    res.json({ success: true, message: 'Correo de prueba enviado', messageId: info.messageId })
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message })
-  }
-})
+// Nunca debe quedar disponible en producción: dispara un correo real.
+if (process.env.NODE_ENV !== 'production') {
+  apiRouter.get('/test-email', async (_req, res) => {
+    try {
+      const info = await sendTestEmail()
+      res.json({ success: true, message: 'Correo de prueba enviado', messageId: info.messageId })
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message })
+    }
+  })
+}

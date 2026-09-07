@@ -28,7 +28,7 @@ export async function create(data, actor = {}) {
   return reminder
 }
 
-export async function update(id, data, actor = {}) {
+export async function update(id, data, _actor = {}) {
   await getById(id)
   return ReminderModel.update(id, data)
 }

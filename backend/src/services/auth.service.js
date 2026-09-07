@@ -6,7 +6,6 @@ import * as UserModel from '../models/user.model.js'
 import * as LoginAttemptModel from '../models/loginAttempt.model.js'
 import * as RefreshTokenModel from '../models/refreshToken.model.js'
 import { ApiError } from '../utils/ApiError.js'
-import { logger } from '../utils/logger.js'
 import { logAudit } from './audit.service.js'
 
 // ── Configuración de tokens y bloqueo ────────────────────────
@@ -79,7 +78,7 @@ export async function login(email, password, ip = null) {
   return { token, refreshToken, user: safeUser }
 }
 
-export async function refresh(refreshToken, ip = null) {
+export async function refresh(refreshToken, _ip = null) {
   if (!refreshToken) {
     throw ApiError.unauthorized('Refresh token requerido')
   }

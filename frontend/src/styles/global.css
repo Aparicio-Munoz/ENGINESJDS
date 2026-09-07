@@ -76,6 +76,7 @@ body {
   line-height: 1.5;
   color: var(--text);
   background: var(--bg);
+  overflow-x: hidden;
 }
 
 a {
@@ -88,6 +89,11 @@ input,
 textarea,
 select {
   font: inherit;
+}
+
+button,
+[role='button'] {
+  touch-action: manipulation;
 }
 
 /* `font: inherit` arriba hereda el font-weight del contenedor (ej. las
@@ -133,4 +139,12 @@ img {
 
 .skip-link:focus-visible {
   top: 0;
+}
+
+@media (max-width: 600px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
 }

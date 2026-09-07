@@ -2,13 +2,6 @@ import { getPool } from '../config/database.js'
 import * as AppointmentModel from '../models/appointment.model.js'
 import { ApiError } from '../utils/ApiError.js'
 
-// ── Horarios del taller ─────────────────────────────────────
-const SCHEDULE = {
-  weekday: { open: '08:00', close: '18:00' }, // Lun – Vie
-  saturday: { open: '08:00', close: '15:00' }, // Sáb
-  sunday: null,                                 // Cerrado
-}
-
 // ── CRUD principal ───────────────────────────────────────────
 export async function getAll({
   search, status, date, client_id, motorcycle_id,
@@ -128,7 +121,7 @@ export async function remove(id, deletedById, reason) {
 }
 
 // ── Transiciones de estado ───────────────────────────────────
-export async function confirm(id, userId) {
+export async function confirm(id, _userId) {
   const appt = await getById(id)
 
   const allowed = ['Pendiente', 'Reprogramada']
@@ -142,7 +135,7 @@ export async function confirm(id, userId) {
   return AppointmentModel.update(id, { status: 'Confirmada' })
 }
 
-export async function cancel(id, userId, reason) {
+export async function cancel(id, _userId, _reason) {
   const appt = await getById(id)
 
   const blocked = ['Atendida', 'Cancelada']
@@ -206,7 +199,6 @@ export async function attend(id) {
 
 // ── Validaciones de horario de taller ───────────────────────
 function _assertFutureDateTime(dateStr, timeStr) {
-  const [h, m] = timeStr.split(':').map(Number)
   const apptMs = new Date(`${dateStr}T${timeStr}:00`).getTime()
   const nowMs  = Date.now()
 

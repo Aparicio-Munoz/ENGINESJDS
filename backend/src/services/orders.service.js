@@ -59,7 +59,9 @@ export async function create(data, createdById, actor = {}) {
 
   if (client_id)       await _assertClientExists(client_id)
   if (motorcycle_id)   await _assertMotorcycleExists(motorcycle_id)
-  if (assigned_employee_id) await _assertEmployeeExists(assigned_employee_id)
+  const assignedEmployee = assigned_employee_id
+    ? await _assertEmployeeExists(assigned_employee_id)
+    : null
   if (appointment_id)       await _assertAppointmentExists(appointment_id)
 
   // Verificar que la moto pertenece al cliente — sólo aplica si ambos vienen
@@ -81,6 +83,8 @@ export async function create(data, createdById, actor = {}) {
     client_id,
     appointment_id:          appointment_id ?? null,
     assigned_employee_id:    assigned_employee_id ?? null,
+    technician_commission_percent: Number(assignedEmployee?.commission_percent ?? 0),
+    commission_is_estimated: 0,
     diagnostic_notes:        problem_description,
     labor_cost:              labor_cost ?? 0,
     discount:                discount   ?? 0,
@@ -118,11 +122,19 @@ export async function update(id, data) {
     throw ApiError.conflict('No se puede modificar una orden ya entregada')
   }
 
-  if (data.assigned_employee_id) {
-    await _assertEmployeeExists(data.assigned_employee_id)
-  }
+  const isTechnicianChanging = Object.prototype.hasOwnProperty.call(data, 'assigned_employee_id')
+  const assignedEmployee = data.assigned_employee_id
+    ? await _assertEmployeeExists(data.assigned_employee_id)
+    : null
 
   const { motorcycle_status, ...orderFields } = data
+
+  // La comisión se congela al asignar o reasignar el técnico. Así, cambios
+  // posteriores en la ficha del empleado no alteran la utilidad de una orden.
+  if (isTechnicianChanging) {
+    orderFields.technician_commission_percent = Number(assignedEmployee?.commission_percent ?? 0)
+    orderFields.commission_is_estimated = 0
+  }
 
   if (motorcycle_status !== undefined && motorcycle_status !== null && motorcycle_status !== '') {
     if (!MOTORCYCLE_STATUSES.includes(motorcycle_status)) {
@@ -223,7 +235,7 @@ export async function changeStatus(id, { status, notes }, changedById, actor = {
 
 // ── Cierre de orden ───────────────────────────────────────────
 
-export async function close(id, { payment_method, payment_status, notes }, closedById) {
+export async function close(id, { payment_method, payment_status, notes }, _closedById) {
   const order = await getById(id)
 
   if (order.status === 'Entregada') {
@@ -438,11 +450,12 @@ async function _assertMotorcycleBelongsToClient(motorcycleId, clientId) {
 
 async function _assertEmployeeExists(id) {
   const [[row]] = await getPool().query(
-    `SELECT id FROM employees
+    `SELECT id, commission_percent FROM employees
      WHERE id = ? AND deleted_at IS NULL AND status IN ('Activo', 'Vacaciones')`,
     [id]
   )
   if (!row) throw ApiError.notFound(`Empleado con ID ${id} no encontrado o inactivo`)
+  return row
 }
 
 async function _assertAppointmentExists(id) {

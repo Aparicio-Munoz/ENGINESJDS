@@ -107,7 +107,10 @@ export function Usuarios() {
     }
   }, [searchApplied, filterRole, filterStatus])
 
-  useEffect(() => { loadUsers() }, [loadUsers])
+  useEffect(() => {
+    const timer = setTimeout(() => loadUsers(), 0)
+    return () => clearTimeout(timer)
+  }, [loadUsers])
 
   // ── Debounced search ───────────────────────────────────
   function handleSearchChange(e) {

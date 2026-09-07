@@ -33,6 +33,7 @@ const LIST_SELECT = `
     o.labor_cost, o.parts_cost, o.services_cost, o.discount, o.subtotal, o.final_price,
     o.diagnostic_notes, o.work_notes,
     o.motorcycle_id, o.client_id, o.appointment_id, o.assigned_employee_id,
+    o.technician_commission_percent, o.commission_is_estimated,
     o.created_by, o.created_at, o.updated_at,
     CONCAT(c.name, ' ', c.last_name) AS client_name,
     c.phone AS client_phone,
@@ -191,8 +192,8 @@ export async function findHistory(id) {
       [id]
     ),
     getPool().query(
-      `SELECT oi.id, oi.inventory_id, oi.part_name, oi.quantity,
-              oi.unit_price, oi.total_price, oi.created_at,
+       `SELECT oi.id, oi.inventory_id, oi.part_name, oi.quantity,
+              oi.unit_price, oi.unit_cost, oi.cost_is_estimated, oi.total_price, oi.created_at,
               i.code AS part_code, i.brand AS part_brand
        FROM order_items oi
        LEFT JOIN inventory i ON i.id = oi.inventory_id
@@ -220,6 +221,8 @@ export async function create({
   client_id               = null,
   appointment_id          = null,
   assigned_employee_id    = null,
+  technician_commission_percent = 0,
+  commission_is_estimated = 0,
   diagnostic_notes        = null,
   labor_cost              = 0,
   discount                = 0,
@@ -228,10 +231,12 @@ export async function create({
   const [result] = await getPool().query(
     `INSERT INTO orders
        (motorcycle_id, client_id, appointment_id, assigned_employee_id,
+        technician_commission_percent, commission_is_estimated,
         diagnostic_notes, labor_cost, discount, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       motorcycle_id, client_id, appointment_id, assigned_employee_id,
+      technician_commission_percent, commission_is_estimated,
       diagnostic_notes,
       labor_cost, discount, created_by,
     ]
@@ -243,6 +248,8 @@ export async function create({
 export async function update(id, fields) {
   const allowed = [
     'assigned_employee_id',
+    'technician_commission_percent',
+    'commission_is_estimated',
     'diagnostic_notes',
     'work_notes',
     'labor_cost',
@@ -339,16 +346,17 @@ export async function removeService(orderId, serviceId) {
 // trg_order_items_after_insert descuenta stock, actualiza parts_cost y registra movimiento
 export async function addPart(orderId, { inventory_id, quantity }) {
   const [[inv]] = await getPool().query(
-    'SELECT id, name, sale_price, quantity AS stock FROM inventory WHERE id = ?',
+    'SELECT id, name, sale_price, unit_price, quantity AS stock FROM inventory WHERE id = ?',
     [inventory_id]
   )
   if (!inv) return { error: 'not_found' }
   if (inv.stock < quantity) return { error: 'insufficient_stock', available: inv.stock }
 
   const [result] = await getPool().query(
-    `INSERT INTO order_items (order_id, inventory_id, part_name, quantity, unit_price)
-     VALUES (?, ?, ?, ?, ?)`,
-    [orderId, inventory_id, inv.name, quantity, inv.sale_price]
+    `INSERT INTO order_items
+       (order_id, inventory_id, part_name, quantity, unit_price, unit_cost, cost_is_estimated)
+     VALUES (?, ?, ?, ?, ?, ?, 0)`,
+    [orderId, inventory_id, inv.name, quantity, inv.sale_price, inv.unit_price]
   )
   const [rows] = await getPool().query(
     `SELECT oi.*, i.code AS part_code, i.brand AS part_brand

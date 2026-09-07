@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { apiClient } from '../../api/apiClient'
 import styles from './Tracking.module.css'
@@ -35,19 +35,7 @@ export function Tracking() {
   const [error, setError] = useState(null)
   const mountedRef = useRef(true)
 
-  useEffect(() => {
-    mountedRef.current = true
-    loadTracking({ showLoading: true })
-
-    const timer = setInterval(() => loadTracking({ showLoading: false }), POLL_INTERVAL_MS)
-
-    return () => {
-      mountedRef.current = false
-      clearInterval(timer)
-    }
-  }, [token])
-
-  async function loadTracking({ showLoading } = {}) {
+  const loadTracking = useCallback(async ({ showLoading } = {}) => {
     if (showLoading) setLoading(true)
     setError(null)
     try {
@@ -64,7 +52,20 @@ export function Tracking() {
     } finally {
       if (mountedRef.current && showLoading) setLoading(false)
     }
-  }
+  }, [token])
+
+  useEffect(() => {
+    mountedRef.current = true
+    const initialLoad = setTimeout(() => loadTracking({ showLoading: true }), 0)
+
+    const timer = setInterval(() => loadTracking({ showLoading: false }), POLL_INTERVAL_MS)
+
+    return () => {
+      mountedRef.current = false; clearTimeout(initialLoad)
+      clearInterval(timer)
+    }
+  }, [loadTracking])
+
 
   const currentIdx = data ? STATUS_ORDER.indexOf(data.status) : -1
 

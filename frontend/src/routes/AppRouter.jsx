@@ -14,9 +14,7 @@ import { Empleados } from '../pages/admin/Empleados/Empleados'
 import { Reportes } from '../pages/admin/Reportes/Reportes'
 import { Usuarios } from '../pages/admin/Usuarios/Usuarios'
 import { Inventario } from '../pages/admin/Inventario/Inventario'
-import { Marcas } from '../pages/admin/Marcas/Marcas'
 import { OrdenesTrabajo } from '../pages/admin/OrdenesTrabajo/OrdenesTrabajo'
-import { Citas } from '../pages/admin/Citas/Citas'
 import { Auditoria } from '../pages/admin/Auditoria/Auditoria'
 import { Backups } from '../pages/admin/Backups/Backups'
 import { Facturas } from '../pages/admin/Facturas/Facturas'
@@ -84,16 +82,6 @@ const router = createBrowserRouter([
         ),
       },
 
-      // ── Citas: Admin + Recepcionista ──────────────────────
-      {
-        path: 'citas',
-        element: (
-          <RoleRoute allowedRoles={['Administrador', 'Recepcionista']}>
-            <Citas />
-          </RoleRoute>
-        ),
-      },
-
       // ── Órdenes: Admin + Recepcionista ──────────────────────
       {
         path: 'ordenes',
@@ -110,16 +98,6 @@ const router = createBrowserRouter([
         element: (
           <RoleRoute allowedRoles={['Administrador']}>
             <Inventario />
-          </RoleRoute>
-        ),
-      },
-
-      // ── Marcas: solo Administrador ────────────────────────
-      {
-        path: 'marcas',
-        element: (
-          <RoleRoute allowedRoles={['Administrador']}>
-            <Marcas />
           </RoleRoute>
         ),
       },

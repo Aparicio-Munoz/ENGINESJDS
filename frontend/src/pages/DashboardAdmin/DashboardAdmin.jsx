@@ -5,14 +5,13 @@ import {
   CategoryScale, LinearScale, BarElement, LineElement,
   PointElement, ArcElement, Tooltip, Legend, Filler,
 } from 'chart.js'
-import { Bar, Doughnut, Line } from 'react-chartjs-2'
+import { Bar, Doughnut } from 'react-chartjs-2'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import * as XLSX from 'xlsx'
-import { saveAs } from 'file-saver'
 import { reportsApi } from '../../api/reportsApi'
 import { useAuth } from '../../hooks/useAuth'
 import { ROUTES } from '../../utils/routes'
+import { exportWorkbook } from '../../utils/exportWorkbook'
 import styles from './DashboardAdmin.module.css'
 
 const POLL_INTERVAL_MS = 30_000
@@ -37,11 +36,6 @@ const STATUS_COLORS = {
 function fmtCOP(n) {
   if (n === null || n === undefined) return '$ 0'
   return `$ ${Math.round(Number(n)).toLocaleString('es-CO')}`
-}
-
-function fmtDate(d) {
-  if (!d) return '—'
-  return new Date(d).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })
 }
 
 const baseOpts = {
@@ -79,9 +73,13 @@ export function DashboardAdmin() {
 
   useEffect(() => {
     mountedRef.current = true
-    loadData({ showLoading: true })
+    const initialLoad = setTimeout(() => loadData({ showLoading: true }), 0)
     const iv = setInterval(() => loadData({ showLoading: false }), POLL_INTERVAL_MS)
-    return () => { mountedRef.current = false; clearInterval(iv) }
+    return () => {
+      mountedRef.current = false
+      clearTimeout(initialLoad)
+      clearInterval(iv)
+    }
   }, [loadData])
 
   const now = new Date()
@@ -94,59 +92,92 @@ export function DashboardAdmin() {
     doc.setFontSize(16); doc.text('ENGINES JDS — Dashboard Ejecutivo', 14, 16)
     doc.setFontSize(9); doc.setTextColor(100); doc.text(`Generado: ${now.toLocaleString('es-CO')}`, 14, 23)
     const k = data.kpis
+    const financial = k.financial
     autoTable(doc, {
       startY: 28,
       head: [['Métrica', 'Valor']],
       body: [
         ['Total clientes', k.totalClients], ['Total motos', k.totalMotorcycles],
         ['Órdenes activas', k.activeOrders], ['Órdenes entregadas', k.deliveredOrders],
-        ['Ingresos del mes', fmtCOP(k.monthlyRevenue)], ['Ingresos del año', fmtCOP(k.yearlyRevenue)],
-        ['Ganancias de hoy', fmtCOP(k.dailyRevenue)], ['Ganancias de la quincena', fmtCOP(k.fortnightRevenue)],
-        ['Citas pendientes', k.pendingAppts], ['Stock bajo', k.lowStockItems],
+        ['Ventas del mes', fmtCOP(financial.month.totalRevenue)], ['Utilidad bruta del mes', fmtCOP(financial.month.grossProfit)],
+        ['Órdenes entregadas del mes', fmtCOP(financial.month.ordersRevenue)], ['Trabajos rápidos del mes', fmtCOP(financial.month.quickJobsRevenue)],
+        ['Ventas del año', fmtCOP(financial.year.totalRevenue)], ['Utilidad bruta del año', fmtCOP(financial.year.grossProfit)],
+        ['Órdenes entregadas del año', fmtCOP(financial.year.ordersRevenue)], ['Trabajos rápidos del año', fmtCOP(financial.year.quickJobsRevenue)],
+        ['Ventas de hoy', fmtCOP(financial.today.totalRevenue)], ['Utilidad bruta de hoy', fmtCOP(financial.today.grossProfit)],
+        ['Órdenes entregadas de hoy', fmtCOP(financial.today.ordersRevenue)], ['Trabajos rápidos de hoy', fmtCOP(financial.today.quickJobsRevenue)],
+        ['Ventas de la quincena', fmtCOP(financial.fortnight.totalRevenue)], ['Utilidad bruta de la quincena', fmtCOP(financial.fortnight.grossProfit)],
+        ['Órdenes entregadas de la quincena', fmtCOP(financial.fortnight.ordersRevenue)], ['Trabajos rápidos de la quincena', fmtCOP(financial.fortnight.quickJobsRevenue)],
+        ['Stock bajo', k.lowStockItems],
       ],
       headStyles: { fillColor: [249, 115, 22] },
     })
     doc.save('ENGINES_JDS_Dashboard.pdf')
   }
 
-  function exportExcel() {
+  async function exportExcel() {
     if (!data) return
     const k = data.kpis
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([
+    const financial = k.financial
+    const sheets = [{ name: 'KPIs', rows: [
       { Métrica: 'Total clientes', Valor: k.totalClients },
       { Métrica: 'Total motos', Valor: k.totalMotorcycles },
       { Métrica: 'Órdenes activas', Valor: k.activeOrders },
       { Métrica: 'Órdenes entregadas', Valor: k.deliveredOrders },
-      { Métrica: 'Ingresos del mes', Valor: k.monthlyRevenue },
-      { Métrica: 'Ingresos del año', Valor: k.yearlyRevenue },
-      { Métrica: 'Ganancias de hoy', Valor: k.dailyRevenue },
-      { Métrica: 'Ganancias de la quincena', Valor: k.fortnightRevenue },
-      { Métrica: 'Citas pendientes', Valor: k.pendingAppts },
+      { Métrica: 'Ventas del mes', Valor: financial.month.totalRevenue },
+      { Métrica: 'Utilidad bruta del mes', Valor: financial.month.grossProfit },
+      { Métrica: 'Órdenes entregadas del mes', Valor: financial.month.ordersRevenue },
+      { Métrica: 'Trabajos rápidos del mes', Valor: financial.month.quickJobsRevenue },
+      { Métrica: 'Ventas del año', Valor: financial.year.totalRevenue },
+      { Métrica: 'Utilidad bruta del año', Valor: financial.year.grossProfit },
+      { Métrica: 'Órdenes entregadas del año', Valor: financial.year.ordersRevenue },
+      { Métrica: 'Trabajos rápidos del año', Valor: financial.year.quickJobsRevenue },
+      { Métrica: 'Ventas de hoy', Valor: financial.today.totalRevenue },
+      { Métrica: 'Utilidad bruta de hoy', Valor: financial.today.grossProfit },
+      { Métrica: 'Órdenes entregadas de hoy', Valor: financial.today.ordersRevenue },
+      { Métrica: 'Trabajos rápidos de hoy', Valor: financial.today.quickJobsRevenue },
+      { Métrica: 'Ventas de la quincena', Valor: financial.fortnight.totalRevenue },
+      { Métrica: 'Utilidad bruta de la quincena', Valor: financial.fortnight.grossProfit },
+      { Métrica: 'Órdenes entregadas de la quincena', Valor: financial.fortnight.ordersRevenue },
+      { Métrica: 'Trabajos rápidos de la quincena', Valor: financial.fortnight.quickJobsRevenue },
       { Métrica: 'Stock bajo', Valor: k.lowStockItems },
-    ]), 'KPIs')
+    ] }]
     if (data.charts.topClients?.length) {
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
-        data.charts.topClients.map((c) => ({ Cliente: c.client_name, Órdenes: c.orders_count, Total: Number(c.total_spent) }))
-      ), 'Top Clientes')
+      sheets.push({
+        name: 'Top Clientes',
+        rows: data.charts.topClients.map((c) => ({ Cliente: c.client_name, Órdenes: c.orders_count, Total: Number(c.total_spent) })),
+      })
     }
-    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
-    saveAs(new Blob([buf]), 'ENGINES_JDS_Dashboard.xlsx')
+    await exportWorkbook(sheets, 'ENGINES_JDS_Dashboard.xlsx')
   }
 
   const k = data?.kpis
   const ch = data?.charts
   const al = data?.alerts
+  const financial = k?.financial
+  const financialPeriods = financial ? [
+    { key: 'today', label: 'Hoy', icon: '☀️' },
+    { key: 'fortnight', label: 'Quincena', icon: '🗓️' },
+    { key: 'month', label: 'Mes', icon: '📅' },
+    { key: 'year', label: 'Año', icon: '📈' },
+  ] : []
 
   // ── Chart configs ──────────────────────────────────
   const revenueChart = ch?.monthlyRevenue?.length ? {
     labels: ch.monthlyRevenue.map((r) => r.label),
-    datasets: [{
-      label: 'Ingresos',
-      data: ch.monthlyRevenue.map((r) => Number(r.revenue)),
-      backgroundColor: 'rgba(249,115,22,0.35)',
-      borderColor: '#F97316', borderWidth: 2, borderRadius: 6,
-    }],
+    datasets: [
+      {
+        label: 'Ventas',
+        data: ch.monthlyRevenue.map((r) => Number(r.revenue)),
+        backgroundColor: 'rgba(249,115,22,0.35)',
+        borderColor: '#F97316', borderWidth: 2, borderRadius: 6,
+      },
+      {
+        label: 'Utilidad bruta',
+        data: ch.monthlyRevenue.map((r) => Number(r.gross_profit)),
+        backgroundColor: 'rgba(5,150,105,0.3)',
+        borderColor: '#059669', borderWidth: 2, borderRadius: 6,
+      },
+    ],
   } : null
 
   const servicesChart = ch?.topServices?.length ? {
@@ -201,7 +232,7 @@ export function DashboardAdmin() {
             Dashboard ejecutivo · {now.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })}
           </p>
           <h1 className={styles.title}>{greeting}, <span className={styles.accent}>{user?.username || 'Admin'}</span></h1>
-          <p className={styles.subtitle}>Métricas operativas en tiempo real del taller.</p>
+          <p className={styles.subtitle}>Métricas operativas y financieras en tiempo real del taller.</p>
         </div>
         <div className={styles.headerActions}>
           <button className={styles.exportBtn} onClick={exportPDF}>PDF</button>
@@ -210,18 +241,13 @@ export function DashboardAdmin() {
         </div>
       </div>
 
-      {/* KPI Grid */}
+      {/* Indicadores operativos */}
       <div className={styles.kpiGrid}>
         {[
           { label: 'Total clientes',    value: k.totalClients,     icon: '👥', color: '#2563EB' },
           { label: 'Total motos',       value: k.totalMotorcycles, icon: '🏍️', color: '#7C3AED' },
           { label: 'Órdenes activas',   value: k.activeOrders,     icon: '📋', color: '#EA580C' },
           { label: 'Entregadas',        value: k.deliveredOrders,  icon: '✅', color: '#059669' },
-          { label: 'Ingresos del mes',  value: fmtCOP(k.monthlyRevenue),  icon: '💰', color: '#F97316' },
-          { label: 'Ingresos del año',  value: fmtCOP(k.yearlyRevenue),   icon: '📊', color: '#2563EB' },
-          { label: 'Ganancias de hoy',      value: fmtCOP(k.dailyRevenue),     icon: '💵', color: '#0D9488' },
-          { label: 'Ganancias de la quincena', value: fmtCOP(k.fortnightRevenue), icon: '🗓️', color: '#DB2777' },
-          { label: 'Citas pendientes',  value: k.pendingAppts,     icon: '📅', color: '#D97706' },
           { label: 'Stock bajo',        value: k.lowStockItems,    icon: '⚠️', color: '#DC2626' },
         ].map((kpi) => (
           <div key={kpi.label} className={styles.kpiCard} style={{ '--kpi-color': kpi.color }}>
@@ -234,12 +260,52 @@ export function DashboardAdmin() {
         ))}
       </div>
 
+      {financial ? (
+        <section className={styles.financialSection} aria-labelledby="financial-summary-title">
+          <div className={styles.financialHeader}>
+            <div>
+              <h2 id="financial-summary-title" className={styles.financialTitle}>Resumen financiero</h2>
+              <p className={styles.financialDescription}>
+                Ventas: órdenes entregadas y trabajos rápidos. Utilidad bruta: ventas menos costo de repuestos y pagos a técnicos.
+              </p>
+            </div>
+            {financialPeriods.some(({ key }) => financial[key].hasEstimatedCosts) ? (
+              <span className={styles.estimateBadge}>Histórico con costos estimados</span>
+            ) : null}
+          </div>
+          <div className={styles.financialGrid}>
+            {financialPeriods.flatMap(({ key, label, icon }) => {
+              const totals = financial[key]
+              return [
+                {
+                  key: `${key}-sales`, label: `Ventas de ${label.toLowerCase()}`, value: totals.totalRevenue, icon, color: '#F97316',
+                  detail: `Órdenes: ${fmtCOP(totals.ordersRevenue)} · Rápidos: ${fmtCOP(totals.quickJobsRevenue)}`,
+                },
+                {
+                  key: `${key}-profit`, label: `Utilidad bruta de ${label.toLowerCase()}`, value: totals.grossProfit, icon: '📈', color: '#059669',
+                  detail: `Costos directos: ${fmtCOP(totals.totalDirectCosts)}`,
+                },
+              ]
+            }).map((metric) => (
+              <div key={metric.key} className={styles.kpiCard} style={{ '--kpi-color': metric.color }}>
+                <div className={styles.kpiIcon}>{metric.icon}</div>
+                <div className={styles.kpiContent}>
+                  <strong className={styles.kpiValue}>{fmtCOP(metric.value)}</strong>
+                  <span className={styles.kpiLabel}>{metric.label}</span>
+                  <span className={styles.financialMetricDetail}>{metric.detail}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       {/* Charts Grid */}
       <div className={styles.chartsGrid}>
         <div className={`${styles.chartCard} ${styles.chartWide}`}>
-          <h3 className={styles.chartTitle}>Ingresos mensuales</h3>
+          <h3 className={styles.chartTitle}>Ventas y utilidad bruta mensuales</h3>
           <div className={styles.chartWrap}>
-            {revenueChart ? <Bar data={revenueChart} options={{ ...baseOpts, plugins: { ...baseOpts.plugins, legend: { display: false } } }} /> : <p className={styles.noData}>Sin datos</p>}
+            {revenueChart ? <Bar data={revenueChart} options={baseOpts} /> : <p className={styles.noData}>Sin datos</p>}
           </div>
         </div>
         <div className={styles.chartCard}>
@@ -315,17 +381,7 @@ export function DashboardAdmin() {
                 <span className={styles.alertTag} style={{ background: '#FEE2E2', color: '#DC2626' }}>Stock bajo</span>
               </div>
             ))}
-            {al?.upcomingAppts?.map((a) => (
-              <div key={`ua-${a.id}`} className={styles.alertRow}>
-                <span className={styles.alertDot} style={{ background: '#2563EB' }} />
-                <div className={styles.alertInfo}>
-                  <span className={styles.alertName}>{a.client_name}</span>
-                  <span className={styles.alertSub}>{a.service_type} · {fmtDate(a.requested_date)}</span>
-                </div>
-                <span className={styles.alertTag} style={{ background: '#DBEAFE', color: '#2563EB' }}>Cita</span>
-              </div>
-            ))}
-            {(!al?.lowStock?.length && !al?.upcomingAppts?.length) ? (
+            {!al?.lowStock?.length ? (
               <p className={styles.noAlerts}>Todo bajo control</p>
             ) : null}
           </div>

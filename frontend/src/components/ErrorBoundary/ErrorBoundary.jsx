@@ -1,4 +1,5 @@
 import { Component } from 'react'
+import styles from './ErrorBoundary.module.css'
 
 export class ErrorBoundary extends Component {
   constructor(props) {
@@ -18,40 +19,21 @@ export class ErrorBoundary extends Component {
     if (!this.state.hasError) return this.props.children
 
     return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#050A14',
-        color: '#E2E8F0',
-        fontFamily: 'Inter, system-ui, sans-serif',
-        padding: '2rem',
-      }}>
-        <div style={{ textAlign: 'center', maxWidth: 420 }}>
-          <p style={{ fontSize: '2.5rem', margin: '0 0 0.5rem', color: '#F97316', fontWeight: 800 }}>
-            Oops
-          </p>
-          <p style={{ fontSize: '1rem', margin: '0 0 1.5rem', color: '#94A3B8' }}>
-            Ocurrió un error inesperado. Intenta recargar la página.
+      <main className={styles.page}>
+        <div className={styles.content}>
+          <h1 className={styles.title}>Algo no salió como esperábamos</h1>
+          <p className={styles.message}>
+            Ocurrió un error inesperado. Recarga la página para continuar.
           </p>
           <button
+            className={styles.button}
+            type="button"
             onClick={() => window.location.reload()}
-            style={{
-              padding: '10px 28px',
-              border: 'none',
-              borderRadius: 8,
-              background: '#F97316',
-              color: '#fff',
-              fontWeight: 700,
-              fontSize: '0.9rem',
-              cursor: 'pointer',
-            }}
           >
             Recargar
           </button>
         </div>
-      </div>
+      </main>
     )
   }
 }

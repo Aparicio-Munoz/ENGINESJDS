@@ -81,7 +81,7 @@ export async function getInventoryAlerts() {
 export async function getChartData() {
   const [
     monthlyRevenue, topServices, topClients, stockByCategory, ordersByTech, appointmentsByMonth,
-    dailyRevenueThisMonth, fortnightComparison,
+    dailyRevenueThisMonth, fortnightComparison, financialSummary,
   ] = await Promise.all([
     ReportModel.getMonthlyRevenue(),
     ReportModel.getTopServices(10),
@@ -91,10 +91,11 @@ export async function getChartData() {
     ReportModel.getAppointmentsByMonth(),
     ReportModel.getDailyRevenueThisMonth(),
     ReportModel.getFortnightComparison(),
+    ReportModel.getFinancialSummary(),
   ])
 
   return {
     monthlyRevenue, topServices, topClients, stockByCategory, ordersByTech, appointmentsByMonth,
-    dailyRevenueThisMonth, fortnightComparison,
+    dailyRevenueThisMonth, fortnightComparison, financialSummary,
   }
 }

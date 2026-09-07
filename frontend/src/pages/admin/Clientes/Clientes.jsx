@@ -97,8 +97,8 @@ export function Clientes() {
 
   useEffect(() => {
     mountedRef.current = true
-    loadClients(1, '')
-    return () => { mountedRef.current = false }
+    const timer = setTimeout(() => loadClients(1, ''), 0)
+    return () => { mountedRef.current = false; clearTimeout(timer) }
   }, [loadClients])
 
   // ── Búsqueda con debounce (400 ms) ──────────────────────────

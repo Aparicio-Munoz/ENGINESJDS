@@ -7,11 +7,10 @@ import {
 import { Bar, Line, Doughnut } from 'react-chartjs-2'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import * as XLSX from 'xlsx'
-import { saveAs } from 'file-saver'
 import { reportsApi } from '../../../api/reportsApi'
 import { usersApi } from '../../../api/usersApi'
 import { Pagination } from '../../../components/Pagination/Pagination'
+import { exportWorkbook } from '../../../utils/exportWorkbook'
 import styles from './Reportes.module.css'
 
 ChartJS.register(
@@ -24,6 +23,22 @@ const CHART_COLORS = ['#F97316', '#2563EB', '#059669', '#7C3AED', '#EF4444', '#D
 
 function fmtCOP(n) {
   return `$ ${Math.round(Number(n)).toLocaleString('es-CO')}`
+}
+
+function fmtPercent(n) {
+  return `${Number(n ?? 0).toFixed(1)}%`
+}
+
+const FINANCIAL_PERIODS = [
+  { key: 'today', label: 'Hoy' },
+  { key: 'fortnight', label: 'Quincena actual' },
+  { key: 'month', label: 'Mes actual' },
+  { key: 'year', label: 'Año actual' },
+]
+
+function financialRows(summary) {
+  if (!summary) return []
+  return FINANCIAL_PERIODS.map(({ key, label }) => ({ period: label, ...summary[key] }))
 }
 
 const ACTION_META = {
@@ -81,14 +96,8 @@ const chartDefaults = {
 }
 
 // ── Exportar a Excel ─────────────────────────────────────────
-function exportToExcel(sheetData, filename) {
-  const wb = XLSX.utils.book_new()
-  for (const { name, data } of sheetData) {
-    const ws = XLSX.utils.json_to_sheet(data)
-    XLSX.utils.book_append_sheet(wb, ws, name)
-  }
-  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
-  saveAs(new Blob([buf], { type: 'application/octet-stream' }), filename)
+async function exportToExcel(sheetData, filename) {
+  await exportWorkbook(sheetData.map(({ name, data }) => ({ name, rows: data })), filename)
 }
 
 // ── Exportar a PDF ───────────────────────────────────────────
@@ -145,7 +154,10 @@ function AuditoriaPanel() {
     finally { if (mountedRef.current) setLoading(false) }
   }, [page, dateFrom, dateTo, userId, action])
 
-  useEffect(() => { loadLogs() }, [loadLogs])
+  useEffect(() => {
+    const timer = setTimeout(() => loadLogs(), 0)
+    return () => clearTimeout(timer)
+  }, [loadLogs])
 
   const hasFilters = dateFrom || dateTo || userId || action
 
@@ -215,17 +227,35 @@ export function Reportes() {
   }
 
   // ── Export handlers ────────────────────────────────────────
-  function handleExportExcel() {
+  async function handleExportExcel() {
     if (!chartData) return
     const sheets = []
+    const financial = financialRows(chartData.financialSummary)
+    if (financial.length) {
+      sheets.push({
+        name: 'Resumen financiero',
+        data: financial.map((row) => ({
+          Período: row.period,
+          Ventas: Number(row.totalRevenue),
+          'Órdenes entregadas': row.deliveredOrders,
+          'Trabajos rápidos': Number(row.quickJobsRevenue),
+          'Costo de repuestos': Number(row.partsCost),
+          'Comisiones técnicas': Number(row.technicianCommissions),
+          'Pago trabajos rápidos': Number(row.quickJobPayout),
+          'Costos directos': Number(row.totalDirectCosts),
+          'Utilidad bruta': Number(row.grossProfit),
+          Margen: Number(row.profitMargin) / 100,
+        })),
+      })
+    }
     if (chartData.monthlyRevenue?.length) {
-      sheets.push({ name: 'Ingresos', data: chartData.monthlyRevenue.map((r) => ({ Mes: r.label, Órdenes: r.orders_count, Ingresos: Number(r.revenue) })) })
+      sheets.push({ name: 'Ventas mensuales', data: chartData.monthlyRevenue.map((r) => ({ Mes: r.label, Órdenes: r.orders_count, Ventas: Number(r.revenue), 'Costos directos': Number(r.totalDirectCosts), 'Utilidad bruta': Number(r.gross_profit) })) })
     }
     if (chartData.dailyRevenueThisMonth?.length) {
-      sheets.push({ name: 'Ganancias diarias', data: chartData.dailyRevenueThisMonth.map((r) => ({ Día: r.day_number, Ingresos: Number(r.revenue) })) })
+      sheets.push({ name: 'Ventas diarias', data: chartData.dailyRevenueThisMonth.map((r) => ({ Día: r.day_number, Ventas: Number(r.revenue), 'Costos directos': Number(r.totalDirectCosts), 'Utilidad bruta': Number(r.gross_profit) })) })
     }
     if (chartData.fortnightComparison?.length) {
-      sheets.push({ name: 'Quincenas', data: chartData.fortnightComparison.map((r) => ({ Quincena: r.fortnight === 'primera' ? 'Quincena 1 (1-15)' : 'Quincena 2 (16-fin)', Órdenes: r.orders_count, Ingresos: Number(r.revenue) })) })
+      sheets.push({ name: 'Quincenas', data: chartData.fortnightComparison.map((r) => ({ Quincena: r.fortnight === 'primera' ? 'Quincena 1 (1-15)' : 'Quincena 2 (16-fin)', Órdenes: r.orders_count, Ventas: Number(r.revenue), 'Costos directos': Number(r.totalDirectCosts), 'Utilidad bruta': Number(r.gross_profit) })) })
     }
     if (chartData.ordersByTech?.length) {
       sheets.push({ name: 'Por Técnico', data: chartData.ordersByTech.map((r) => ({ Técnico: r.employee_name, Especialidad: r.specialty, Total: r.total_orders, Completadas: r.completed, Activas: r.active })) })
@@ -242,7 +272,7 @@ export function Reportes() {
     if (chartData.stockByCategory?.length) {
       sheets.push({ name: 'Inventario', data: chartData.stockByCategory.map((r) => ({ Categoría: r.category, Items: r.items_count, Stock: r.total_stock, Agotado: r.out_of_stock, 'Stock bajo': r.low_stock })) })
     }
-    exportToExcel(sheets, 'ENGINES_JDS_Reportes.xlsx')
+    await exportToExcel(sheets, 'ENGINES_JDS_Reportes.xlsx')
   }
 
   function handleExportPDF() {
@@ -254,10 +284,19 @@ export function Reportes() {
     doc.text(`Generado: ${new Date().toLocaleString('es-CO')}`, 14, 23)
     let y = 30
 
+    const financial = financialRows(chartData.financialSummary)
+    if (financial.length) {
+      autoTable(doc, {
+        startY: y, head: [['Período', 'Ventas', 'Costos directos', 'Utilidad bruta']],
+        body: financial.map((row) => [row.period, fmtCOP(row.totalRevenue), fmtCOP(row.totalDirectCosts), fmtCOP(row.grossProfit)]),
+        styles: { fontSize: 8 }, headStyles: { fillColor: [5, 150, 105] },
+      })
+      y = doc.lastAutoTable.finalY + 10
+    }
     if (chartData.monthlyRevenue?.length) {
       autoTable(doc, {
-        startY: y, head: [['Mes', 'Órdenes', 'Ingresos']],
-        body: chartData.monthlyRevenue.map((r) => [r.label, r.orders_count, fmtCOP(r.revenue)]),
+        startY: y, head: [['Mes', 'Órdenes', 'Ventas', 'Utilidad bruta']],
+        body: chartData.monthlyRevenue.map((r) => [r.label, r.orders_count, fmtCOP(r.revenue), fmtCOP(r.gross_profit)]),
         styles: { fontSize: 8 }, headStyles: { fillColor: [249, 115, 22] },
       })
       y = doc.lastAutoTable.finalY + 10
@@ -266,10 +305,10 @@ export function Reportes() {
       const primera = chartData.fortnightComparison.find((r) => r.fortnight === 'primera') ?? { orders_count: 0, revenue: 0 }
       const segunda = chartData.fortnightComparison.find((r) => r.fortnight === 'segunda') ?? { orders_count: 0, revenue: 0 }
       autoTable(doc, {
-        startY: y, head: [['Período', 'Órdenes', 'Ingresos']],
+        startY: y, head: [['Período', 'Órdenes', 'Ventas', 'Utilidad bruta']],
         body: [
-          ['Quincena 1 (1–15)', primera.orders_count, fmtCOP(primera.revenue)],
-          ['Quincena 2 (16–fin)', segunda.orders_count, fmtCOP(segunda.revenue)],
+          ['Quincena 1 (1–15)', primera.orders_count, fmtCOP(primera.revenue), fmtCOP(primera.gross_profit)],
+          ['Quincena 2 (16–fin)', segunda.orders_count, fmtCOP(segunda.revenue), fmtCOP(segunda.gross_profit)],
         ],
         styles: { fontSize: 8 }, headStyles: { fillColor: [13, 148, 136] },
       })
@@ -297,14 +336,22 @@ export function Reportes() {
   const revenueChart = chartData?.monthlyRevenue?.length ? {
     data: {
       labels: chartData.monthlyRevenue.map((r) => r.label),
-      datasets: [{
-        label: 'Ingresos',
-        data: chartData.monthlyRevenue.map((r) => Number(r.revenue)),
-        borderColor: '#F97316', backgroundColor: 'rgba(249,115,22,0.1)',
-        tension: 0.4, fill: true, pointBackgroundColor: '#F97316',
-      }],
+      datasets: [
+        {
+          label: 'Ventas',
+          data: chartData.monthlyRevenue.map((r) => Number(r.revenue)),
+          borderColor: '#F97316', backgroundColor: 'rgba(249,115,22,0.1)',
+          tension: 0.4, fill: true, pointBackgroundColor: '#F97316',
+        },
+        {
+          label: 'Utilidad bruta',
+          data: chartData.monthlyRevenue.map((r) => Number(r.gross_profit)),
+          borderColor: '#059669', backgroundColor: 'rgba(5,150,105,0.08)',
+          tension: 0.4, fill: true, pointBackgroundColor: '#059669',
+        },
+      ],
     },
-    options: { ...chartDefaults, plugins: { ...chartDefaults.plugins, legend: { display: false } } },
+    options: chartDefaults,
   } : null
 
   const servicesChart = chartData?.topServices?.length ? {
@@ -336,12 +383,20 @@ export function Reportes() {
   const dailyRevenueChart = chartData?.dailyRevenueThisMonth?.length ? {
     data: {
       labels: chartData.dailyRevenueThisMonth.map((r) => r.day_number),
-      datasets: [{
-        label: 'Ganancias',
-        data: chartData.dailyRevenueThisMonth.map((r) => Number(r.revenue)),
-        borderColor: '#0D9488', backgroundColor: 'rgba(13,148,136,0.1)',
-        tension: 0.3, fill: true, pointBackgroundColor: '#0D9488', pointRadius: 3,
-      }],
+      datasets: [
+        {
+          label: 'Ventas',
+          data: chartData.dailyRevenueThisMonth.map((r) => Number(r.revenue)),
+          borderColor: '#0D9488', backgroundColor: 'rgba(13,148,136,0.1)',
+          tension: 0.3, fill: true, pointBackgroundColor: '#0D9488', pointRadius: 3,
+        },
+        {
+          label: 'Utilidad bruta',
+          data: chartData.dailyRevenueThisMonth.map((r) => Number(r.gross_profit)),
+          borderColor: '#059669', backgroundColor: 'rgba(5,150,105,0.08)',
+          tension: 0.3, fill: true, pointBackgroundColor: '#059669', pointRadius: 3,
+        },
+      ],
     },
     options: {
       ...chartDefaults,
@@ -364,6 +419,8 @@ export function Reportes() {
     },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#64748B', font: { size: 11 } } } } },
   } : null
+  const financial = financialRows(chartData?.financialSummary)
+  const hasEstimatedCosts = financial.some((row) => row.hasEstimatedCosts)
 
   return (
     <section className={styles.page}>
@@ -372,7 +429,7 @@ export function Reportes() {
         <div>
           <p className={styles.eyebrow}>Módulo administrativo</p>
           <h1 className={styles.title}>Reportes</h1>
-          <p className={styles.subtitle}>Dashboard analítico con gráficas e historial de actividad.</p>
+          <p className={styles.subtitle}>Ventas, utilidad bruta, tendencias e historial de actividad.</p>
         </div>
         <div className={styles.headerActions}>
           <button type="button" className={styles.exportBtn} onClick={handleExportPDF} disabled={!chartData}>
@@ -396,21 +453,44 @@ export function Reportes() {
         </div>
       ) : (
         <>
+          {financial.length ? (
+            <section className={styles.financialSummary} aria-labelledby="financial-report-title">
+              <div className={styles.financialSummaryHeader}>
+                <div>
+                  <h2 id="financial-report-title" className={styles.financialSummaryTitle}>Ventas y utilidad bruta</h2>
+                  <p className={styles.financialSummaryDescription}>La utilidad bruta descuenta repuestos y pagos a técnicos. No incluye nómina fija ni gastos operativos.</p>
+                </div>
+                {hasEstimatedCosts ? <span className={styles.estimateBadge}>Histórico con costos estimados</span> : null}
+              </div>
+              <div className={styles.financialCards}>
+                {financial.map((row) => (
+                  <article key={row.period} className={styles.financialCard}>
+                    <h3>{row.period}</h3>
+                    <div><span>Ventas</span><strong>{fmtCOP(row.totalRevenue)}</strong></div>
+                    <p className={styles.financialSource}>Órdenes: {fmtCOP(row.ordersRevenue)} · Rápidos: {fmtCOP(row.quickJobsRevenue)}</p>
+                    <div><span>Utilidad bruta</span><strong className={styles.profitValue}>{fmtCOP(row.grossProfit)}</strong></div>
+                    <p>Costos directos: {fmtCOP(row.totalDirectCosts)} · Margen: {fmtPercent(row.profitMargin)}</p>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
           {/* ── Gráficas principales ────────────────────── */}
           <div className={styles.chartsGrid}>
             {/* Ingresos mensuales */}
             <div className={styles.chartCard}>
-              <h3 className={styles.chartTitle}>Ingresos mensuales</h3>
+              <h3 className={styles.chartTitle}>Ventas y utilidad bruta mensuales</h3>
               <div className={styles.chartWrap}>
                 {revenueChart ? <Line data={revenueChart.data} options={revenueChart.options} /> : <p className={styles.noData}>Sin datos de ingresos</p>}
               </div>
             </div>
 
-            {/* Ganancias diarias del mes en curso */}
+            {/* Ventas y utilidad bruta diarias */}
             <div className={`${styles.chartCard} ${styles.chartWide}`}>
-              <h3 className={styles.chartTitle}>Ganancias diarias — mes en curso</h3>
+              <h3 className={styles.chartTitle}>Ventas y utilidad bruta diarias — mes en curso</h3>
               <div className={styles.chartWrap}>
-                {dailyRevenueChart ? <Line data={dailyRevenueChart.data} options={dailyRevenueChart.options} /> : <p className={styles.noData}>Sin datos de ganancias diarias</p>}
+                {dailyRevenueChart ? <Line data={dailyRevenueChart.data} options={dailyRevenueChart.options} /> : <p className={styles.noData}>Sin datos financieros diarios</p>}
               </div>
             </div>
 
@@ -445,31 +525,35 @@ export function Reportes() {
             {chartData?.fortnightComparison?.length ? (() => {
               const primera = chartData.fortnightComparison.find((r) => r.fortnight === 'primera') ?? { orders_count: 0, revenue: 0 }
               const segunda = chartData.fortnightComparison.find((r) => r.fortnight === 'segunda') ?? { orders_count: 0, revenue: 0 }
-              const diff = Number(segunda.revenue) - Number(primera.revenue)
+              const revenueDiff = Number(segunda.revenue) - Number(primera.revenue)
+              const profitDiff = Number(segunda.gross_profit) - Number(primera.gross_profit)
               return (
                 <div className={styles.detailCard}>
                   <div className={styles.detailCardHeader}>
                     <h3 className={styles.chartTitle}>Quincena 1 vs Quincena 2</h3>
                     <button type="button" className={styles.miniExport} onClick={() => exportToPDF(
                       'Quincena 1 vs Quincena 2',
-                      ['Período', 'Órdenes', 'Ingresos'],
+                      ['Período', 'Órdenes', 'Ventas', 'Utilidad bruta'],
                       [
-                        ['Quincena 1 (1–15)', primera.orders_count, fmtCOP(primera.revenue)],
-                        ['Quincena 2 (16–fin)', segunda.orders_count, fmtCOP(segunda.revenue)],
+                        ['Quincena 1 (1–15)', primera.orders_count, fmtCOP(primera.revenue), fmtCOP(primera.gross_profit)],
+                        ['Quincena 2 (16–fin)', segunda.orders_count, fmtCOP(segunda.revenue), fmtCOP(segunda.gross_profit)],
                       ],
                       'Quincena_1_vs_2.pdf'
                     )}>PDF</button>
                   </div>
                   <table className={styles.miniTable}>
-                    <thead><tr><th>Período</th><th>Órdenes</th><th>Ingresos</th></tr></thead>
+                    <thead><tr><th>Período</th><th>Órdenes</th><th>Ventas</th><th>Utilidad bruta</th></tr></thead>
                     <tbody>
-                      <tr><td>Quincena 1 (1–15)</td><td>{primera.orders_count}</td><td>{fmtCOP(primera.revenue)}</td></tr>
-                      <tr><td>Quincena 2 (16–fin)</td><td>{segunda.orders_count}</td><td>{fmtCOP(segunda.revenue)}</td></tr>
+                      <tr><td>Quincena 1 (1–15)</td><td>{primera.orders_count}</td><td>{fmtCOP(primera.revenue)}</td><td>{fmtCOP(primera.gross_profit)}</td></tr>
+                      <tr><td>Quincena 2 (16–fin)</td><td>{segunda.orders_count}</td><td>{fmtCOP(segunda.revenue)}</td><td>{fmtCOP(segunda.gross_profit)}</td></tr>
                       <tr>
                         <td>Diferencia (Q2 − Q1)</td>
                         <td>—</td>
-                        <td style={{ color: diff >= 0 ? '#059669' : '#DC2626', fontWeight: 800 }}>
-                          {diff >= 0 ? '+' : ''}{fmtCOP(diff)}
+                        <td style={{ color: revenueDiff >= 0 ? '#059669' : '#DC2626', fontWeight: 800 }}>
+                          {revenueDiff >= 0 ? '+' : ''}{fmtCOP(revenueDiff)}
+                        </td>
+                        <td style={{ color: profitDiff >= 0 ? '#059669' : '#DC2626', fontWeight: 800 }}>
+                          {profitDiff >= 0 ? '+' : ''}{fmtCOP(profitDiff)}
                         </td>
                       </tr>
                     </tbody>

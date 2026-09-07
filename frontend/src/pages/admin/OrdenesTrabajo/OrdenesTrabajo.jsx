@@ -5,7 +5,6 @@ import { useToast } from '../../../hooks/useToast'
 import styles from './OrdenesTrabajo.module.css'
 
 const TRACKING_BASE_URL = `${window.location.origin}/tracking`
-const WHATSAPP_NUMBER   = '573000000000'
 const LIMIT              = 10
 
 const VALID_STATUSES    = ['Pendiente', 'En proceso', 'En reparación', 'Esperando repuesto', 'Listo', 'Lista para entrega', 'Entregada']
@@ -204,7 +203,10 @@ export function OrdenesTrabajo() {
     }
   }, [page, searchApplied, filterStatus, filterEmployee])
 
-  useEffect(() => { loadOrders() }, [loadOrders])
+  useEffect(() => {
+    const timer = setTimeout(() => loadOrders(), 0)
+    return () => clearTimeout(timer)
+  }, [loadOrders])
 
   // ── Load technicians (empleados activos) ───────────────────
   const loadEmployees = useCallback(async () => {
@@ -214,7 +216,10 @@ export function OrdenesTrabajo() {
     } catch { /* ignore */ }
   }, [])
 
-  useEffect(() => { loadEmployees() }, [loadEmployees])
+  useEffect(() => {
+    const timer = setTimeout(() => loadEmployees(), 0)
+    return () => clearTimeout(timer)
+  }, [loadEmployees])
 
   // ── Search debounce ───────────────────────────────────────
   function handleSearchChange(e) {

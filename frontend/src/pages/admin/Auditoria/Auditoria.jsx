@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import * as XLSX from 'xlsx'
-import { saveAs } from 'file-saver'
 import { reportsApi } from '../../../api/reportsApi'
 import { usersApi } from '../../../api/usersApi'
 import { Pagination } from '../../../components/Pagination/Pagination'
+import { exportWorkbook } from '../../../utils/exportWorkbook'
 import styles from './Auditoria.module.css'
 
 const ACTION_LABELS = {
@@ -112,7 +111,10 @@ export function Auditoria() {
     }
   }, [page, searchApplied, dateFrom, dateTo, filterUser, filterAction, filterTable])
 
-  useEffect(() => { loadLogs() }, [loadLogs])
+  useEffect(() => {
+    const timer = setTimeout(() => loadLogs(), 0)
+    return () => clearTimeout(timer)
+  }, [loadLogs])
 
   function handleSearchChange(e) {
     const val = e.target.value
@@ -128,7 +130,7 @@ export function Auditoria() {
 
   const hasFilters = searchApplied || dateFrom || dateTo || filterUser || filterAction || filterTable
 
-  function handleExportExcel() {
+  async function handleExportExcel() {
     if (!logs.length) return
     const data = logs.map((r) => ({
       Fecha: fmtDate(r.created_at),
@@ -140,11 +142,7 @@ export function Auditoria() {
       Descripción: r.description ?? '—',
       IP: r.ip_address ?? '—',
     }))
-    const ws = XLSX.utils.json_to_sheet(data)
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Auditoría')
-    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
-    saveAs(new Blob([buf], { type: 'application/octet-stream' }), 'ENGINES_JDS_Auditoria.xlsx')
+    await exportWorkbook([{ name: 'Auditoría', rows: data }], 'ENGINES_JDS_Auditoria.xlsx')
   }
 
   function handleExportPDF() {

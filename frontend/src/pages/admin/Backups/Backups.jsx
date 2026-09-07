@@ -56,9 +56,12 @@ export function Backups() {
     } finally {
       if (mountedRef.current) setLoading(false)
     }
-  }, [page])
+  }, [page, toast])
 
-  useEffect(() => { loadData() }, [loadData])
+  useEffect(() => {
+    const timer = setTimeout(() => loadData(), 0)
+    return () => clearTimeout(timer)
+  }, [loadData])
 
   async function handleCreate() {
     setCreating(true)

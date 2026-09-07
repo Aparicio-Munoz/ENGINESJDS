@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { settingsApi } from '../../../api/settingsApi'
 import { useToast } from '../../../hooks/useToast'
 import styles from './Configuracion.module.css'
@@ -11,20 +11,21 @@ export function Configuracion() {
   const [saving, setSaving] = useState(false)
   const [section, setSection] = useState('info')
 
-  useEffect(() => {
-    mountedRef.current = true
-    loadSettings()
-    return () => { mountedRef.current = false }
-  }, [])
-
-  async function loadSettings() {
+  const loadSettings = useCallback(async () => {
     setLoading(true)
     try {
       const data = await settingsApi.get()
       if (mountedRef.current) setSettings(data)
     } catch { if (mountedRef.current) toast.error('Error al cargar configuración') }
     finally { if (mountedRef.current) setLoading(false) }
-  }
+  }, [toast])
+
+  useEffect(() => {
+    mountedRef.current = true
+    const initialLoad = setTimeout(() => loadSettings(), 0)
+    return () => { mountedRef.current = false; clearTimeout(initialLoad) }
+  }, [loadSettings])
+
 
   async function handleSave(fields) {
     setSaving(true)

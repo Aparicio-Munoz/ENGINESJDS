@@ -61,9 +61,12 @@ export function Facturas() {
       setSummary(summaryRes)
     } catch { if (mountedRef.current) toast.error('Error al cargar facturas') }
     finally { if (mountedRef.current) setLoading(false) }
-  }, [page, searchApplied, filterStatus, filterMethod])
+  }, [page, searchApplied, filterStatus, filterMethod, toast])
 
-  useEffect(() => { loadData() }, [loadData])
+  useEffect(() => {
+    const timer = setTimeout(() => loadData(), 0)
+    return () => clearTimeout(timer)
+  }, [loadData])
 
   function handleSearch(e) {
     const v = e.target.value; setSearchInput(v)

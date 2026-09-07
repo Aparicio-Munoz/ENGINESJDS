@@ -93,7 +93,10 @@ export function Marcas() {
     }
   }, [page, searchApplied, filterCategory, filterStatus])
 
-  useEffect(() => { loadBrands() }, [loadBrands])
+  useEffect(() => {
+    const timer = setTimeout(() => loadBrands(), 0)
+    return () => clearTimeout(timer)
+  }, [loadBrands])
 
   function handleSearchChange(e) {
     const val = e.target.value

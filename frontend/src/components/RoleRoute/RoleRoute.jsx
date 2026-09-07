@@ -5,7 +5,7 @@ import { useAuth } from '../../hooks/useAuth'
  * Retorna la ruta de inicio según el rol del usuario.
  * Se usa como destino de redirección cuando el acceso es denegado.
  */
-export function getDefaultRoute(role) {
+function getDefaultRoute(role) {
   if (role === 'Técnico')       return '/admin/tecnico-dashboard'
   if (role === 'Recepcionista') return '/admin/clientes'
   return '/admin'

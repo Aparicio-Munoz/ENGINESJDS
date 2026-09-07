@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useParams } from 'react-router-dom'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip, Legend } from 'chart.js'
 import { Bar } from 'react-chartjs-2'
-import * as XLSX from 'xlsx'
-import { saveAs } from 'file-saver'
 import { historyApi } from '../../../api/historyApi'
 import { useToast } from '../../../hooks/useToast'
+import { exportWorkbook } from '../../../utils/exportWorkbook'
 import styles from './HistorialMoto.module.css'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend)
@@ -33,13 +32,7 @@ export function HistorialMoto() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  useEffect(() => {
-    mountedRef.current = true
-    loadHistory()
-    return () => { mountedRef.current = false }
-  }, [id])
-
-  async function loadHistory() {
+  const loadHistory = useCallback(async () => {
     setLoading(true); setError(null)
     try {
       const result = await historyApi.getFullHistory(id)
@@ -49,27 +42,35 @@ export function HistorialMoto() {
     } finally {
       if (mountedRef.current) setLoading(false)
     }
-  }
+  }, [id])
+
+  useEffect(() => {
+    mountedRef.current = true
+    const initialLoad = setTimeout(() => loadHistory(), 0)
+    return () => { mountedRef.current = false; clearTimeout(initialLoad) }
+  }, [loadHistory])
+
 
   async function handlePDF() {
     try { await historyApi.downloadPDF(id); toast.success('PDF descargado') } catch { toast.error('Error al descargar PDF') }
   }
 
-  function handleExcel() {
+  async function handleExcel() {
     if (!data) return
-    const wb = XLSX.utils.book_new()
+    const sheets = []
     if (data.timeline?.length) {
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
-        data.timeline.map((t) => ({ OT: t.order_number, Fecha: fmtDate(t.entry_date), Estado: t.order_status, Técnico: t.technician_name ?? '—', Diagnóstico: t.diagnostic_notes ?? '—', Total: Number(t.final_price) }))
-      ), 'Historial')
+      sheets.push({
+        name: 'Historial',
+        rows: data.timeline.map((t) => ({ OT: t.order_number, Fecha: fmtDate(t.entry_date), Estado: t.order_status, Técnico: t.technician_name ?? '—', Diagnóstico: t.diagnostic_notes ?? '—', Total: Number(t.final_price) })),
+      })
     }
     if (data.services?.length) {
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
-        data.services.map((s) => ({ Servicio: s.service_name, Cantidad: s.quantity, Precio: Number(s.total_price), OT: s.order_number, Técnico: s.technician ?? '—' }))
-      ), 'Servicios')
+      sheets.push({
+        name: 'Servicios',
+        rows: data.services.map((s) => ({ Servicio: s.service_name, Cantidad: s.quantity, Precio: Number(s.total_price), OT: s.order_number, Técnico: s.technician ?? '—' })),
+      })
     }
-    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
-    saveAs(new Blob([buf]), `Historial_${data.motorcycle.plate ?? data.motorcycle.id}.xlsx`)
+    await exportWorkbook(sheets, `Historial_${data.motorcycle.plate ?? data.motorcycle.id}.xlsx`)
   }
 
   if (loading) return <section className={styles.page}><div className={styles.loadingState}><div className={styles.spinner} />Cargando historial…</div></section>

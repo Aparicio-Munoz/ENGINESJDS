@@ -1,11 +1,11 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ordersApi } from '../api/ordersApi'
 import { inventoryApi } from '../api/inventoryApi'
 import { invoicesApi } from '../api/invoicesApi'
 import { useToast } from '../hooks/useToast'
 import { useAuth } from '../hooks/useAuth'
 
-const SocketContext = createContext(null)
+import { SocketContext } from './SocketContextValue'
 const NOTIFICATIONS_KEY = 'engines-notifications'
 const POLL_INTERVAL_MS = 25000
 
@@ -23,7 +23,7 @@ export function SocketProvider({ children }) {
   const isAdmin = user?.role === 'Administrador'
   const toast = useToast()
   const toastRef = useRef(toast)
-  toastRef.current = toast
+  useEffect(() => { toastRef.current = toast }, [toast])
 
   const [notifications, setNotifications] = useState(() => {
     try { return JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY) ?? '[]') } catch { return [] }
@@ -160,8 +160,4 @@ export function SocketProvider({ children }) {
       {children}
     </SocketContext.Provider>
   )
-}
-
-export function useSocket() {
-  return useContext(SocketContext)
 }

@@ -1,0 +1,39 @@
+.page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+  background: var(--dark-950, #050A14);
+  color: #E2E8F0;
+}
+
+.content {
+  max-width: 420px;
+  text-align: center;
+}
+
+.title {
+  margin: 0 0 10px;
+  color: var(--accent, #F97316);
+  font-size: clamp(1.8rem, 6vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.message {
+  margin: 0 0 24px;
+  color: var(--dark-400, #94A3B8);
+}
+
+.button {
+  min-height: 44px;
+  border: 0;
+  border-radius: var(--r-sm, 8px);
+  padding: 10px 28px;
+  background: var(--accent, #F97316);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.button:hover { background: var(--accent-hover, #EA580C); }

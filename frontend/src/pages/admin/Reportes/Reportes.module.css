@@ -64,6 +64,101 @@
   transform: translateY(-1px);
 }
 
+/* ── Resumen financiero ───────────────────────────── */
+.financialSummary {
+  padding: 20px;
+  border: 1px solid #BBF7D0;
+  border-radius: var(--r-md, 12px);
+  background: linear-gradient(135deg, #F0FDFA 0%, #FFFFFF 68%);
+}
+
+.financialSummaryHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.financialSummaryTitle {
+  margin: 0 0 4px;
+  color: var(--text, #0F172A);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.financialSummaryDescription {
+  margin: 0;
+  color: var(--muted, #64748B);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.estimateBadge {
+  flex-shrink: 0;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #FEF3C7;
+  color: #92400E;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.financialCards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.financialCard {
+  padding: 15px;
+  border: 1px solid #D1FAE5;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.financialCard h3 {
+  margin: 0 0 12px;
+  color: #334155;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.financialCard div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 8px;
+}
+
+.financialCard span,
+.financialCard p {
+  color: #64748B;
+  font-size: 0.73rem;
+}
+
+.financialCard strong {
+  color: #F97316;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.financialCard .profitValue {
+  color: #059669;
+}
+
+.financialCard p {
+  margin: 12px 0 0;
+  line-height: 1.4;
+}
+
+.financialCard .financialSource {
+  margin-top: 6px;
+  color: #475569;
+}
+
 /* ── Period nav ───────────────────────────────────── */
 .periodNav {
   display: flex;
@@ -722,6 +817,9 @@
 }
 
 @media (max-width: 1024px) {
+  .financialCards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .chartsGrid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -731,6 +829,12 @@
 }
 
 @media (max-width: 540px) {
+  .financialCards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .financialSummaryHeader {
+    flex-direction: column;
+  }
   .chartWrap {
     height: 200px;
   }

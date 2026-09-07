@@ -157,7 +157,10 @@ export function Empleados() {
       .finally(() => { if (mountedRef.current) setStatsLoading(false) })
   }, [])
 
-  useEffect(() => { loadStats() }, [loadStats])
+  useEffect(() => {
+    const timer = setTimeout(() => loadStats(), 0)
+    return () => clearTimeout(timer)
+  }, [loadStats])
 
   // Load employees (re-runs when page or applied filters change)
   const loadEmployees = useCallback(async (opts = {}) => {
@@ -183,7 +186,10 @@ export function Empleados() {
     }
   }, [page, searchApplied, filterSpecialty, filterStatus])
 
-  useEffect(() => { loadEmployees() }, [loadEmployees])
+  useEffect(() => {
+    const timer = setTimeout(() => loadEmployees(), 0)
+    return () => clearTimeout(timer)
+  }, [loadEmployees])
 
   // ── Debounced search ───────────────────────────────────
   function handleSearchChange(e) {

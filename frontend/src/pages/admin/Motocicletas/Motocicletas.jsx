@@ -168,7 +168,8 @@ export function Motocicletas() {
   }, [page, search])
 
   useEffect(() => {
-    loadMotorcycles()
+    const timer = setTimeout(() => loadMotorcycles(), 0)
+    return () => clearTimeout(timer)
   }, [loadMotorcycles])
 
   // ── Debounced search ───────────────────────────────────

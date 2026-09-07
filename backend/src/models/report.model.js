@@ -1,8 +1,155 @@
 import { getPool } from '../config/database.js'
 
+const BOGOTA_TIME_ZONE = 'America/Bogota'
+const ORDER_DELIVERY_DAY = `DATE(CONVERT_TZ(actual_delivery_date, '+00:00', '-05:00'))`
+const QUICK_JOB_DAY = `DATE(CONVERT_TZ(q.created_at, '+00:00', '-05:00'))`
+
+// Cada fila representa dinero generado en un día calendario de Bogotá.
+// Las órdenes entregadas y los trabajos rápidos se unen aquí para que todos
+// los KPIs utilicen exactamente el mismo origen, fechas y fórmula.
+//
+// La utilidad es bruta: ventas - costo de repuestos - pago a técnicos. No se
+// descuenta nómina fija ni gastos operativos porque aún no se registran en la
+// base de datos.
+const FINANCIAL_MOVEMENTS_CTE = `
+  WITH part_costs AS (
+    SELECT
+      oi.order_id,
+      COALESCE(SUM(oi.quantity * oi.unit_cost), 0) AS parts_cost,
+      MAX(oi.cost_is_estimated) AS has_estimated_part_cost
+    FROM order_items oi
+    GROUP BY oi.order_id
+  ),
+  financial_movements AS (
+    SELECT
+      ${ORDER_DELIVERY_DAY} AS business_day,
+      o.final_price AS order_revenue,
+      0 AS quick_job_revenue,
+      COALESCE(pc.parts_cost, 0) AS parts_cost,
+      o.labor_cost * COALESCE(o.technician_commission_percent, 0) / 100 AS technician_commissions,
+      0 AS quick_job_payout,
+      1 AS delivered_orders,
+      0 AS quick_jobs,
+      CASE
+        WHEN COALESCE(pc.has_estimated_part_cost, 0) = 1
+          OR COALESCE(o.commission_is_estimated, 0) = 1
+        THEN 1 ELSE 0
+      END AS has_estimated_cost
+    FROM orders o
+    LEFT JOIN part_costs pc ON pc.order_id = o.id
+    WHERE o.status = 'Entregada' AND o.actual_delivery_date IS NOT NULL
+
+    UNION ALL
+
+    SELECT
+      ${QUICK_JOB_DAY} AS business_day,
+      0 AS order_revenue,
+      q.price AS quick_job_revenue,
+      0 AS parts_cost,
+      0 AS technician_commissions,
+      q.price AS quick_job_payout,
+      0 AS delivered_orders,
+      1 AS quick_jobs,
+      0 AS has_estimated_cost
+    FROM quick_jobs q
+    WHERE q.deleted_at IS NULL
+  )
+`
+
+function pad2(value) {
+  return String(value).padStart(2, '0')
+}
+
+function getBogotaPeriods() {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: BOGOTA_TIME_ZONE }).format(new Date())
+  const [year, month, day] = today.split('-').map(Number)
+  const monthStart = `${year}-${pad2(month)}-01`
+  const yearStart = `${year}-01-01`
+  const fortnightStart = day <= 15 ? monthStart : `${year}-${pad2(month)}-16`
+  const date = new Date(Date.UTC(year, month - 1, day))
+  const daysSinceMonday = (date.getUTCDay() + 6) % 7
+  date.setUTCDate(date.getUTCDate() - daysSinceMonday)
+  const weekStart = `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())}`
+
+  return { today, year, month, monthStart, yearStart, fortnightStart, weekStart }
+}
+
+function getFinancialPeriodRange(period = 'monthly') {
+  const periods = getBogotaPeriods()
+  const fromByPeriod = {
+    daily: periods.today,
+    weekly: periods.weekStart,
+    biweekly: periods.fortnightStart,
+    monthly: periods.monthStart,
+  }
+
+  return { from: fromByPeriod[period] ?? periods.monthStart, to: periods.today }
+}
+
+function toNumber(value) {
+  return Number(value ?? 0)
+}
+
+function formatFinancialTotals(row = {}) {
+  const ordersRevenue = toNumber(row.orders_revenue)
+  const quickJobsRevenue = toNumber(row.quick_jobs_revenue)
+  const partsCost = toNumber(row.parts_cost)
+  const technicianCommissions = toNumber(row.technician_commissions)
+  const quickJobPayout = toNumber(row.quick_job_payout)
+  const totalRevenue = ordersRevenue + quickJobsRevenue
+  const totalDirectCosts = partsCost + technicianCommissions + quickJobPayout
+
+  return {
+    ordersRevenue,
+    quickJobsRevenue,
+    totalRevenue,
+    partsCost,
+    technicianCommissions,
+    quickJobPayout,
+    totalDirectCosts,
+    grossProfit: totalRevenue - totalDirectCosts,
+    profitMargin: totalRevenue > 0 ? ((totalRevenue - totalDirectCosts) / totalRevenue) * 100 : 0,
+    deliveredOrders: toNumber(row.delivered_orders),
+    quickJobs: toNumber(row.quick_jobs),
+    hasEstimatedCosts: toNumber(row.estimated_cost_records) > 0,
+  }
+}
+
+async function getFinancialTotals(from, to) {
+  const [[row]] = await getPool().query(
+    `${FINANCIAL_MOVEMENTS_CTE}
+     SELECT
+       COALESCE(SUM(order_revenue), 0) AS orders_revenue,
+       COALESCE(SUM(quick_job_revenue), 0) AS quick_jobs_revenue,
+       COALESCE(SUM(parts_cost), 0) AS parts_cost,
+       COALESCE(SUM(technician_commissions), 0) AS technician_commissions,
+       COALESCE(SUM(quick_job_payout), 0) AS quick_job_payout,
+       COALESCE(SUM(delivered_orders), 0) AS delivered_orders,
+       COALESCE(SUM(quick_jobs), 0) AS quick_jobs,
+       COALESCE(SUM(has_estimated_cost), 0) AS estimated_cost_records
+     FROM financial_movements
+     WHERE business_day BETWEEN ? AND ?`,
+    [from, to]
+  )
+  return formatFinancialTotals(row)
+}
+
+export async function getFinancialSummary() {
+  const { today, monthStart, yearStart, fortnightStart } = getBogotaPeriods()
+  const [todayTotals, fortnight, month, year] = await Promise.all([
+    getFinancialTotals(today, today),
+    getFinancialTotals(fortnightStart, today),
+    getFinancialTotals(monthStart, today),
+    getFinancialTotals(yearStart, today),
+  ])
+
+  return { today: todayTotals, fortnight, month, year }
+}
+
 // ── KPIs del dashboard ────────────────────────────────────────
 export async function getSummaryData() {
   const pool = getPool()
+  const { today } = getBogotaPeriods()
 
   const [
     [activeRows],
@@ -10,7 +157,7 @@ export async function getSummaryData() {
     [lowStockRows],
     [inServiceRows],
     [completedRows],
-    [revenueRows],
+    financialToday,
   ] = await Promise.all([
     // Órdenes activas (no entregadas)
     pool.query(
@@ -35,14 +182,10 @@ export async function getSummaryData() {
       `SELECT COUNT(*) AS cnt
        FROM orders
        WHERE status = 'Entregada'
-         AND DATE(actual_delivery_date) = CURDATE()`
+         AND ${ORDER_DELIVERY_DAY} = ?`,
+      [today]
     ),
-    // Ingresos del día (ventas con actual_delivery_date hoy)
-    pool.query(
-      `SELECT COALESCE(SUM(total_revenue), 0) AS revenue
-       FROM v_daily_sales_summary
-       WHERE sale_day = CURDATE()`
-    ),
+    getFinancialTotals(today, today),
   ])
 
   return {
@@ -51,65 +194,82 @@ export async function getSummaryData() {
     lowStockItems:        Number(lowStockRows[0].cnt),
     motorcyclesInService: Number(inServiceRows[0].cnt),
     completedToday:       Number(completedRows[0].cnt),
-    dailyRevenue:         Number(revenueRows[0].revenue),
+    dailyRevenue:         financialToday.totalRevenue,
+    dailyGrossProfit:     financialToday.grossProfit,
   }
 }
 
-// ── Ventas por período — usa v_revenue_by_period ──────────────
+// ── Ventas por período ────────────────────────────────────────
 // period: 'daily' | 'weekly' | 'biweekly' | 'monthly'
 export async function getOrdersByPeriod(period = 'monthly') {
-  const pool = getPool()
-
-  // Condición WHERE según período
-  const periodConditions = {
-    daily:     `DATE(sale_date) = CURDATE()`,
-    weekly:    `YEARWEEK(sale_date, 1) = YEARWEEK(NOW(), 1)`,
-    biweekly:  `year_month = DATE_FORMAT(NOW(), '%Y-%m')
-                  AND fortnight = IF(DAY(NOW()) <= 15, 'primera', 'segunda')`,
-    monthly:   `year_month = DATE_FORMAT(NOW(), '%Y-%m')`,
-  }
-
-  const condition = periodConditions[period] ?? periodConditions.monthly
-
-  const [[summaryRow], [salesRows]] = await Promise.all([
-    pool.query(
+  const { from, to } = getFinancialPeriodRange(period)
+  const [financial, [salesRows], [quickJobsRows]] = await Promise.all([
+    getFinancialTotals(from, to),
+    getPool().query(
       `SELECT
-         COUNT(*)                            AS total_sales,
-         COALESCE(SUM(total), 0)            AS total_revenue,
-         COALESCE(SUM(parts_subtotal), 0)   AS parts_revenue,
-         COALESCE(SUM(labor_subtotal), 0)   AS labor_revenue,
-         COALESCE(SUM(discount), 0)         AS total_discounts,
-         COALESCE(SUM(CASE WHEN payment_status = 'Pagado'    THEN total ELSE 0 END), 0) AS collected,
-         COALESCE(SUM(CASE WHEN payment_status = 'Pendiente' THEN total ELSE 0 END), 0) AS pending,
-         COALESCE(SUM(CASE WHEN payment_status = 'Parcial'   THEN total ELSE 0 END), 0) AS partial
-       FROM v_revenue_by_period
-       WHERE ${condition}`
+         COALESCE(s.id, o.id) AS id, o.id AS order_id, o.order_number,
+         o.actual_delivery_date AS sale_date,
+         o.final_price AS total,
+         o.parts_cost AS parts_subtotal,
+         o.labor_cost + o.services_cost AS labor_subtotal,
+         o.discount,
+         s.payment_method, s.payment_status,
+         CONCAT_WS(' ', c.name, c.last_name) AS client_name,
+         m.plate AS motorcycle_plate,
+         CONCAT_WS(' ', m.brand, m.model) AS motorcycle_info
+       FROM orders o
+       LEFT JOIN sales s ON s.order_id = o.id
+       LEFT JOIN clients c ON c.id = o.client_id
+       LEFT JOIN motorcycles m ON m.id = o.motorcycle_id
+       WHERE o.status = 'Entregada'
+         AND o.actual_delivery_date IS NOT NULL
+         AND ${ORDER_DELIVERY_DAY} BETWEEN ? AND ?
+       ORDER BY o.actual_delivery_date DESC`,
+      [from, to]
     ),
-    pool.query(
-      `SELECT
-         id, order_id, order_number,
-         sale_date, total, parts_subtotal, labor_subtotal, discount,
-         payment_method, payment_status,
-         client_name, motorcycle_plate, motorcycle_info
-       FROM v_revenue_by_period
-       WHERE ${condition}
-       ORDER BY sale_date DESC`
+    getPool().query(
+      `SELECT id, description, price, employee_id, created_at
+       FROM quick_jobs q
+       WHERE q.deleted_at IS NULL
+         AND ${QUICK_JOB_DAY} BETWEEN ? AND ?
+       ORDER BY q.created_at DESC`,
+      [from, to]
     ),
   ])
+
+  const orderTotals = salesRows.reduce((totals, sale) => {
+    const amount = toNumber(sale.total)
+    totals.partsRevenue += toNumber(sale.parts_subtotal)
+    totals.laborRevenue += toNumber(sale.labor_subtotal)
+    totals.totalDiscounts += toNumber(sale.discount)
+    if (sale.payment_status === 'Pagado') totals.collected += amount
+    if (sale.payment_status === 'Pendiente') totals.pending += amount
+    if (sale.payment_status === 'Parcial') totals.partial += amount
+    return totals
+  }, {
+    partsRevenue: 0,
+    laborRevenue: 0,
+    totalDiscounts: 0,
+    collected: 0,
+    pending: 0,
+    partial: 0,
+  })
 
   return {
     period,
     summary: {
-      totalSales:     Number(summaryRow[0].total_sales),
-      totalRevenue:   Number(summaryRow[0].total_revenue),
-      partsRevenue:   Number(summaryRow[0].parts_revenue),
-      laborRevenue:   Number(summaryRow[0].labor_revenue),
-      totalDiscounts: Number(summaryRow[0].total_discounts),
-      collected:      Number(summaryRow[0].collected),
-      pending:        Number(summaryRow[0].pending),
-      partial:        Number(summaryRow[0].partial),
+      totalSales:     financial.deliveredOrders + financial.quickJobs,
+      totalRevenue:   financial.totalRevenue,
+      partsRevenue:   orderTotals.partsRevenue,
+      laborRevenue:   orderTotals.laborRevenue,
+      totalDiscounts: orderTotals.totalDiscounts,
+      collected:      orderTotals.collected,
+      pending:        orderTotals.pending,
+      partial:        orderTotals.partial,
+      ...financial,
     },
     sales: salesRows,
+    quickJobs: quickJobsRows,
   }
 }
 
@@ -257,39 +417,16 @@ export async function getTecnomecanicaStatus() {
 export async function getExecutiveKPIs() {
   const pool = getPool()
   const [
+    financial,
     [clientsRow], [motosRow], [activeRow], [deliveredRow],
-    [monthRevenueRow], [yearRevenueRow], [dailyRevenueRow], [fortnightRevenueRow],
-    [pendingApptsRow], [lowStockRow],
+    [lowStockRow],
     [statusRows],
   ] = await Promise.all([
+    getFinancialSummary(),
     pool.query('SELECT COUNT(*) AS cnt FROM clients WHERE deleted_at IS NULL'),
     pool.query('SELECT COUNT(*) AS cnt FROM motorcycles WHERE deleted_at IS NULL'),
     pool.query("SELECT COUNT(*) AS cnt FROM orders WHERE status != 'Entregada'"),
     pool.query("SELECT COUNT(*) AS cnt FROM orders WHERE status = 'Entregada'"),
-    pool.query(`SELECT COALESCE(SUM(final_price), 0) AS revenue FROM orders
-                WHERE status = 'Entregada' AND YEAR(actual_delivery_date) = YEAR(CURDATE())
-                AND MONTH(actual_delivery_date) = MONTH(CURDATE())`),
-    pool.query(`SELECT COALESCE(SUM(final_price), 0) AS revenue FROM orders
-                WHERE status = 'Entregada' AND YEAR(actual_delivery_date) = YEAR(CURDATE())`),
-    // Ganancias de hoy — actual_delivery_date se guarda en UTC real; se
-    // convierte a -05:00 (Bogotá, sin horario de verano) antes de comparar
-    // contra "hoy", igual que en getEmployeePerformance() más abajo, para
-    // no perder entregas de la noche (7pm-medianoche hora Colombia).
-    pool.query(`SELECT COALESCE(SUM(final_price), 0) AS revenue FROM orders
-                WHERE status = 'Entregada'
-                  AND DATE(CONVERT_TZ(actual_delivery_date, '+00:00', '-05:00'))
-                    = DATE(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'))`),
-    // Ganancias de la quincena actual — quincena calendario: 1-15 o 16-fin
-    // de mes, según el día de hoy (hora Bogotá).
-    pool.query(`SELECT COALESCE(SUM(final_price), 0) AS revenue FROM orders
-                WHERE status = 'Entregada'
-                  AND YEAR(CONVERT_TZ(actual_delivery_date, '+00:00', '-05:00'))
-                    = YEAR(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'))
-                  AND MONTH(CONVERT_TZ(actual_delivery_date, '+00:00', '-05:00'))
-                    = MONTH(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'))
-                  AND (DAY(CONVERT_TZ(actual_delivery_date, '+00:00', '-05:00')) <= 15)
-                    = (DAY(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00')) <= 15)`),
-    pool.query("SELECT COUNT(*) AS cnt FROM appointments WHERE status = 'Pendiente'"),
     pool.query('SELECT COUNT(*) AS cnt FROM inventory WHERE quantity <= min_stock'),
     pool.query(`SELECT status, COUNT(*) AS cnt FROM orders GROUP BY status`),
   ])
@@ -302,11 +439,16 @@ export async function getExecutiveKPIs() {
     totalMotorcycles:  Number(motosRow[0].cnt),
     activeOrders:      Number(activeRow[0].cnt),
     deliveredOrders:   Number(deliveredRow[0].cnt),
-    monthlyRevenue:    Number(monthRevenueRow[0].revenue),
-    yearlyRevenue:     Number(yearRevenueRow[0].revenue),
-    dailyRevenue:      Number(dailyRevenueRow[0].revenue),
-    fortnightRevenue:  Number(fortnightRevenueRow[0].revenue),
-    pendingAppts:      Number(pendingApptsRow[0].cnt),
+    // Campos conservados para consumidores existentes del endpoint.
+    monthlyRevenue:    financial.month.totalRevenue,
+    yearlyRevenue:     financial.year.totalRevenue,
+    dailyRevenue:      financial.today.totalRevenue,
+    fortnightRevenue:  financial.fortnight.totalRevenue,
+    monthlyGrossProfit:   financial.month.grossProfit,
+    yearlyGrossProfit:    financial.year.grossProfit,
+    dailyGrossProfit:     financial.today.grossProfit,
+    fortnightGrossProfit: financial.fortnight.grossProfit,
+    financial,
     lowStockItems:     Number(lowStockRow[0].cnt),
     ordersByStatus,
   }
@@ -315,83 +457,126 @@ export async function getExecutiveKPIs() {
 // ── Dashboard: alertas ───────────────────────────────────────
 export async function getDashboardAlerts() {
   const pool = getPool()
-  const [[lowStock], [upcomingAppts]] = await Promise.all([
-    pool.query(`SELECT id, code, name, brand, quantity, min_stock
-                FROM inventory WHERE quantity <= min_stock ORDER BY quantity ASC LIMIT 5`),
-    pool.query(`SELECT id, client_name, service_type, requested_date
-                FROM appointments WHERE status = 'Pendiente'
-                AND requested_date <= DATE_ADD(CURDATE(), INTERVAL 3 DAY)
-                ORDER BY requested_date ASC LIMIT 5`),
-  ])
-  return { lowStock, upcomingAppts }
+  const [lowStock] = await pool.query(`SELECT id, code, name, brand, quantity, min_stock
+                                       FROM inventory
+                                       WHERE quantity <= min_stock
+                                       ORDER BY quantity ASC LIMIT 5`)
+  return { lowStock }
 }
 
-// ── Chart data: ingresos mensuales (últimos 12 meses) ────────
+// ── Chart data: ventas y utilidad bruta mensuales ────────────
 export async function getMonthlyRevenue() {
+  const { year, month: currentMonth, today, yearStart } = getBogotaPeriods()
   const [rows] = await getPool().query(
-    `SELECT
-       DATE_FORMAT(o.actual_delivery_date, '%Y-%m')    AS month,
-       DATE_FORMAT(o.actual_delivery_date, '%b %Y')    AS label,
-       COUNT(*)                                         AS orders_count,
-       COALESCE(SUM(o.final_price), 0)                 AS revenue
-     FROM orders o
-     WHERE o.status = 'Entregada'
-       AND o.actual_delivery_date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
-     GROUP BY month, label
-     ORDER BY month ASC`
+    `${FINANCIAL_MOVEMENTS_CTE}
+     SELECT
+       DATE_FORMAT(business_day, '%Y-%m') AS month,
+       COALESCE(SUM(order_revenue), 0) AS orders_revenue,
+       COALESCE(SUM(quick_job_revenue), 0) AS quick_jobs_revenue,
+       COALESCE(SUM(parts_cost), 0) AS parts_cost,
+       COALESCE(SUM(technician_commissions), 0) AS technician_commissions,
+       COALESCE(SUM(quick_job_payout), 0) AS quick_job_payout,
+       COALESCE(SUM(delivered_orders), 0) AS delivered_orders,
+       COALESCE(SUM(quick_jobs), 0) AS quick_jobs,
+       COALESCE(SUM(has_estimated_cost), 0) AS estimated_cost_records
+     FROM financial_movements
+     WHERE business_day BETWEEN ? AND ?
+     GROUP BY month
+     ORDER BY month ASC`,
+    [yearStart, today]
   )
-  return rows
+
+  const byMonth = new Map(rows.map((row) => [row.month, row]))
+  return Array.from({ length: currentMonth }, (_, index) => {
+    const monthNumber = index + 1
+    const monthKey = `${year}-${pad2(monthNumber)}`
+    const row = byMonth.get(monthKey)
+    const label = new Intl.DateTimeFormat('es-CO', {
+      month: 'short', year: 'numeric', timeZone: BOGOTA_TIME_ZONE,
+    }).format(new Date(Date.UTC(year, index, 1, 5)))
+
+    const totals = formatFinancialTotals(row)
+    return {
+      month: monthKey,
+      label,
+      ...totals,
+      // Aliases utilizados por las gráficas y exportaciones ya existentes.
+      orders_count: toNumber(row?.delivered_orders),
+      revenue: totals.totalRevenue,
+      gross_profit: totals.grossProfit,
+    }
+  })
 }
 
-// ── Chart data: ganancias diarias del mes en curso ────────────
+// ── Chart data: ingresos diarios del mes en curso ────────────
 // Un punto por día 1..N del mes actual (hora Bogotá) — los días sin
 // entregas quedan en 0 en vez de faltar, para que el gráfico muestre
 // picos y días bajos reales, no solo los días con ventas.
 export async function getDailyRevenueThisMonth() {
-  const pool = getPool()
-  const [[{ daysInMonth }]] = await pool.query(
-    `SELECT DAY(LAST_DAY(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'))) AS daysInMonth`
+  const { year, month, monthStart, today } = getBogotaPeriods()
+  const [rows] = await getPool().query(
+    `${FINANCIAL_MOVEMENTS_CTE}
+     SELECT
+       DAY(business_day) AS day_number,
+       COALESCE(SUM(order_revenue), 0) AS orders_revenue,
+       COALESCE(SUM(quick_job_revenue), 0) AS quick_jobs_revenue,
+       COALESCE(SUM(parts_cost), 0) AS parts_cost,
+       COALESCE(SUM(technician_commissions), 0) AS technician_commissions,
+       COALESCE(SUM(quick_job_payout), 0) AS quick_job_payout,
+       COALESCE(SUM(delivered_orders), 0) AS delivered_orders,
+       COALESCE(SUM(quick_jobs), 0) AS quick_jobs,
+       COALESCE(SUM(has_estimated_cost), 0) AS estimated_cost_records
+     FROM financial_movements
+     WHERE business_day BETWEEN ? AND ?
+     GROUP BY day_number
+     ORDER BY day_number`,
+    [monthStart, today]
   )
-  const [rows] = await pool.query(
-    `SELECT
-       DAY(CONVERT_TZ(actual_delivery_date, '+00:00', '-05:00')) AS day_number,
-       COALESCE(SUM(final_price), 0)                             AS revenue
-     FROM orders
-     WHERE status = 'Entregada'
-       AND YEAR(CONVERT_TZ(actual_delivery_date, '+00:00', '-05:00'))
-         = YEAR(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'))
-       AND MONTH(CONVERT_TZ(actual_delivery_date, '+00:00', '-05:00'))
-         = MONTH(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'))
-     GROUP BY day_number`
-  )
-  const revenueByDay = new Map(rows.map((r) => [Number(r.day_number), Number(r.revenue)]))
-  return Array.from({ length: Number(daysInMonth) }, (_, i) => ({
-    day_number: i + 1,
-    revenue: revenueByDay.get(i + 1) ?? 0,
-  }))
+  const byDay = new Map(rows.map((row) => [Number(row.day_number), formatFinancialTotals(row)]))
+  const daysInMonth = new Date(year, month, 0).getDate()
+
+  return Array.from({ length: daysInMonth }, (_, index) => {
+    const totals = byDay.get(index + 1) ?? formatFinancialTotals()
+    return {
+      day_number: index + 1,
+      ...totals,
+      revenue: totals.totalRevenue,
+      gross_profit: totals.grossProfit,
+    }
+  })
 }
 
 // ── Chart data: comparación quincena 1 vs quincena 2 del mes ──
 export async function getFortnightComparison() {
+  const { monthStart, today } = getBogotaPeriods()
   const [rows] = await getPool().query(
-    `SELECT
-       IF(DAY(CONVERT_TZ(actual_delivery_date, '+00:00', '-05:00')) <= 15, 'primera', 'segunda') AS fortnight,
-       COUNT(*)                         AS orders_count,
-       COALESCE(SUM(final_price), 0)    AS revenue
-     FROM orders
-     WHERE status = 'Entregada'
-       AND YEAR(CONVERT_TZ(actual_delivery_date, '+00:00', '-05:00'))
-         = YEAR(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'))
-       AND MONTH(CONVERT_TZ(actual_delivery_date, '+00:00', '-05:00'))
-         = MONTH(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'))
-     GROUP BY fortnight`
+    `${FINANCIAL_MOVEMENTS_CTE}
+     SELECT
+       IF(DAY(business_day) <= 15, 'primera', 'segunda') AS fortnight,
+       COALESCE(SUM(order_revenue), 0) AS orders_revenue,
+       COALESCE(SUM(quick_job_revenue), 0) AS quick_jobs_revenue,
+       COALESCE(SUM(parts_cost), 0) AS parts_cost,
+       COALESCE(SUM(technician_commissions), 0) AS technician_commissions,
+       COALESCE(SUM(quick_job_payout), 0) AS quick_job_payout,
+       COALESCE(SUM(delivered_orders), 0) AS delivered_orders,
+       COALESCE(SUM(quick_jobs), 0) AS quick_jobs,
+       COALESCE(SUM(has_estimated_cost), 0) AS estimated_cost_records
+     FROM financial_movements
+     WHERE business_day BETWEEN ? AND ?
+     GROUP BY fortnight`,
+    [monthStart, today]
   )
-  const byFortnight = new Map(rows.map((r) => [r.fortnight, r]))
-  return ['primera', 'segunda'].map((fortnight) => ({
-    fortnight,
-    orders_count: Number(byFortnight.get(fortnight)?.orders_count ?? 0),
-    revenue: Number(byFortnight.get(fortnight)?.revenue ?? 0),
-  }))
+  const byFortnight = new Map(rows.map((row) => [row.fortnight, formatFinancialTotals(row)]))
+  return ['primera', 'segunda'].map((fortnight) => {
+    const totals = byFortnight.get(fortnight) ?? formatFinancialTotals()
+    return {
+      fortnight,
+      ...totals,
+      orders_count: totals.deliveredOrders,
+      revenue: totals.totalRevenue,
+      gross_profit: totals.grossProfit,
+    }
+  })
 }
 
 // ── Chart data: servicios más vendidos ────────────────────────

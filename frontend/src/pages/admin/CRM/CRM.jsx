@@ -48,9 +48,12 @@ export function CRM() {
       setDashboard(dashRes)
     } catch { if (mountedRef.current) toast.error('Error cargando CRM') }
     finally { if (mountedRef.current) setLoading(false) }
-  }, [page, searchApplied, filterType, filterStatus])
+  }, [page, searchApplied, filterType, filterStatus, toast])
 
-  useEffect(() => { loadData() }, [loadData])
+  useEffect(() => {
+    const timer = setTimeout(() => loadData(), 0)
+    return () => clearTimeout(timer)
+  }, [loadData])
 
   function handleSearch(e) {
     const v = e.target.value; setSearchInput(v)
@@ -61,7 +64,7 @@ export function CRM() {
   async function openCreate() {
     setForm({ client_id: '', motorcycle_id: '', type: 'MANTENIMIENTO', message: '', scheduled_date: '' })
     setCreateOpen(true)
-    try { const res = await clientsApi.getAll({ limit: 200 }); if (mountedRef.current) setClients(res.data ?? []) } catch {}
+    try { const res = await clientsApi.getAll({ limit: 200 }); if (mountedRef.current) setClients(res.data ?? []) } catch { toast.error('Error al cargar los clientes') }
   }
 
   async function handleCreate(e) {

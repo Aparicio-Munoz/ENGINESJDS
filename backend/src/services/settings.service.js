@@ -6,7 +6,6 @@ export async function get() {
 }
 
 export async function update(data, actor = {}) {
-  const before = await SettingsModel.get()
   const updated = await SettingsModel.update(data)
 
   await logAudit('UPDATE_SETTINGS', {

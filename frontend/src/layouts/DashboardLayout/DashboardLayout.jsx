@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { useSocket } from '../../context/SocketContext'
+import { useSocket } from '../../hooks/useSocket'
 import { GlobalSearch } from '../../components/GlobalSearch/GlobalSearch'
 import { ROUTES } from '../../utils/routes'
 import styles from './DashboardLayout.module.css'
@@ -42,16 +42,6 @@ const NAV_ITEMS = [
     ),
   },
   {
-    label: 'Citas',
-    to: ROUTES.adminCitas,
-    roles: ['Administrador', 'Recepcionista'],
-    icon: (
-      <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18" aria-hidden="true">
-        <path fillRule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clipRule="evenodd" />
-      </svg>
-    ),
-  },
-  {
     label: 'Órdenes de trabajo',
     to: ROUTES.adminOrdenes,
     roles: ['Administrador', 'Recepcionista'],
@@ -68,16 +58,6 @@ const NAV_ITEMS = [
     icon: (
       <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18" aria-hidden="true">
         <path d="M2 3a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H2ZM2 7.5h16l-.811 7.71a2 2 0 0 1-1.99 1.79H4.802a2 2 0 0 1-1.99-1.79L2 7.5Z" />
-      </svg>
-    ),
-  },
-  {
-    label: 'Marcas',
-    to: ROUTES.adminMarcas,
-    roles: ['Administrador'],
-    icon: (
-      <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18" aria-hidden="true">
-        <path fillRule="evenodd" d="M5.5 3A2.5 2.5 0 0 0 3 5.5v2.879a2.5 2.5 0 0 0 .732 1.767l6.5 6.5a2.5 2.5 0 0 0 3.536 0l2.878-2.878a2.5 2.5 0 0 0 0-3.536l-6.5-6.5A2.5 2.5 0 0 0 8.38 3H5.5ZM6 7a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
       </svg>
     ),
   },
@@ -238,14 +218,21 @@ function RealtimeBell() {
 
   return (
     <div className={styles.bellWrap} ref={ref}>
-      <button className={styles.bellBtn} type="button" onClick={() => { setOpen((v) => !v); if (!open && unreadCount) markAllRead?.() }}>
-        <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+      <button
+        className={styles.bellBtn}
+        type="button"
+        onClick={() => { setOpen((v) => !v); if (!open && unreadCount) markAllRead?.() }}
+        aria-label={unreadCount ? `Notificaciones: ${unreadCount} sin leer` : 'Notificaciones'}
+        aria-expanded={open}
+        aria-controls="notifications-panel"
+      >
+        <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18" aria-hidden="true">
           <path fillRule="evenodd" d="M10 2a6 6 0 0 0-6 6c0 1.887-.454 3.665-1.257 5.234a.75.75 0 0 0 .515 1.076 32.91 32.91 0 0 0 3.256.508 3.5 3.5 0 0 0 6.972 0 32.903 32.903 0 0 0 3.256-.508.75.75 0 0 0 .515-1.076A11.448 11.448 0 0 1 16 8a6 6 0 0 0-6-6ZM8.05 14.943a33.54 33.54 0 0 0 3.9 0 2 2 0 0 1-3.9 0Z" clipRule="evenodd" />
         </svg>
         {unreadCount > 0 ? <span className={styles.bellBadge}>{unreadCount > 9 ? '9+' : unreadCount}</span> : null}
       </button>
       {open ? (
-        <div className={styles.bellDropdown}>
+        <div id="notifications-panel" className={styles.bellDropdown}>
           <div className={styles.bellHeader}>
             <strong>Notificaciones</strong>
             {notifications?.length ? <button className={styles.bellClear} type="button" onClick={() => { clearNotifications?.(); setOpen(false) }}>Limpiar</button> : null}
@@ -271,25 +258,35 @@ export function DashboardLayout() {
   const location = useLocation()
   const [profileOpen, setProfileOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 900)
-  const [accessBanner, setAccessBanner] = useState('')
+  const [accessBanner, setAccessBanner] = useState(null)
   const profileRef = useRef(null)
   const bannerTimerRef = useRef(null)
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 900
 
   // ── Close sidebar on mobile nav ────────────────────────────────────────────
   useEffect(() => {
-    if (window.innerWidth <= 900) setSidebarOpen(false)
+    if (window.innerWidth > 900) return undefined
+    const closeTimer = setTimeout(() => setSidebarOpen(false), 0)
+    return () => clearTimeout(closeTimer)
   }, [location.pathname])
 
   // ── Banner de acceso denegado ──────────────────────────────────────────────
+  const accessDenied = Boolean(location.state?.accessDenied)
+
   useEffect(() => {
-    if (location.state?.accessDenied) {
+    clearTimeout(bannerTimerRef.current)
+    if (!accessDenied) return undefined
+
+    const showTimer = setTimeout(() => {
+      setAccessBanner({ key: location.key, message: 'No tienes permisos para acceder a este módulo.' })
+      bannerTimerRef.current = setTimeout(() => setAccessBanner(null), 5000)
+    }, 0)
+
+    return () => {
+      clearTimeout(showTimer)
       clearTimeout(bannerTimerRef.current)
-      setAccessBanner('No tienes permisos para acceder a este módulo.')
-      bannerTimerRef.current = setTimeout(() => setAccessBanner(''), 5000)
     }
-    return () => clearTimeout(bannerTimerRef.current)
-  }, [location.key]) // dispara por cada navegación, no sólo por cambio de state
+  }, [location.key, accessDenied]) // dispara por cada navegación
 
   // ── Cerrar menú al hacer clic afuera ──────────────────────────────────────
   useEffect(() => {
@@ -444,17 +441,17 @@ export function DashboardLayout() {
         </div>
 
         {/* Banner de acceso denegado */}
-        {accessBanner && (
+        {accessBanner?.key === location.key && (
           <div className={styles.accessBanner} role="alert" aria-live="assertive">
             <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true">
               <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
             </svg>
-            {accessBanner}
+            {accessBanner.message}
             <button
               className={styles.accessBannerClose}
               type="button"
               aria-label="Cerrar"
-              onClick={() => setAccessBanner('')}
+              onClick={() => setAccessBanner(null)}
             >
               <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14" aria-hidden="true">
                 <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />

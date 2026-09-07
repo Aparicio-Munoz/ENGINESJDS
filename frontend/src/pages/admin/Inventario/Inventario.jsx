@@ -164,7 +164,10 @@ export function Inventario() {
       .catch(() => {})
   }, [])
 
-  useEffect(() => { loadAlerts() }, [loadAlerts])
+  useEffect(() => {
+    const timer = setTimeout(() => loadAlerts(), 0)
+    return () => clearTimeout(timer)
+  }, [loadAlerts])
 
   // ── Main loader ───────────────────────────────────────
   const loadItems = useCallback(async (opts = {}) => {
@@ -192,7 +195,10 @@ export function Inventario() {
     }
   }, [page, searchApplied, filterCategory, filterBrand, filterStatus, sortBy])
 
-  useEffect(() => { loadItems() }, [loadItems])
+  useEffect(() => {
+    const timer = setTimeout(() => loadItems(), 0)
+    return () => clearTimeout(timer)
+  }, [loadItems])
 
   // ── Search with debounce ──────────────────────────────
   function handleSearchChange(e) {
