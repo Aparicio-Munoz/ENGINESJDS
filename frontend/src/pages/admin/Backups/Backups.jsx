@@ -18,6 +18,16 @@ function fmtSize(kb) {
   return `${kb} KB`
 }
 
+function getBackupErrorMessage(err, fallback) {
+  const status = err?.response?.status
+  if (status === 401) return 'Tu sesión expiró.'
+  if (status === 403) return 'No tienes permisos para administrar respaldos.'
+  if (status === 404) return 'El recurso de respaldo no está disponible.'
+  if (status === 409) return 'Ya hay una operación de respaldo o restauración en curso.'
+  if (status === 500) return 'El servidor no pudo procesar el respaldo.'
+  return err?.response?.data?.message ?? fallback
+}
+
 export function Backups() {
   const toast = useToast()
   const mountedRef = useRef(true)
@@ -27,7 +37,9 @@ export function Backups() {
   const [pagination, setPagination] = useState(null)
   const [page, setPage] = useState(1)
   const [stats, setStats] = useState(null)
+  const [capabilities, setCapabilities] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(null)
   const [creating, setCreating] = useState(false)
   const [restoring, setRestoring] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
@@ -36,27 +48,39 @@ export function Backups() {
   // Restore modal
   const [restoreModal, setRestoreModal] = useState(false)
   const [restoreFile, setRestoreFile] = useState(null)
+  const [restoreConfirmation, setRestoreConfirmation] = useState('')
   const [dragOver, setDragOver] = useState(false)
 
   useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false } }, [])
 
   const loadData = useCallback(async () => {
     setLoading(true)
+    setLoadError(null)
     try {
-      const [listRes, statsRes] = await Promise.all([
-        backupsApi.getAll({ page, limit: 10 }),
-        backupsApi.getStats(),
-      ])
+      const capabilitiesRes = await backupsApi.getCapabilities()
+      const [listRes, statsRes] = capabilitiesRes.manualBackupAvailable
+        ? await Promise.all([
+            backupsApi.getAll({ page, limit: 10 }),
+            backupsApi.getStats(),
+          ])
+        : [null, null]
       if (!mountedRef.current) return
-      setBackups(listRes.data ?? [])
-      setPagination(listRes.pagination ?? null)
+      setCapabilities(capabilitiesRes)
+      setBackups(listRes?.data ?? [])
+      setPagination(listRes?.pagination ?? null)
       setStats(statsRes)
-    } catch {
-      if (mountedRef.current) toast.error('Error al cargar respaldos')
+    } catch (err) {
+      if (mountedRef.current) {
+        setCapabilities(null)
+        setBackups([])
+        setPagination(null)
+        setStats(null)
+        setLoadError(getBackupErrorMessage(err, 'Error al cargar respaldos.'))
+      }
     } finally {
       if (mountedRef.current) setLoading(false)
     }
-  }, [page, toast])
+  }, [page])
 
   useEffect(() => {
     const timer = setTimeout(() => loadData(), 0)
@@ -64,13 +88,14 @@ export function Backups() {
   }, [loadData])
 
   async function handleCreate() {
+    if (!capabilities?.manualBackupAvailable) return
     setCreating(true)
     try {
       const backup = await backupsApi.create()
       toast.success(`Respaldo "${backup.filename}" creado (${fmtSize(backup.size_kb)})`)
       loadData()
     } catch (err) {
-      toast.error(err?.response?.data?.message ?? 'Error al crear el respaldo')
+      toast.error(getBackupErrorMessage(err, 'Error al crear el respaldo.'))
     } finally {
       if (mountedRef.current) setCreating(false)
     }
@@ -80,8 +105,8 @@ export function Backups() {
     try {
       await backupsApi.download(backup.id)
       toast.success(`Descargando ${backup.filename}`)
-    } catch {
-      toast.error('Error al descargar el respaldo')
+    } catch (err) {
+      toast.error(getBackupErrorMessage(err, 'Error al descargar el respaldo.'))
     }
   }
 
@@ -94,7 +119,7 @@ export function Backups() {
       setDeleteTarget(null)
       loadData()
     } catch (err) {
-      toast.error(err?.response?.data?.message ?? 'Error al eliminar')
+      toast.error(getBackupErrorMessage(err, 'Error al eliminar el respaldo.'))
     } finally {
       if (mountedRef.current) setDeleting(false)
     }
@@ -104,28 +129,46 @@ export function Backups() {
   function handleFileDrop(e) {
     e.preventDefault(); setDragOver(false)
     const file = e.dataTransfer?.files?.[0]
-    if (file) setRestoreFile(file)
+    selectRestoreFile(file)
   }
 
   function handleFileSelect(e) {
     const file = e.target.files?.[0]
-    if (file) setRestoreFile(file)
+    selectRestoreFile(file)
+  }
+
+  function selectRestoreFile(file) {
+    if (!file) return
+    if (!file.name.toLowerCase().endsWith('.sql')) {
+      toast.error('Selecciona un archivo .sql')
+      return
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error('El archivo excede el límite de 50 MB')
+      return
+    }
+    setRestoreFile(file)
   }
 
   async function handleRestore() {
-    if (!restoreFile) return
+    if (!restoreFile || !capabilities?.manualRestoreAvailable || restoreConfirmation !== 'RESTAURAR') return
     setRestoring(true)
     try {
-      await backupsApi.restore(restoreFile)
+      await backupsApi.restore(restoreFile, restoreConfirmation)
       toast.success('Base de datos restaurada exitosamente')
-      setRestoreModal(false); setRestoreFile(null)
+      setRestoreModal(false); setRestoreFile(null); setRestoreConfirmation('')
       loadData()
     } catch (err) {
-      toast.error(err?.response?.data?.message ?? 'Error al restaurar')
+      toast.error(getBackupErrorMessage(err, 'Error al restaurar el respaldo.'))
     } finally {
       if (mountedRef.current) setRestoring(false)
     }
   }
+
+  const manualBackupAvailable = capabilities?.manualBackupAvailable === true
+  const manualRestoreAvailable = capabilities?.manualRestoreAvailable === true
+  const managedBackups = capabilities?.mode === 'managed'
+  const aivenManagedBackups = managedBackups && capabilities?.provider === 'Aiven'
 
   return (
     <section className={styles.page}>
@@ -134,20 +177,39 @@ export function Backups() {
         <div>
           <p className={styles.eyebrow}>Módulo administrativo</p>
           <h1>Respaldos</h1>
-          <p>Crea, descarga y restaura respaldos de la base de datos.</p>
+          <p>{managedBackups ? 'Consulta el estado de protección de la base de datos.' : 'Crea, descarga y restaura respaldos de la base de datos.'}</p>
         </div>
         <div className={styles.headerActions}>
-          <button className={styles.primaryButton} type="button" onClick={handleCreate} disabled={creating}>
+          <button className={styles.primaryButton} type="button" onClick={handleCreate} disabled={!manualBackupAvailable || creating} title={!manualBackupAvailable ? 'Los respaldos manuales no están disponibles en este entorno.' : undefined}>
             {creating ? 'Creando…' : 'Crear respaldo'}
           </button>
-          <button className={styles.secondaryButton} type="button" onClick={() => { setRestoreModal(true); setRestoreFile(null) }}>
+          <button className={styles.secondaryButton} type="button" onClick={() => { setRestoreModal(true); setRestoreFile(null); setRestoreConfirmation('') }} disabled={!manualRestoreAvailable} title={!manualRestoreAvailable ? 'La restauración manual no está disponible en este entorno.' : undefined}>
             Restaurar
           </button>
         </div>
       </div>
 
-      {/* Stats cards */}
-      {stats ? (
+      {loadError ? (
+        <div className={styles.errorState} role="alert">
+          <p>{loadError}</p>
+          <button className={styles.secondaryButton} type="button" onClick={loadData}>Reintentar</button>
+        </div>
+      ) : capabilities && !manualBackupAvailable ? (
+        <section className={styles.managedInfo} role="status">
+          <p className={styles.eyebrow}>{managedBackups ? 'Base de datos administrada' : 'Operación no habilitada'}</p>
+          <h2>{aivenManagedBackups ? 'Respaldos automáticos gestionados por Aiven' : managedBackups ? 'Base de datos gestionada por el proveedor' : 'Respaldos manuales deshabilitados'}</h2>
+          <p>
+            {managedBackups
+              ? aivenManagedBackups
+                ? 'La base de datos de producción usa respaldos automáticos gestionados por Aiven.'
+                : 'SGTM no crea ni almacena dumps manuales en este entorno serverless.'
+              : 'Este entorno no tiene habilitada la creación de respaldos manuales.'}
+          </p>
+          <p>Este módulo no consulta métricas ni fechas de respaldo del proveedor. La restauración debe gestionarse desde su plataforma o soporte autorizado.</p>
+        </section>
+      ) : null}
+
+      {!loadError && stats && manualBackupAvailable ? (
         <div className={styles.statsGrid}>
           <div className={styles.statCard}>
             <span className={styles.statLabel}>Último respaldo</span>
@@ -170,12 +232,11 @@ export function Backups() {
         </div>
       ) : null}
 
-      {/* Table */}
-      {loading ? (
+      {loadError ? null : manualBackupAvailable && loading ? (
         <div className={styles.loadingState}><div className={styles.spinner} />Cargando respaldos…</div>
-      ) : backups.length === 0 ? (
+      ) : manualBackupAvailable && backups.length === 0 ? (
         <div className={styles.emptyState}>No hay respaldos registrados. Crea el primero.</div>
-      ) : (
+      ) : manualBackupAvailable ? (
         <>
           <div className={styles.tableWrapper}>
             <table className={styles.table}>
@@ -216,7 +277,7 @@ export function Backups() {
           </div>
           <Pagination page={page} totalPages={pagination?.totalPages} total={pagination?.total} onPageChange={setPage} disabled={loading} />
         </>
-      )}
+      ) : null}
 
       {/* Delete modal */}
       {deleteTarget ? (
@@ -283,12 +344,17 @@ export function Backups() {
             </div>
 
             <p className={styles.restoreWarn}>
-              Esta acción sobrescribirá los datos actuales de la base de datos.
+              Esta acción sobrescribirá los datos actuales de la base de datos. Escribe RESTAURAR para confirmar.
             </p>
+
+            <label className={styles.confirmationField}>
+              Confirmación
+              <input value={restoreConfirmation} onChange={(e) => setRestoreConfirmation(e.target.value)} placeholder="RESTAURAR" autoComplete="off" />
+            </label>
 
             <div className={styles.modalActions}>
               <button className={styles.secondaryButton} type="button" disabled={restoring} onClick={() => setRestoreModal(false)}>Cancelar</button>
-              <button className={styles.dangerButton} type="button" disabled={!restoreFile || restoring} onClick={handleRestore}>
+              <button className={styles.dangerButton} type="button" disabled={!restoreFile || restoreConfirmation !== 'RESTAURAR' || restoring} onClick={handleRestore}>
                 {restoring ? 'Restaurando…' : 'Restaurar'}
               </button>
             </div>

@@ -24,6 +24,7 @@
 .primaryButton:hover { background: #EA580C; }
 .primaryButton:disabled { opacity: .5; cursor: not-allowed; }
 .secondaryButton { padding: 12px 16px; color: #344054; background: #e5e7eb; }
+.secondaryButton:disabled { opacity: .5; cursor: not-allowed; }
 .dangerButton { padding: 12px 16px; color: #fff; background: #DC2626; }
 .dangerButton:hover { background: #B91C1C; }
 .dangerButton:disabled { opacity: .5; cursor: not-allowed; }
@@ -38,6 +39,12 @@
 .spinner { width: 36px; height: 36px; border: 3px solid #e5e7eb; border-top-color: #F97316; border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .emptyState { padding: 50px 24px; color: #667085; text-align: center; border: 1px dashed #d9e1ec; border-radius: 8px; background: #fff; }
+.errorState { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 24px; border: 1px solid #fecaca; border-radius: 12px; background: #fef2f2; color: #991b1b; }
+.errorState p { margin: 0; }
+.managedInfo { padding: 24px; border: 1px solid #bfdbfe; border-radius: 12px; background: #eff6ff; color: #1e3a5f; }
+.managedInfo h2, .managedInfo p { margin: 0; }
+.managedInfo h2 { margin-top: 6px; color: #1e3a8a; font-size: 1.2rem; }
+.managedInfo p:not(.eyebrow) { margin-top: 10px; line-height: 1.6; }
 
 /* ── Table ────────────────────────────────────────── */
 .tableWrapper { overflow-x: auto; border: 1px solid #d9e1ec; border-radius: 8px; background: #fff; box-shadow: 0 12px 28px rgba(16,24,40,.06); }
@@ -80,6 +87,8 @@
 .fileRemove { width: 28px; height: 28px; border: 0; border-radius: 6px; background: #fee4e2; color: #b42318; font-weight: 800; cursor: pointer; margin-left: auto; }
 
 .restoreWarn { margin: 12px 0 0; padding: 12px; border-radius: 8px; background: #FEF3C7; color: #92400E; font-size: 0.85rem; font-weight: 600; text-align: center; }
+.confirmationField { display: grid; gap: 6px; margin-top: 14px; color: #344054; font-size: 0.85rem; font-weight: 700; }
+.confirmationField input { width: 100%; padding: 10px 12px; border: 1px solid #d0d5dd; border-radius: 8px; color: #101828; font: inherit; text-transform: uppercase; }
 
 @media (max-width: 900px) { .statsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 760px) {

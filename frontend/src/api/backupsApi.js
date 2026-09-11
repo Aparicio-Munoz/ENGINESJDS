@@ -10,13 +10,18 @@ export const backupsApi = {
     return apiClient.get('/backups/stats').then((r) => r.data.data)
   },
 
+  getCapabilities() {
+    return apiClient.get('/backups/capabilities').then((r) => r.data.data)
+  },
+
   create() {
     return apiClient.post('/backups/create').then((r) => r.data.data)
   },
 
-  restore(file) {
+  restore(file, confirmation) {
     const formData = new FormData()
     formData.append('file', file)
+    formData.append('confirmation', confirmation)
     return apiClient.post('/backups/restore', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 120000,

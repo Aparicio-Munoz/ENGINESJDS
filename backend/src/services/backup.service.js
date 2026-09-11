@@ -13,6 +13,52 @@ const execFileAsync = promisify(execFile)
 const BACKUP_ROOT_DIR = path.resolve(process.cwd(), 'storage', 'backups')
 const MAX_RESTORE_SIZE = 50 * 1024 * 1024 // 50 MB
 const DATABASE_NAME_PATTERN = /^[A-Za-z0-9_]{1,64}$/
+const RESTORE_CONFIRMATION = 'RESTAURAR'
+
+function isEnabled(value, defaultValue) {
+  if (value === undefined) return defaultValue
+  return String(value).trim().toLowerCase() === 'true'
+}
+
+function resolveProvider(env) {
+  const configured = String(env.DATABASE_PROVIDER ?? '').trim().toLowerCase()
+  const host = String(env.DB_HOST ?? '').trim().toLowerCase()
+
+  if (configured === 'aiven' || host.endsWith('.aivencloud.com')) return 'Aiven'
+  if (configured) return 'Proveedor gestionado'
+  return null
+}
+
+export function getBackupCapabilities(env = process.env) {
+  const isVercel = Boolean(env.VERCEL)
+  const provider = resolveProvider(env)
+
+  if (isVercel) {
+    return {
+      mode: 'managed',
+      provider: provider ?? 'Proveedor gestionado',
+      manualBackupAvailable: false,
+      manualRestoreAvailable: false,
+    }
+  }
+
+  const manualBackupAvailable = isEnabled(env.BACKUP_MANUAL_ENABLED, true)
+  if (!manualBackupAvailable) {
+    return {
+      mode: 'unavailable',
+      provider,
+      manualBackupAvailable: false,
+      manualRestoreAvailable: false,
+    }
+  }
+
+  return {
+    mode: 'manual',
+    provider,
+    manualBackupAvailable: true,
+    manualRestoreAvailable: env.NODE_ENV !== 'production' && isEnabled(env.BACKUP_RESTORE_ENABLED, false),
+  }
+}
 
 function getDbConfig() {
   const database = getTenantContext()?.databaseName ?? process.env.DB_NAME ?? 'engines_jds'
@@ -37,17 +83,31 @@ function formatFilename(database) {
   return `${database}_${now.getFullYear()}_${pad(now.getMonth() + 1)}_${pad(now.getDate())}_${pad(now.getHours())}_${pad(now.getMinutes())}.sql`
 }
 
-function assertBackupsAvailable() {
-  if (process.env.VERCEL) {
+function assertManualBackupAvailable() {
+  const capabilities = getBackupCapabilities()
+  if (capabilities.manualBackupAvailable) return capabilities
+
+  if (capabilities.mode === 'managed') {
     throw ApiError.badRequest(
-      'Los backups manuales no están disponibles en este entorno. La base de datos gestionada realiza copias de seguridad automáticas.'
+      'Los respaldos manuales no están disponibles en este entorno serverless. La protección de la base de datos la gestiona el proveedor.'
     )
   }
+
+  throw ApiError.badRequest('Los respaldos manuales están deshabilitados en este entorno')
+}
+
+export function assertManualRestoreAvailable() {
+  const capabilities = assertManualBackupAvailable()
+  if (capabilities.manualRestoreAvailable) return
+
+  throw ApiError.badRequest(
+    'La restauración manual está deshabilitada. Requiere BACKUP_RESTORE_ENABLED=true fuera de producción y con almacenamiento persistente.'
+  )
 }
 
 // ── Crear respaldo ───────────────────────────────────────────
 export async function createBackup(actor = {}) {
-  assertBackupsAvailable()
+  assertManualBackupAvailable()
   const db = getDbConfig()
   const backupDir = getBackupDir(db.database)
   await fs.mkdir(backupDir, { recursive: true })
@@ -106,10 +166,13 @@ export async function createBackup(actor = {}) {
 }
 
 // ── Restaurar respaldo ───────────────────────────────────────
-export async function restoreBackup(file, actor = {}) {
-  assertBackupsAvailable()
+export async function restoreBackup(file, actor = {}, confirmation) {
+  assertManualRestoreAvailable()
+  if (confirmation !== RESTORE_CONFIRMATION) {
+    throw ApiError.badRequest(`Escribe ${RESTORE_CONFIRMATION} para confirmar la restauración`)
+  }
   if (!file) throw ApiError.badRequest('Archivo SQL requerido')
-  if (!file.originalname.endsWith('.sql')) {
+  if (!file.buffer || !file.originalname?.toLowerCase().endsWith('.sql')) {
     throw ApiError.badRequest('Solo se permiten archivos .sql')
   }
   if (file.size > MAX_RESTORE_SIZE) {
@@ -117,9 +180,14 @@ export async function restoreBackup(file, actor = {}) {
   }
 
   const db = getDbConfig()
-  const sqlContent = file.buffer.toString('utf8')
+  let sqlContent
+  try {
+    sqlContent = new TextDecoder('utf-8', { fatal: true }).decode(file.buffer)
+  } catch {
+    throw ApiError.badRequest('El archivo SQL debe estar codificado en UTF-8')
+  }
 
-  if (!sqlContent.trim()) {
+  if (!sqlContent.trim() || sqlContent.includes('\u0000')) {
     throw ApiError.badRequest('El archivo SQL está vacío')
   }
   if (/\b(?:USE|CREATE\s+DATABASE|DROP\s+DATABASE)\b/i.test(sqlContent)) {

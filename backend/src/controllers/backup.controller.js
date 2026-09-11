@@ -20,6 +20,19 @@ export async function getStats(req, res, next) {
   } catch (err) { next(err) }
 }
 
+export async function getCapabilities(_req, res, next) {
+  try {
+    ApiResponse.success(res, BackupService.getBackupCapabilities())
+  } catch (err) { next(err) }
+}
+
+export function ensureRestoreAvailable(_req, _res, next) {
+  try {
+    BackupService.assertManualRestoreAvailable()
+    next()
+  } catch (err) { next(err) }
+}
+
 export async function create(req, res, next) {
   try {
     const backup = await BackupService.createBackup(buildActor(req))
@@ -29,7 +42,7 @@ export async function create(req, res, next) {
 
 export async function restore(req, res, next) {
   try {
-    const result = await BackupService.restoreBackup(req.file, buildActor(req))
+    const result = await BackupService.restoreBackup(req.file, buildActor(req), req.body?.confirmation)
     ApiResponse.success(res, result, 'Base de datos restaurada exitosamente')
   } catch (err) { next(err) }
 }

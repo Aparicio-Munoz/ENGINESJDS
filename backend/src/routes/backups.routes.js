@@ -10,8 +10,9 @@ router.use(verifyToken, requireRole('Administrador'))
 
 router.get('/',              BackupController.getAll)
 router.get('/stats',         BackupController.getStats)
+router.get('/capabilities',  BackupController.getCapabilities)
 router.post('/create',       BackupController.create)
-router.post('/restore',      upload.single('file'), BackupController.restore)
+router.post('/restore',      BackupController.ensureRestoreAvailable, upload.single('file'), BackupController.restore)
 router.get('/download/:id',  BackupController.download)
 router.delete('/:id',        BackupController.remove)
 
