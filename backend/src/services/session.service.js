@@ -1,4 +1,5 @@
 import * as RefreshTokenModel from '../models/refreshToken.model.js'
+import { ensureSessionActivitySchema } from '../config/database.js'
 import { ApiError } from '../utils/ApiError.js'
 
 const DEFAULT_IDLE_TIMEOUT_MINUTES = 300
@@ -27,6 +28,8 @@ export async function validateSession(refreshToken, { tokenModel = RefreshTokenM
   if (!refreshToken) {
     throw ApiError.unauthorized('Sesión no encontrada — inicia sesión nuevamente')
   }
+
+  if (tokenModel === RefreshTokenModel) await ensureSessionActivitySchema()
 
   const tokenHash = tokenModel.hashToken(refreshToken)
   const record = await tokenModel.findValid(tokenHash)
