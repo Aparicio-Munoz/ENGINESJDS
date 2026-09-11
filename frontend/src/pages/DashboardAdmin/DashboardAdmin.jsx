@@ -62,7 +62,7 @@ export function DashboardAdmin() {
     if (showLoading) setLoading(true)
     setError(null)
     try {
-      const result = await reportsApi.getExecutiveDashboard()
+      const result = await reportsApi.getExecutiveDashboard({ sessionActivity: showLoading !== false })
       if (mountedRef.current) setData(result)
     } catch {
       if (mountedRef.current) setError('Error al cargar el dashboard.')
@@ -89,7 +89,7 @@ export function DashboardAdmin() {
   function exportPDF() {
     if (!data) return
     const doc = new jsPDF({ orientation: 'landscape' })
-    doc.setFontSize(16); doc.text('ENGINES JDS — Dashboard Ejecutivo', 14, 16)
+    doc.setFontSize(16); doc.text('SGTM — Dashboard Ejecutivo', 14, 16)
     doc.setFontSize(9); doc.setTextColor(100); doc.text(`Generado: ${now.toLocaleString('es-CO')}`, 14, 23)
     const k = data.kpis
     const financial = k.financial

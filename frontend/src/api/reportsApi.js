@@ -32,8 +32,8 @@ export const reportsApi = {
   },
 
   // GET /reports/executive → { kpis, charts, alerts }
-  getExecutiveDashboard() {
-    return apiClient.get('/reports/executive').then((r) => r.data.data)
+  getExecutiveDashboard(config = {}) {
+    return apiClient.get('/reports/executive', config).then((r) => r.data.data)
   },
 
   // GET /reports/chart-data → { monthlyRevenue, topServices, topClients, stockByCategory, ordersByTech, appointmentsByMonth }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useAuth } from '../../../hooks/useAuth'
 import { ordersApi, clientsApi, motorcyclesApi, employeesApi, inventoryApi, quickJobsApi } from '../../../api'
 import { Pagination } from '../../../components/Pagination/Pagination'
 import { useToast } from '../../../hooks/useToast'
@@ -32,8 +33,12 @@ function formatCurrency(n) {
   return `$ ${Number(n).toLocaleString('es-CO')}`
 }
 
-function buildWhatsAppUrl(order) {
-  const trackingLink = `${TRACKING_BASE_URL}/${order.tracking_token}`
+function buildTrackingLink(token, tenantSlug) {
+  return `${TRACKING_BASE_URL}/${tenantSlug ? `${encodeURIComponent(tenantSlug)}/` : ''}${token}`
+}
+
+function buildWhatsAppUrl(order, tenantSlug) {
+  const trackingLink = buildTrackingLink(order.tracking_token, tenantSlug)
   const clientName = order.client_name || order.client_last_name
     ? `${order.client_name || ''} ${order.client_last_name || ''}`.trim()
     : 'Cliente'
@@ -45,7 +50,7 @@ function buildWhatsAppUrl(order) {
   const msg = [
     `Hola ${clientName} `,
     '',
-    `Tu motocicleta ${brand} ${plate} fue recibida correctamente en ENGINES JDS.`,
+    `Tu motocicleta ${brand} ${plate} fue recibida correctamente en SGTM.`,
     '',
     'Puedes consultar el estado de tu moto aquí:',
     trackingLink,
@@ -96,6 +101,7 @@ function emptySvc() {
 }
 
 export function OrdenesTrabajo() {
+  const { user } = useAuth()
   const toast      = useToast()
   const mountedRef = useRef(true)
 
@@ -825,7 +831,7 @@ export function OrdenesTrabajo() {
                           {order.tracking_token && order.client_phone ? (
                             <a
                               className={styles.whatsappButton}
-                              href={buildWhatsAppUrl(order)}
+                              href={buildWhatsAppUrl(order, user?.tenantSlug)}
                               target="_blank"
                               rel="noopener noreferrer"
                               title="Enviar por WhatsApp"
@@ -1676,7 +1682,7 @@ export function OrdenesTrabajo() {
                 {detailTarget.tracking_token && detailTarget.client_phone ? (
                   <a
                     className={styles.whatsappButtonLg}
-                    href={buildWhatsAppUrl(detailTarget)}
+                    href={buildWhatsAppUrl(detailTarget, user?.tenantSlug)}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -2029,7 +2035,7 @@ export function OrdenesTrabajo() {
                 ¿Deseas notificar al cliente <strong>{whatsappOrder.client_name}</strong> por WhatsApp con el enlace de seguimiento?
               </p>
               <div className={styles.waTrackingUrl}>
-                {TRACKING_BASE_URL}/{whatsappOrder.tracking_token}
+                {buildTrackingLink(whatsappOrder.tracking_token, user?.tenantSlug)}
               </div>
             </div>
             <div className={styles.waActions}>
@@ -2042,7 +2048,7 @@ export function OrdenesTrabajo() {
               </button>
               <a
                 className={styles.waButton}
-                href={buildWhatsAppUrl(whatsappOrder)}
+                href={buildWhatsAppUrl(whatsappOrder, user?.tenantSlug)}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setWhatsappOrder(null)}

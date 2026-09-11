@@ -7,6 +7,7 @@
 | `01_schema.sql` | DDL completo: 18 tablas, FKs, índices, columnas generadas, triggers |
 | `02_views.sql`  | 8 vistas para reportes, dashboard y alertas |
 | `03_seed.sql`   | Datos iniciales: roles, admin, servicios, clientes y órdenes demo |
+| `37_session_activity.sql` | Añade `refresh_tokens.last_activity` para timeout por inactividad |
 
 ## Ejecutar (orden obligatorio)
 

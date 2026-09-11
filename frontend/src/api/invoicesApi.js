@@ -1,4 +1,5 @@
 import { apiClient } from './apiClient'
+import { downloadBlob } from '../utils/downloadBlob'
 
 export const invoicesApi = {
   getAll(params = {}) {
@@ -21,16 +22,13 @@ export const invoicesApi = {
     return apiClient.put(`/invoices/${id}/cancel`).then((r) => r.data.data)
   },
 
-  getDailySummary(date) {
+  getDailySummary(date, config = {}) {
     const params = date ? { date } : {}
-    return apiClient.get('/invoices/daily-summary', { params }).then((r) => r.data.data)
+    return apiClient.get('/invoices/daily-summary', { ...config, params }).then((r) => r.data.data)
   },
 
   async downloadPDF(id) {
     const res = await apiClient.get(`/invoices/${id}/pdf`, { responseType: 'blob' })
-    const url = URL.createObjectURL(res.data)
-    const a = document.createElement('a')
-    a.href = url; a.download = `factura_${id}.pdf`; a.click()
-    URL.revokeObjectURL(url)
+    downloadBlob(res.data, `factura_${id}.pdf`)
   },
 }

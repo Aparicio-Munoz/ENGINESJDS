@@ -1,8 +1,8 @@
 import { apiClient } from './apiClient'
 
 export const technicianApi = {
-  getDashboard() {
-    return apiClient.get('/technician/dashboard').then((r) => r.data.data)
+  getDashboard(config = {}) {
+    return apiClient.get('/technician/dashboard', config).then((r) => r.data.data)
   },
 
   getOrders(params = {}) {

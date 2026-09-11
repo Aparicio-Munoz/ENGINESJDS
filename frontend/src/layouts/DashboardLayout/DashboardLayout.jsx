@@ -102,6 +102,17 @@ const NAV_ITEMS = [
     ),
   },
   {
+    label: 'Suscripción',
+    to: ROUTES.adminSuscripcion,
+    saasOnly: true,
+    roles: ['Administrador'],
+    icon: (
+      <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18" aria-hidden="true">
+        <path fillRule="evenodd" d="M10 1.75a8.25 8.25 0 1 0 0 16.5 8.25 8.25 0 0 0 0-16.5ZM8.75 5a1.25 1.25 0 1 1 2.5 0v.75h.5a.75.75 0 0 1 0 1.5h-3.5a.75.75 0 0 1 0 1.5h3.5a.75.75 0 0 1 0 1.5h-.5V11a1.25 1.25 0 1 1-2.5 0v-.75h-.5a.75.75 0 0 1 0-1.5h3.5a.75.75 0 0 1 0-1.5h-.5V5Z" clipRule="evenodd" />
+      </svg>
+    ),
+  },
+  {
     label: 'CRM',
     to: ROUTES.adminCRM,
     roles: ['Administrador'],
@@ -299,14 +310,15 @@ export function DashboardLayout() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  function handleLogout() {
-    logout()
+  async function handleLogout() {
+    await logout()
     navigate(ROUTES.login)
   }
 
   // Filtrar ítems de navegación según el rol del usuario
   const visibleNavItems = NAV_ITEMS.filter(
     (item) => item.roles.includes(user?.role)
+      && (!item.saasOnly || (import.meta.env.VITE_SAAS_ENABLED === 'true' && user?.tenantId))
   )
 
   const isAdmin = user?.role === 'Administrador'
@@ -320,8 +332,11 @@ export function DashboardLayout() {
 
       <aside className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : styles.sidebarClosed}`}>
         <NavLink to={ROUTES.admin} className={styles.brand}>
-          <span className={styles.brandMark} aria-hidden="true">◈</span>
-          ENGINES JDS
+          <span className={styles.brandMark} aria-hidden="true">S</span>
+          <span className={styles.brandCopy}>
+            <strong>SGTM</strong>
+            <small>Gestión de talleres</small>
+          </span>
         </NavLink>
 
         <nav className={styles.nav} aria-label="Navegación administrativa">

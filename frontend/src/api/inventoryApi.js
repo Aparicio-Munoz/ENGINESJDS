@@ -17,8 +17,8 @@ export const inventoryApi = {
   },
 
   // GET /inventory/alerts?status= (optional: 'Agotado' | 'Stock bajo')
-  getAlerts(params = {}) {
-    return apiClient.get('/inventory/alerts', { params }).then((r) => r.data.data)
+  getAlerts(params = {}, config = {}) {
+    return apiClient.get('/inventory/alerts', { ...config, params }).then((r) => r.data.data)
   },
 
   // GET /inventory/:id

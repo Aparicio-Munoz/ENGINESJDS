@@ -1,6 +1,7 @@
 export const ROUTES = {
   home: '/',
   login: '/login',
+  register: '/register',
   forgotPassword: '/forgot-password',
   resetPassword: '/reset-password',
   admin: '/admin',
@@ -17,6 +18,7 @@ export const ROUTES = {
   adminCRM: '/admin/crm',
   adminPerfil: '/admin/perfil',
   adminConfiguracion: '/admin/configuracion',
+  adminSuscripcion: '/admin/suscripcion',
   // Técnico
   tecnicoDashboard: '/admin/tecnico-dashboard',
   tecnicoOrdenes: '/admin/ordenes-tecnico',

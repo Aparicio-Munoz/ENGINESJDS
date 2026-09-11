@@ -1,4 +1,5 @@
 import * as LoginAttemptModel from '../models/loginAttempt.model.js'
+import { isSaaSEnabled } from '../config/saas.js'
 import { ApiError } from '../utils/ApiError.js'
 import { logAudit } from '../services/audit.service.js'
 
@@ -8,6 +9,10 @@ import { logAudit } from '../services/audit.service.js'
 // getStatus al expirar blocked_until).
 export async function checkBlockedIp(req, _res, next) {
   try {
+    // En SaaS el tenant aún no se conoce. AuthService verifica el bloqueo
+    // después de resolver la base propia del taller.
+    if (isSaaSEnabled()) return next()
+
     const ip = req.ip
     const status = await LoginAttemptModel.getStatus(ip)
 

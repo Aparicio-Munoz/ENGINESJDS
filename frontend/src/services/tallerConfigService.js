@@ -1,7 +1,7 @@
 const KEY = 'engines_jds_taller_config'
 
 const DEFAULTS = {
-  nombre: 'ENGINES JDS',
+  nombre: 'SGTM',
   direccion: '',
   telefono: '',
   whatsapp: '',

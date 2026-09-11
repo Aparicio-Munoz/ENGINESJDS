@@ -49,7 +49,7 @@ export function SocketProvider({ children }) {
   }, [])
 
   const pollOrders = useCallback(async () => {
-    const orders = await ordersApi.getActive()
+    const orders = await ordersApi.getActive({ sessionActivity: false })
     const previous = ordersSnapshotRef.current
     const snapshot = new Map(orders.map((o) => [o.id, o.status]))
 
@@ -75,7 +75,7 @@ export function SocketProvider({ children }) {
   }, [addNotification])
 
   const pollInventoryAlerts = useCallback(async () => {
-    const alerts = await inventoryApi.getAlerts()
+    const alerts = await inventoryApi.getAlerts({}, { sessionActivity: false })
     const previous = alertsSnapshotRef.current
     const snapshot = new Set(alerts.map((a) => a.id))
 
@@ -94,7 +94,7 @@ export function SocketProvider({ children }) {
   }, [addNotification])
 
   const pollInvoices = useCallback(async () => {
-    const summary = await invoicesApi.getDailySummary()
+    const summary = await invoicesApi.getDailySummary(undefined, { sessionActivity: false })
     const previous = invoicesPaidRef.current
     if (previous != null && summary.totalPaid > previous) {
       const delta = summary.totalPaid - previous

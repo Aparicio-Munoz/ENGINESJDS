@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { apiClient } from '../../api/apiClient'
+import { downloadBlob, getFilenameFromContentDisposition } from '../../utils/downloadBlob'
 import styles from './Tracking.module.css'
 
 const STATUS_ORDER = ['Recibida', 'En reparación', 'Esperando repuesto', 'Lista para entrega', 'Entregada']
@@ -29,17 +30,22 @@ function formatDateTime(d) {
 }
 
 export function Tracking() {
-  const { token } = useParams()
+  const { tenantSlug, token } = useParams()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [pdfDownloading, setPdfDownloading] = useState(false)
+  const [pdfError, setPdfError] = useState('')
   const mountedRef = useRef(true)
 
   const loadTracking = useCallback(async ({ showLoading } = {}) => {
     if (showLoading) setLoading(true)
     setError(null)
     try {
-      const res = await apiClient.get(`/public/tracking/${token}`)
+      const trackingPath = tenantSlug
+        ? `/public/tracking/${encodeURIComponent(tenantSlug)}/${token}`
+        : `/public/tracking/${token}`
+      const res = await apiClient.get(trackingPath)
       if (mountedRef.current) setData(res.data.data)
     } catch (err) {
       if (mountedRef.current) {
@@ -52,7 +58,24 @@ export function Tracking() {
     } finally {
       if (mountedRef.current && showLoading) setLoading(false)
     }
-  }, [token])
+  }, [tenantSlug, token])
+
+  async function handleDownloadPDF() {
+    if (pdfDownloading) return
+    setPdfDownloading(true)
+    setPdfError('')
+
+    try {
+      const pdfPath = `/public/tracking/${tenantSlug ? `${encodeURIComponent(tenantSlug)}/` : ''}${token}/pdf`
+      const res = await apiClient.get(pdfPath, { responseType: 'blob' })
+      const filename = getFilenameFromContentDisposition(res.headers['content-disposition'], 'orden-de-trabajo.pdf')
+      downloadBlob(res.data, filename)
+    } catch {
+      if (mountedRef.current) setPdfError('No se pudo descargar la orden de trabajo. Intenta de nuevo.')
+    } finally {
+      if (mountedRef.current) setPdfDownloading(false)
+    }
+  }
 
   useEffect(() => {
     mountedRef.current = true
@@ -75,8 +98,8 @@ export function Tracking() {
 
       <header className={styles.header}>
         <Link to="/" className={styles.brand}>
-          <span className={styles.brandMark}>◈</span>
-          ENGINES JDS
+          <span className={styles.brandMark}>S</span>
+          SGTM
         </Link>
       </header>
 
@@ -210,18 +233,20 @@ export function Tracking() {
 
               {/* PDF download */}
               <section className={styles.pdfSection}>
-                <a
+                <button
                   className={styles.pdfBtn}
-                  href={`${apiClient.defaults.baseURL}/public/tracking/${token}/pdf`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  type="button"
+                  onClick={handleDownloadPDF}
+                  disabled={pdfDownloading}
+                  aria-busy={pdfDownloading}
                 >
                   <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
                     <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z" />
                     <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
                   </svg>
-                  Descargar orden de trabajo (PDF)
-                </a>
+                  {pdfDownloading ? 'Descargando…' : 'Descargar orden de trabajo (PDF)'}
+                </button>
+                {pdfError ? <p className={styles.pdfError} role="status">{pdfError}</p> : null}
               </section>
             </>
           ) : null}
@@ -229,7 +254,7 @@ export function Tracking() {
       </main>
 
       <footer className={styles.footer}>
-        <p>ENGINES JDS — Taller especializado en motocicletas</p>
+        <p>SGTM — Sistema de Gestión para Talleres de Motocicletas</p>
       </footer>
     </div>
   )

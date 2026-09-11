@@ -23,11 +23,11 @@ export function DashboardTecnico() {
   const [error, setError] = useState(null)
   const mountedRef = useRef(true)
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (background = false) => {
     setLoading(true)
     setError(null)
     try {
-      const result = await technicianApi.getDashboard()
+      const result = await technicianApi.getDashboard({ sessionActivity: !background })
       if (mountedRef.current) setData(result)
     } catch {
       if (mountedRef.current) setError('No se pudo cargar el dashboard.')
@@ -39,7 +39,7 @@ export function DashboardTecnico() {
   useEffect(() => {
     mountedRef.current = true
     const initialLoad = setTimeout(() => loadData(), 0)
-    const interval = setInterval(loadData, 60_000)
+    const interval = setInterval(() => loadData(true), 60_000)
     return () => { mountedRef.current = false; clearTimeout(initialLoad); clearInterval(interval) }
   }, [loadData])
 

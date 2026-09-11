@@ -47,8 +47,8 @@
 .brand {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px 20px;
+  gap: 10px;
+  padding: 6px 10px 20px;
   color: #ffffff;
   font-size: 1rem;
   font-weight: 800;
@@ -60,8 +60,36 @@
 }
 
 .brandMark {
-  color: #F97316;
-  font-size: 1.2rem;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 10px;
+  background: linear-gradient(145deg, #F97316, #EA580C);
+  box-shadow: 0 6px 18px rgba(249, 115, 22, 0.22);
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 900;
+}
+
+.brandCopy {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+
+.brandCopy strong {
+  font-size: 1.02rem;
+  letter-spacing: 0.1em;
+}
+
+.brandCopy small {
+  margin-top: 4px;
+  color: rgba(214, 244, 255, 0.48);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
 }
 
 /* ── Nav ──────────────────────────────────────────── */
@@ -249,7 +277,7 @@
   background: transparent; color: #64748B; cursor: pointer;
   position: relative; transition: background .15s, color .15s;
 }
-.bellBtn:hover { background: rgba(249,115,22,.1); color: #F97316; }
+.bellBtn:hover { background: rgba(249, 115, 22, .1); color: #F97316; }
 .bellBadge {
   position: absolute; top: 4px; right: 4px;
   min-width: 18px; height: 18px; padding: 0 4px;
@@ -308,6 +336,7 @@
   padding: 12px 24px;
   background: #ffffff;
   border-bottom: 1px solid #E2E8F0;
+  backdrop-filter: blur(14px);
   position: sticky;
   top: 0;
   z-index: 100;

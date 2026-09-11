@@ -1,19 +1,24 @@
 import { apiClient } from './apiClient'
 
 export const authApi = {
-  // POST /auth/login → { token, refreshToken, user }
+  // POST /auth/login → { user }; tokens arrive in HttpOnly cookies.
   login(credentials) {
     return apiClient.post('/auth/login', credentials).then((r) => r.data.data)
   },
 
-  // POST /auth/refresh → { token, user }
-  refresh(refreshToken) {
-    return apiClient.post('/auth/refresh', { refreshToken }).then((r) => r.data.data)
+  // POST /onboarding/register → crea un taller SaaS y su administrador
+  registerWorkshop(data) {
+    return apiClient.post('/onboarding/register', data).then((r) => r.data.data)
   },
 
-  // POST /auth/logout → invalida el refresh token
-  logout(refreshToken) {
-    return apiClient.post('/auth/logout', { refreshToken }).then((r) => r.data)
+  // POST /auth/refresh → { user }; the access token is replaced in a cookie.
+  refresh() {
+    return apiClient.post('/auth/refresh').then((r) => r.data.data)
+  },
+
+  // POST /auth/logout → revoca la sesión y elimina las cookies.
+  logout() {
+    return apiClient.post('/auth/logout').then((r) => r.data)
   },
 
   // GET /auth/me → user

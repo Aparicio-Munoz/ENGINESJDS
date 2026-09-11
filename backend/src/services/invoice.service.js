@@ -104,7 +104,7 @@ export async function generatePDF(id, actor = {}) {
     const pw = doc.page.width - 100
 
     // Header
-    doc.fontSize(18).fillColor('#F97316').text('ENGINES JDS', 50, 40)
+    doc.fontSize(18).fillColor('#F97316').text('SGTM', 50, 40)
     doc.fontSize(9).fillColor('#64748B').text('Taller especializado en motocicletas', 50, 62)
     doc.moveDown(1.5)
 
@@ -161,7 +161,7 @@ export async function generatePDF(id, actor = {}) {
     if (inv.paid_at) doc.text(`Pagada: ${new Date(inv.paid_at).toLocaleString('es-CO')}`)
 
     // Footer
-    doc.fontSize(8).fillColor('#94A3B8').text('ENGINES JDS — Gracias por su preferencia', 50, doc.page.height - 60, { width: pw, align: 'center' })
+    doc.fontSize(8).fillColor('#94A3B8').text('SGTM — Gracias por su preferencia', 50, doc.page.height - 60, { width: pw, align: 'center' })
 
     doc.end()
   })

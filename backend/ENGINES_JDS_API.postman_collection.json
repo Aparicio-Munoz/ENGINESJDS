@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "ENGINES JDS — API REST",
-    "description": "Colección completa de endpoints para el sistema de gestión de taller ENGINES JDS.\n\nAntes de usar: ejecuta 'Auth / Login' y el token se guarda automáticamente en {{token}}.",
+    "name": "SGTM — API REST",
+    "description": "Colección completa de endpoints para el sistema de gestión de talleres SGTM.\n\nAntes de usar: ejecuta 'Auth / Login' y el token se guarda automáticamente en {{token}}.",
     "version": "1.0.0",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },

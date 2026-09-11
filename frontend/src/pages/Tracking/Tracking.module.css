@@ -480,9 +480,21 @@
   transition: background 0.15s, border-color 0.15s;
 }
 
+.pdfBtn:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
 .pdfBtn:hover {
   background: rgba(249, 115, 22, 0.2);
   border-color: #F97316;
+}
+
+.pdfError {
+  margin: 10px 0 0;
+  color: #fca5a5;
+  font-size: 0.82rem;
+  text-align: center;
 }
 
 /* ── Footer ──────────────────────────────────────── */

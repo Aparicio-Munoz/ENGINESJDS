@@ -1,3 +1,5 @@
+import { isSaaSEnabled } from './saas.js'
+
 const REQUIRED = [
   'DB_HOST',
   'DB_USER',
@@ -6,7 +8,10 @@ const REQUIRED = [
 ]
 
 export function validateEnv() {
-  const missing = REQUIRED.filter((key) => !process.env[key]?.trim())
+  const required = [...REQUIRED]
+  if (isSaaSEnabled()) required.push('PLATFORM_DB_NAME')
+
+  const missing = required.filter((key) => !process.env[key]?.trim())
   if (missing.length > 0) {
     throw new Error(
       `[env] Variables de entorno requeridas no configuradas: ${missing.join(', ')}\n` +

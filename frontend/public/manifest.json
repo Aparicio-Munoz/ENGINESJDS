@@ -1,7 +1,8 @@
 {
-  "name": "ENGINES JDS — Taller de Motocicletas",
-  "short_name": "ENGINES JDS",
+  "name": "SGTM",
+  "short_name": "SGTM",
   "description": "Sistema de gestión integral para taller de motocicletas",
+  "id": "/",
   "start_url": "/",
   "display": "standalone",
   "orientation": "any",

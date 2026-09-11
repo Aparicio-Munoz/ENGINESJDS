@@ -1,4 +1,5 @@
 import { apiClient } from './apiClient'
+import { downloadBlob } from '../utils/downloadBlob'
 
 export const ordersApi = {
   // GET /orders?search=&status=&employee_id=&client_id=&motorcycle_id=&date_from=&date_to=&sort=&page=&limit=
@@ -7,8 +8,8 @@ export const ordersApi = {
   },
 
   // GET /orders/active — órdenes no Entregadas
-  getActive() {
-    return apiClient.get('/orders/active').then((r) => r.data.data)
+  getActive(config = {}) {
+    return apiClient.get('/orders/active', config).then((r) => r.data.data)
   },
 
   // GET /orders/service-catalog — servicios disponibles para agregar a la orden
@@ -76,11 +77,6 @@ export const ordersApi = {
   // GET /orders/:id/pdf → descarga el PDF de la orden
   async downloadPDF(id) {
     const res = await apiClient.get(`/orders/${id}/pdf`, { responseType: 'blob' })
-    const url = URL.createObjectURL(res.data)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `OT_${id}.pdf`
-    a.click()
-    URL.revokeObjectURL(url)
+    downloadBlob(res.data, `OT_${id}.pdf`)
   },
 }

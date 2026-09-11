@@ -57,11 +57,11 @@ export async function sendTestEmail() {
   const info = await t.sendMail({
     from,
     to,
-    subject: 'ENGINES JDS — Correo de prueba SMTP',
+    subject: 'SGTM — Correo de prueba SMTP',
     html: `
       <div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb">
         <div style="background:#0A0F1E;padding:28px 32px">
-          <p style="margin:0;color:#F97316;font-size:0.75rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase">ENGINES JDS</p>
+          <p style="margin:0;color:#F97316;font-size:0.75rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase">SGTM</p>
           <h1 style="margin:8px 0 0;color:#ffffff;font-size:1.5rem;font-weight:800">Prueba SMTP</h1>
         </div>
         <div style="padding:32px">

@@ -1,13 +1,14 @@
 {
   "name": "engines-jds-backend",
   "version": "1.0.0",
-  "description": "API REST para ENGINES JDS — Sistema de gestión de taller de motocicletas",
+  "description": "API REST para SGTM — Sistema de Gestión para Talleres de Motocicletas",
   "type": "module",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "lint": "eslint src/"
+    "lint": "eslint src/",
+    "test": "node --test test/*.test.js"
   },
   "engines": {
     "node": ">=18.0.0"

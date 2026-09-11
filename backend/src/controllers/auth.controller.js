@@ -2,12 +2,15 @@ import { ApiResponse } from '../utils/ApiResponse.js'
 import * as AuthService from '../services/auth.service.js'
 import * as SettingsModel from '../models/settings.model.js'
 import { ApiError } from '../utils/ApiError.js'
+import { isSaaSEnabled } from '../config/saas.js'
+import { clearAuthCookies, getRefreshToken, setAuthCookies } from '../utils/authCookies.js'
 
 export async function login(req, res, next) {
   try {
     const { email, password } = req.body
     const result = await AuthService.login(email, password, req.ip)
-    ApiResponse.success(res, result, 'Sesión iniciada correctamente')
+    setAuthCookies(res, { accessToken: result.token, refreshToken: result.refreshToken })
+    ApiResponse.success(res, { user: result.user }, 'Sesión iniciada correctamente')
   } catch (err) {
     next(err)
   }
@@ -15,20 +18,24 @@ export async function login(req, res, next) {
 
 export async function refresh(req, res, next) {
   try {
-    const { refreshToken } = req.body
-    const result = await AuthService.refresh(refreshToken, req.ip)
-    ApiResponse.success(res, result, 'Token renovado')
+    const result = await AuthService.refresh(getRefreshToken(req), req.ip, {
+      touch: req.headers['x-session-activity'] !== '0',
+    })
+    setAuthCookies(res, { accessToken: result.token })
+    ApiResponse.success(res, { user: result.user }, 'Token renovado')
   } catch (err) {
+    clearAuthCookies(res)
     next(err)
   }
 }
 
 export async function logout(req, res, next) {
   try {
-    const { refreshToken } = req.body
-    await AuthService.logout(refreshToken, req.user?.id ?? null, req.ip)
+    await AuthService.logout(getRefreshToken(req), req.user?.id ?? null, req.ip)
+    clearAuthCookies(res)
     ApiResponse.success(res, null, 'Sesión cerrada correctamente')
   } catch (err) {
+    clearAuthCookies(res)
     next(err)
   }
 }
@@ -63,6 +70,9 @@ export async function changePassword(req, res, next) {
 
 export async function publicRegister(req, res, next) {
   try {
+    if (isSaaSEnabled()) {
+      throw ApiError.forbidden('El registro de talleres debe hacerse desde /register')
+    }
     const settings = await SettingsModel.get()
     if (!settings?.allow_public_registration) {
       throw ApiError.forbidden('El registro público no está habilitado')

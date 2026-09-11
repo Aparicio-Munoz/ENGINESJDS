@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { promptInstall, canInstall } from '../../pwa'
+import { canInstall, getBrowserName, isInstalled, promptInstall } from '../../pwa'
 import { ROUTES } from '../../utils/routes'
 import styles from './Login.module.css'
 
@@ -20,39 +20,88 @@ function EyeIcon({ open }) {
 }
 
 function InstallButton() {
-  const [show, setShow] = useState(canInstall())
+  const [show, setShow] = useState(() => !isInstalled())
+  const [showInstructions, setShowInstructions] = useState(false)
+  const [nativeAvailable, setNativeAvailable] = useState(canInstall())
+  const browserName = getBrowserName()
 
   useEffect(() => {
-    function onAvailable() { setShow(true) }
+    function onAvailable() { setShow(true); setNativeAvailable(true) }
+    function onCompleted() { setShow(false); setShowInstructions(false) }
     window.addEventListener('pwa-install-available', onAvailable)
-    return () => window.removeEventListener('pwa-install-available', onAvailable)
+    window.addEventListener('pwa-install-completed', onCompleted)
+    return () => {
+      window.removeEventListener('pwa-install-available', onAvailable)
+      window.removeEventListener('pwa-install-completed', onCompleted)
+    }
   }, [])
 
   if (!show) return null
 
+  function renderManualInstructions() {
+    if (browserName === 'Brave') {
+      return <>En Brave, abre el menú <strong>⋮</strong> y selecciona <strong>Guardar y compartir → Instalar SGTM</strong>. También puedes gestionarla desde <strong>brave://apps</strong>.</>
+    }
+    if (browserName === 'Chrome') {
+      return <>En Chrome, abre el menú <strong>⋮</strong> y selecciona <strong>Enviar, guardar y compartir → Instalar página como aplicación</strong>.</>
+    }
+    if (browserName === 'Edge') {
+      return <>En Edge, abre el menú <strong>…</strong> y selecciona <strong>Más herramientas → Aplicaciones → Instalar este sitio como una aplicación</strong>.</>
+    }
+    return <>Abre el menú de tu navegador y busca <strong>Instalar página como aplicación</strong> o <strong>Crear acceso directo</strong>.</>
+  }
+
   async function handleInstall() {
-    const accepted = await promptInstall()
-    if (accepted) setShow(false)
+    // La disponibilidad del evento es la comprobación real de instalación
+    // nativa; el nombre del navegador solo decide el texto de respaldo.
+    const promptAvailable = nativeAvailable || canInstall()
+    if (!promptAvailable) {
+      setShowInstructions(true)
+      return
+    }
+
+    try {
+      const accepted = await promptInstall()
+      if (accepted || isInstalled()) setShow(false)
+      else setShowInstructions(true)
+    } catch {
+      setShowInstructions(true)
+    }
   }
 
   return (
-    <button className={styles.installButton} type="button" onClick={handleInstall}>
-      <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
-        <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z" />
-        <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
-      </svg>
-      Instalar ENGINES JDS
-    </button>
+    <div className={styles.installArea}>
+      <button className={styles.installButton} type="button" onClick={handleInstall}>
+        <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true">
+          <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z" />
+          <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-0.56-1.25-1.25v-2.5Z" />
+        </svg>
+        Instalar en el PC
+      </button>
+      {showInstructions ? (
+        <p className={styles.installHelp} role="status">
+          {renderManualInstructions()}
+        </p>
+      ) : null}
+    </div>
   )
 }
 
 export function Login() {
-  const { isAuthenticated, login } = useAuth()
+  const { isAuthenticated, user, login } = useAuth()
+  const location = useLocation()
   const navigate = useNavigate()
   const [formData, setFormData] = useState({ email: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPwd, setShowPwd] = useState(false)
+  const [notice] = useState(() => {
+    if (location.state?.registered) return 'Taller creado correctamente. Inicia sesión para continuar.'
+    if (new URLSearchParams(location.search).get('reason') === 'session-expired') {
+      return 'Tu sesión expiró por inactividad. Inicia sesión nuevamente.'
+    }
+    return ''
+  })
 
   function handleChange(event) {
     const { name, value } = event.target
@@ -60,11 +109,16 @@ export function Login() {
     if (error) setError('')
   }
 
-  function roleDestination(role) {
+  function roleDestination(role, nextUser) {
+    if (role === 'Administrador' && nextUser?.tenantId && nextUser.subscriptionActive === false) {
+      return ROUTES.adminSuscripcion
+    }
     if (role === 'Técnico')       return '/admin/motocicletas'
     if (role === 'Recepcionista') return '/admin/clientes'
     return ROUTES.admin
   }
+
+  const sessionSubscriptionBlocked = Boolean(user?.tenantId && user.subscriptionActive === false)
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -72,7 +126,7 @@ export function Login() {
     setLoading(true)
     try {
       const session = await login(formData)
-      navigate(roleDestination(session?.user?.role), { replace: true })
+      navigate(roleDestination(session?.user?.role, session?.user), { replace: true })
     } catch (loginError) {
       setError(loginError.message || 'Credenciales incorrectas. Verifica tu correo y contraseña.')
       setLoading(false)
@@ -80,7 +134,7 @@ export function Login() {
   }
 
   if (isAuthenticated) {
-    return <Navigate to={ROUTES.admin} replace />
+    return <Navigate to={sessionSubscriptionBlocked ? ROUTES.adminSuscripcion : ROUTES.admin} replace />
   }
 
   return (
@@ -90,11 +144,12 @@ export function Login() {
         <div className={styles.panelGlow} />
         <div className={styles.panelContent}>
           <div className={styles.panelBrand}>
-            <span className={styles.panelMark}>◈</span>
-            ENGINES JDS
+            <span className={styles.panelMark}>S</span>
+            <span>SGTM <small>Sistema de Gestión para Talleres</small></span>
           </div>
+          <span className={styles.panelKicker}>CONTROL OPERATIVO</span>
           <blockquote className={styles.panelQuote}>
-            "Tu motocicleta en las mejores manos."
+            "Tu taller, siempre un paso adelante."
           </blockquote>
           <ul className={styles.panelFeatures}>
             <li>
@@ -118,11 +173,13 @@ export function Login() {
       <div className={styles.formSide}>
         <div className={styles.formWrapper}>
           <div className={styles.formHeader}>
+            <div className={styles.mobileBrand}><span>SGTM</span> Gestión inteligente para talleres</div>
+            <p className={styles.formKicker}>ACCESO SEGURO</p>
             <h1 className={styles.formTitle}>Bienvenido de vuelta</h1>
-            <p className={styles.formSubtitle}>Ingresa tus credenciales para acceder al panel.</p>
+            <p className={styles.formSubtitle}>Entra a tu centro de control y mantén cada servicio bajo control.</p>
           </div>
 
-          <form className={styles.form} onSubmit={handleSubmit} noValidate>
+          <form className={`${styles.form} ${styles.formSurface}`} onSubmit={handleSubmit} noValidate>
             <div className={styles.field}>
               <label className={styles.label} htmlFor="email">Correo electrónico</label>
               <input
@@ -133,7 +190,7 @@ export function Login() {
                 type="email"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="usuario@enginesjds.com"
+                placeholder="tu@taller.com"
                 required
               />
             </div>
@@ -177,10 +234,18 @@ export function Login() {
               </div>
             ) : null}
 
+            {notice ? <div className={styles.successBox} role="status">{notice}</div> : null}
+
             <button className={styles.submitButton} type="submit" disabled={loading}>
               {loading ? 'Verificando...' : 'Iniciar sesión'}
             </button>
           </form>
+
+          {import.meta.env.VITE_SAAS_ENABLED === 'true' ? (
+            <p className={styles.registerPrompt}>
+              ¿Tienes un taller? <Link to={ROUTES.register}>Crear una cuenta</Link>
+            </p>
+          ) : null}
 
           <InstallButton />
         </div>

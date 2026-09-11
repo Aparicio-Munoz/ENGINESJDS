@@ -3,7 +3,9 @@ import { DashboardLayout } from '../layouts/DashboardLayout/DashboardLayout'
 import { DashboardAdmin } from '../pages/DashboardAdmin/DashboardAdmin'
 import { Perfil } from '../pages/admin/Perfil/Perfil'
 import { Configuracion } from '../pages/admin/Configuracion/Configuracion'
+import { Suscripcion } from '../pages/admin/Suscripcion/Suscripcion'
 import { Login } from '../pages/Login/Login'
+import { Register } from '../pages/Register/Register'
 import { ForgotPassword } from '../pages/ForgotPassword/ForgotPassword'
 import { ResetPassword } from '../pages/ResetPassword/ResetPassword'
 import { Clientes } from '../pages/admin/Clientes/Clientes'
@@ -46,6 +48,7 @@ const router = createBrowserRouter([
   // ── Raíz: siempre redirige al login (sin landing pública) ──
   { path: ROUTES.home, element: <Navigate to={ROUTES.login} replace /> },
   { path: ROUTES.login,          element: <Login /> },
+  { path: ROUTES.register,       element: <Register /> },
   { path: ROUTES.forgotPassword, element: <ForgotPassword /> },
   { path: ROUTES.resetPassword,  element: <ResetPassword /> },
   {
@@ -138,6 +141,16 @@ const router = createBrowserRouter([
         element: (
           <RoleRoute allowedRoles={['Administrador']}>
             <Configuracion />
+          </RoleRoute>
+        ),
+      },
+
+      // ── Suscripción SaaS: solo Administrador ──────────────
+      {
+        path: 'suscripcion',
+        element: (
+          <RoleRoute allowedRoles={['Administrador']}>
+            <Suscripcion />
           </RoleRoute>
         ),
       },
@@ -236,6 +249,7 @@ const router = createBrowserRouter([
     ],
   },
   // ── Seguimiento público (sin login) ────────────────
+  { path: '/tracking/:tenantSlug/:token', element: <Tracking /> },
   { path: '/tracking/:token', element: <Tracking /> },
 
   { path: '*', element: <NotFound /> },

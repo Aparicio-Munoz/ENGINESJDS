@@ -1,6 +1,5 @@
 import axios from 'axios'
-
-const AUTH_KEY = 'engines-jds-auth'
+import { notifySessionEvent } from '../services/sessionEvents'
 
 function resolveBaseURL() {
   const env = import.meta.env.VITE_API_BASE_URL
@@ -13,62 +12,47 @@ export const apiClient = axios.create({
   baseURL: resolveBaseURL(),
   headers: { 'Content-Type': 'application/json' },
   timeout: 15000,
+  withCredentials: true,
 })
 
-// ── Helpers de sesión (localStorage) ─────────────────────
-function readSession() {
-  try {
-    const raw = localStorage.getItem(AUTH_KEY)
-    return raw ? JSON.parse(raw) : null
-  } catch {
-    return null
-  }
-}
-
-function writeSession(session) {
-  localStorage.setItem(AUTH_KEY, JSON.stringify(session))
-}
-
-function clearSessionAndRedirect() {
-  localStorage.removeItem(AUTH_KEY)
-  if (!window.location.pathname.startsWith('/login')) {
-    window.location.href = '/login'
-  }
-}
-
-// ── Request: attach JWT access token ──────────────────────
 apiClient.interceptors.request.use((config) => {
-  const session = readSession()
-  if (session?.token) {
-    config.headers.Authorization = `Bearer ${session.token}`
+  if (config.sessionActivity === false) {
+    config.headers = { ...config.headers, 'X-Session-Activity': '0' }
+    delete config.sessionActivity
   }
   return config
 })
+
+function clearSessionAndRedirect() {
+  notifySessionEvent('expired')
+}
 
 // ── Refresh single-flight ─────────────────────────────────
 // Si varias peticiones reciben 401 a la vez, solo se dispara
 // un refresh; todas esperan la misma promesa.
 let refreshPromise = null
 
-async function doRefresh() {
-  const session = readSession()
-  const refreshToken = session?.refreshToken
-  if (!refreshToken) throw new Error('Sin refresh token')
-
+async function doRefresh(shouldTouchSession = true) {
   // El endpoint /auth/refresh está excluido del reintento (ver isAuthEndpoint)
-  const res = await apiClient.post('/auth/refresh', { refreshToken })
-  const newToken = res.data?.data?.token
-  if (!newToken) throw new Error('Respuesta de refresh inválida')
-
-  writeSession({ ...session, token: newToken })
-  return newToken
+  const config = shouldTouchSession ? undefined : { sessionActivity: false }
+  await apiClient.post('/auth/refresh', undefined, config)
+  return true
 }
 
-function getRefreshedToken() {
+function getRefreshedToken(shouldTouchSession) {
   if (!refreshPromise) {
-    refreshPromise = doRefresh().finally(() => { refreshPromise = null })
+    refreshPromise = doRefresh(shouldTouchSession).finally(() => { refreshPromise = null })
   }
   return refreshPromise
+}
+
+function requestCountsAsActivity(config) {
+  const headers = config?.headers
+  if (!headers) return true
+  if (typeof headers.get === 'function') {
+    return headers.get('X-Session-Activity') !== '0'
+  }
+  return headers['X-Session-Activity'] !== '0' && headers['x-session-activity'] !== '0'
 }
 
 function isAuthEndpoint(url = '') {
@@ -91,13 +75,13 @@ apiClient.interceptors.response.use(
     if (apiMessage) error.message = apiMessage
 
     const authCall = isAuthEndpoint(original.url)
+    const publicCall = original.url?.includes('/public/')
 
     // 401 en petición protegida → intentar renovar el access token una vez
-    if (status === 401 && !authCall && !original._retry) {
+    if (status === 401 && !authCall && !publicCall && !original._retry) {
       original._retry = true
       try {
-        const newToken = await getRefreshedToken()
-        original.headers = { ...original.headers, Authorization: `Bearer ${newToken}` }
+        await getRefreshedToken(requestCountsAsActivity(original))
         return apiClient(original)
       } catch {
         clearSessionAndRedirect()
@@ -106,7 +90,7 @@ apiClient.interceptors.response.use(
     }
 
     // 401 tras reintento fallido en petición protegida → cerrar sesión
-    if (status === 401 && !authCall) {
+    if (status === 401 && !authCall && !publicCall) {
       clearSessionAndRedirect()
     }
 

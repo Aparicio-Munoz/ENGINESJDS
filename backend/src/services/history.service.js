@@ -69,7 +69,7 @@ export async function generatePDF(motorcycleId, actor = {}) {
     doc.on('error', reject)
 
     // Header
-    doc.fontSize(18).fillColor('#F97316').text('ENGINES JDS', 50, 40)
+    doc.fontSize(18).fillColor('#F97316').text('SGTM', 50, 40)
     doc.fontSize(9).fillColor('#64748B').text('Historial clínico de motocicleta', 50, 62)
     doc.moveDown(1.5)
 
@@ -99,7 +99,7 @@ export async function generatePDF(motorcycleId, actor = {}) {
     if (!timeline.length) doc.fontSize(9).fillColor('#64748B').text('Sin visitas registradas.')
 
     // Footer
-    doc.fontSize(8).fillColor('#94A3B8').text('ENGINES JDS — Historial clínico de motocicleta', 50, doc.page.height - 60, { width: doc.page.width - 100, align: 'center' })
+    doc.fontSize(8).fillColor('#94A3B8').text('SGTM — Historial clínico de motocicleta', 50, doc.page.height - 60, { width: doc.page.width - 100, align: 'center' })
 
     doc.end()
   })

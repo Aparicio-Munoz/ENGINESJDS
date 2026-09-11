@@ -1,45 +1,66 @@
 import mysql from 'mysql2/promise'
 import { logger } from '../utils/logger.js'
+import { getTenantContext } from './requestContext.js'
 
-let pool = null
+const pools = new Map()
 
-export function getPool() {
-  if (!pool) {
-    pool = mysql.createPool({
-      host:               process.env.DB_HOST     ?? 'localhost',
-      port:               Number(process.env.DB_PORT ?? 3306),
-      user:               process.env.DB_USER,
-      password:           process.env.DB_PASSWORD,
-      database:           process.env.DB_NAME,
-      waitForConnections: true,
-      connectionLimit:    Number(process.env.DB_CONNECTION_LIMIT ?? 10),
-      queueLimit:         0,
-      timezone:           'Z',
-      // Convertir tipos correctamente (BIGINT → Number, DECIMAL → string para precisión)
-      supportBigNumbers:  true,
-      bigNumberStrings:   false,
-      // Requerido por proveedores gestionados con TLS forzado (ej. Aiven).
-      // Con DB_SSL_CA (PEM) se verifica la identidad del servidor; sin ella,
-      // la conexión va cifrada pero sin verificación de CA (Aiven usa CA propia).
-      ssl: process.env.DB_SSL === 'true'
-        ? {
-            minVersion: 'TLSv1.2',
-            rejectUnauthorized: Boolean(process.env.DB_SSL_CA),
-            ca: process.env.DB_SSL_CA ? process.env.DB_SSL_CA.replace(/\\n/g, '\n') : undefined,
-          }
-        : undefined,
-    })
+const DATABASE_NAME_PATTERN = /^[A-Za-z0-9_]{1,64}$/
 
-    // Algunos proveedores gestionados (ej. Aiven) traen sql_mode ANSI global
-    // (ANSI_QUOTES, PIPES_AS_CONCAT) — se fija el modo estándar de MySQL por
-    // sesión para que las queries se comporten igual que en desarrollo local.
-    pool.on('connection', (conn) => {
-      conn.query(
-        "SET SESSION sql_mode = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'"
-      )
-    })
+function createPool(databaseName) {
+  if (!DATABASE_NAME_PATTERN.test(databaseName)) {
+    throw new Error('Nombre de base de datos inválido')
   }
+
+  const isTenantDatabase = databaseName !== process.env.DB_NAME
+  const connectionLimit = isTenantDatabase
+    ? Number(process.env.TENANT_DB_CONNECTION_LIMIT ?? process.env.DB_CONNECTION_LIMIT ?? 5)
+    : Number(process.env.DB_CONNECTION_LIMIT ?? 10)
+
+  const pool = mysql.createPool({
+    host:               process.env.DB_HOST     ?? 'localhost',
+    port:               Number(process.env.DB_PORT ?? 3306),
+    user:               process.env.DB_USER,
+    password:           process.env.DB_PASSWORD,
+    database:           databaseName,
+    waitForConnections: true,
+    connectionLimit,
+    queueLimit:         0,
+    timezone:           'Z',
+    supportBigNumbers:  true,
+    bigNumberStrings:   false,
+    ssl: process.env.DB_SSL === 'true'
+      ? {
+          minVersion: 'TLSv1.2',
+          rejectUnauthorized: Boolean(process.env.DB_SSL_CA),
+          ca: process.env.DB_SSL_CA ? process.env.DB_SSL_CA.replace(/\\n/g, '\n') : undefined,
+        }
+      : undefined,
+  })
+
+  pool.on('connection', (conn) => {
+    conn.query(
+      "SET SESSION sql_mode = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'"
+    )
+  })
+
   return pool
+}
+
+export function resolveDatabaseName(databaseName = null, context = getTenantContext()) {
+  const resolvedDatabase = databaseName ?? context?.databaseName ?? process.env.DB_NAME
+
+  if (!resolvedDatabase) throw new Error('DB_NAME no configurado')
+  if (!DATABASE_NAME_PATTERN.test(resolvedDatabase)) {
+    throw new Error('Nombre de base de datos inválido')
+  }
+  return resolvedDatabase
+}
+
+export function getPool(databaseName = null) {
+  const resolvedDatabase = resolveDatabaseName(databaseName)
+
+  if (!pools.has(resolvedDatabase)) pools.set(resolvedDatabase, createPool(resolvedDatabase))
+  return pools.get(resolvedDatabase)
 }
 
 export async function testConnection() {
@@ -54,9 +75,9 @@ export async function testConnection() {
 }
 
 export async function closePool() {
-  if (pool) {
-    await pool.end()
-    pool = null
-    logger.info('Pool de conexiones MySQL cerrado')
+  if (pools.size) {
+    await Promise.all([...pools.values()].map((currentPool) => currentPool.end()))
+    pools.clear()
+    logger.info('Pools de conexiones MySQL cerrados')
   }
 }

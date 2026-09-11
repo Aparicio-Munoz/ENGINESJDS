@@ -13,11 +13,11 @@ export async function sendPasswordResetCode(to, code, username = '') {
   const info = await transporter.sendMail({
     from,
     to,
-    subject: 'ENGINES JDS — Código de recuperación de contraseña',
+    subject: 'SGTM — Código de recuperación de contraseña',
     html: `
       <div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb">
         <div style="background:#0A0F1E;padding:28px 32px">
-          <p style="margin:0;color:#F97316;font-size:0.75rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase">ENGINES JDS</p>
+          <p style="margin:0;color:#F97316;font-size:0.75rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase">SGTM</p>
           <h1 style="margin:8px 0 0;color:#ffffff;font-size:1.5rem;font-weight:800">Recuperación de contraseña</h1>
         </div>
         <div style="padding:32px">

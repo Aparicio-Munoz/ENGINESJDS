@@ -1,5 +1,7 @@
 import bcrypt from 'bcryptjs'
 import { getPool } from '../config/database.js'
+import { getTenantContext } from '../config/requestContext.js'
+import * as PlatformModel from '../models/platform.model.js'
 import * as UserModel from '../models/user.model.js'
 import { ApiError } from '../utils/ApiError.js'
 
@@ -26,16 +28,43 @@ export async function create({ username, email, password, role, status = 'Activo
 
   const rounds = Number(process.env.BCRYPT_ROUNDS ?? 12)
   const password_hash = await bcrypt.hash(password, rounds)
+  const tenant = getTenantContext()
 
-  return UserModel.create({ role_id: roleRecord.id, username, email, password_hash, status })
+  if (tenant && await PlatformModel.findAccountByEmail(email)) {
+    throw ApiError.conflict('El correo electrónico ya está registrado')
+  }
+
+  const user = await UserModel.create({ role_id: roleRecord.id, username, email, password_hash, status })
+
+  if (tenant) {
+    try {
+      await PlatformModel.createAccount({
+        tenantId: tenant.tenantId,
+        username,
+        email,
+        passwordHash: password_hash,
+        role,
+        status,
+      })
+    } catch (error) {
+      await UserModel.remove(user.id)
+      throw error
+    }
+  }
+
+  return user
 }
 
 export async function update(id, { username, email, role, status }) {
   const user = await getById(id)
   const fields = {}
+  const tenant = getTenantContext()
 
   if (email !== undefined) {
     if (await UserModel.emailExists(email, id)) {
+      throw ApiError.conflict('El correo electrónico ya está registrado')
+    }
+    if (tenant && email !== user.email && await PlatformModel.findAccountByEmail(email)) {
       throw ApiError.conflict('El correo electrónico ya está registrado')
     }
     fields.email = email
@@ -70,7 +99,20 @@ export async function update(id, { username, email, role, status }) {
     fields.status = status
   }
 
-  return UserModel.update(id, fields)
+  const updated = await UserModel.update(id, fields)
+
+  if (tenant) {
+    await PlatformModel.updateAccount({
+      tenantId: tenant.tenantId,
+      oldEmail: user.email,
+      username: fields.username,
+      email: fields.email,
+      role,
+      status,
+    })
+  }
+
+  return updated
 }
 
 export async function remove(id, deletedById, reason) {
@@ -79,6 +121,7 @@ export async function remove(id, deletedById, reason) {
   }
 
   const user = await getById(id)
+  const tenant = getTenantContext()
 
   // Proteger al último administrador
   if (user.role === 'Administrador') {
@@ -97,11 +140,18 @@ export async function remove(id, deletedById, reason) {
   )
 
   await UserModel.remove(id)
+  if (tenant) {
+    await PlatformModel.removeAccount(tenant.tenantId, user.email)
+  }
 }
 
 export async function resetPassword(id, newPassword) {
-  await getById(id)
+  const user = await getById(id)
   const rounds = Number(process.env.BCRYPT_ROUNDS ?? 12)
   const password_hash = await bcrypt.hash(newPassword, rounds)
+  const tenant = getTenantContext()
+  if (tenant) {
+    await PlatformModel.updateAccountPassword(tenant.tenantId, user.email, password_hash)
+  }
   await UserModel.updatePassword(id, password_hash)
 }

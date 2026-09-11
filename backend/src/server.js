@@ -4,6 +4,8 @@ import os from 'os'
 
 import app from './app.js'
 import { testConnection, closePool } from './config/database.js'
+import { closePlatformPool, testPlatformConnection } from './config/platformDatabase.js'
+import { isSaaSEnabled } from './config/saas.js'
 import { logger } from './utils/logger.js'
 import { initialize as initEmail } from './services/email.service.js'
 
@@ -24,11 +26,12 @@ function getLocalIP() {
 async function bootstrap() {
   try {
     await testConnection()
+    if (isSaaSEnabled()) await testPlatformConnection()
     await initEmail().catch((err) => logger.error('SMTP no disponible', { message: err.message }))
     const httpServer = http.createServer(app)
     httpServer.listen(PORT, HOST, () => {
       const localIP = getLocalIP()
-      logger.info(`ENGINES JDS API`)
+      logger.info(`SGTM API`)
       logger.info(`  Local:   http://localhost:${PORT}`)
       if (localIP) logger.info(`  Network: http://${localIP}:${PORT}`)
     })
@@ -38,6 +41,7 @@ async function bootstrap() {
       logger.info(`Señal ${signal} recibida — cerrando servidor`)
       httpServer.close(async () => {
         await closePool()
+        await closePlatformPool()
         process.exit(0)
       })
     }

@@ -2,8 +2,23 @@ let deferredPrompt = null
 let swRegistration = null
 
 export function registerSW() {
-  if (!('serviceWorker' in navigator)) return
-  if (import.meta.env.DEV) return
+  if (typeof window === 'undefined') return
+
+  // El evento puede llegar aunque el service worker no esté disponible
+  // (por ejemplo, en desarrollo). Capturarlo por separado evita que el
+  // botón de instalación desaparezca sin explicación.
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault()
+    deferredPrompt = e
+    window.dispatchEvent(new Event('pwa-install-available'))
+  })
+
+  window.addEventListener('appinstalled', () => {
+    deferredPrompt = null
+    window.dispatchEvent(new Event('pwa-install-completed'))
+  })
+
+  if (!('serviceWorker' in navigator) || import.meta.env.DEV) return
 
   window.addEventListener('load', async () => {
     try {
@@ -26,13 +41,6 @@ export function registerSW() {
     } catch (err) {
       console.warn('SW registration failed:', err)
     }
-  })
-
-  // Capture install prompt
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault()
-    deferredPrompt = e
-    window.dispatchEvent(new Event('pwa-install-available'))
   })
 }
 
@@ -80,4 +88,20 @@ export async function promptInstall() {
 
 export function canInstall() {
   return deferredPrompt !== null
+}
+
+export function getBrowserName() {
+  if (typeof navigator === 'undefined') return 'este navegador'
+  if (navigator.brave) return 'Brave'
+
+  const userAgent = navigator.userAgent ?? ''
+  if (/Edg(?:A|iOS)?\//.test(userAgent)) return 'Edge'
+  if (/Chrome\//.test(userAgent)) return 'Chrome'
+  return 'este navegador'
+}
+
+export function isInstalled() {
+  if (typeof window === 'undefined') return false
+  return window.matchMedia?.('(display-mode: standalone)').matches === true
+    || window.navigator.standalone === true
 }

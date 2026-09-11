@@ -149,7 +149,7 @@ export function Auditoria() {
     if (!logs.length) return
     const doc = new jsPDF({ orientation: 'landscape' })
     doc.setFontSize(16); doc.setTextColor(15, 23, 42)
-    doc.text('ENGINES JDS — Auditoría', 14, 16)
+    doc.text('SGTM — Auditoría', 14, 16)
     doc.setFontSize(9); doc.setTextColor(100, 116, 139)
     doc.text(`Generado: ${new Date().toLocaleString('es-CO')}`, 14, 23)
     autoTable(doc, {

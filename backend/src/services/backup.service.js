@@ -3,29 +3,38 @@ import { promisify } from 'util'
 import fs from 'fs/promises'
 import path from 'path'
 import { getPool } from '../config/database.js'
+import { getTenantContext } from '../config/requestContext.js'
 import { ApiError } from '../utils/ApiError.js'
 import { logAudit } from './audit.service.js'
 import { logger } from '../utils/logger.js'
 
 const execFileAsync = promisify(execFile)
 
-const BACKUP_DIR = path.resolve(process.cwd(), 'storage', 'backups')
+const BACKUP_ROOT_DIR = path.resolve(process.cwd(), 'storage', 'backups')
 const MAX_RESTORE_SIZE = 50 * 1024 * 1024 // 50 MB
+const DATABASE_NAME_PATTERN = /^[A-Za-z0-9_]{1,64}$/
 
 function getDbConfig() {
+  const database = getTenantContext()?.databaseName ?? process.env.DB_NAME ?? 'engines_jds'
+  if (!DATABASE_NAME_PATTERN.test(database)) throw new Error('Nombre de base de datos inválido')
+
   return {
     host:     process.env.DB_HOST     ?? 'localhost',
     port:     process.env.DB_PORT     ?? '3306',
     user:     process.env.DB_USER     ?? 'root',
     password: process.env.DB_PASSWORD ?? '',
-    database: process.env.DB_NAME     ?? 'engines_jds',
+    database,
   }
 }
 
-function formatFilename() {
+function getBackupDir(database) {
+  return path.join(BACKUP_ROOT_DIR, database)
+}
+
+function formatFilename(database) {
   const now = new Date()
   const pad = (n) => String(n).padStart(2, '0')
-  return `engines_jds_${now.getFullYear()}_${pad(now.getMonth() + 1)}_${pad(now.getDate())}_${pad(now.getHours())}_${pad(now.getMinutes())}.sql`
+  return `${database}_${now.getFullYear()}_${pad(now.getMonth() + 1)}_${pad(now.getDate())}_${pad(now.getHours())}_${pad(now.getMinutes())}.sql`
 }
 
 function assertBackupsAvailable() {
@@ -39,11 +48,11 @@ function assertBackupsAvailable() {
 // ── Crear respaldo ───────────────────────────────────────────
 export async function createBackup(actor = {}) {
   assertBackupsAvailable()
-  await fs.mkdir(BACKUP_DIR, { recursive: true })
-
   const db = getDbConfig()
-  const filename = formatFilename()
-  const filepath = path.join(BACKUP_DIR, filename)
+  const backupDir = getBackupDir(db.database)
+  await fs.mkdir(backupDir, { recursive: true })
+  const filename = formatFilename(db.database)
+  const filepath = path.join(backupDir, filename)
 
   const args = [
     `-h${db.host}`,
@@ -55,13 +64,14 @@ export async function createBackup(actor = {}) {
     '--events',
     db.database,
   ]
-  if (db.password) args.splice(3, 0, `-p${db.password}`)
-
   let status = 'SUCCESS'
   let notes = null
 
   try {
-    const { stdout } = await execFileAsync('mysqldump', args, { maxBuffer: 100 * 1024 * 1024 })
+    const { stdout } = await execFileAsync('mysqldump', args, {
+      maxBuffer: 100 * 1024 * 1024,
+      env: { ...process.env, ...(db.password ? { MYSQL_PWD: db.password } : {}) },
+    })
     await fs.writeFile(filepath, stdout, 'utf8')
   } catch (err) {
     status = 'FAILED'
@@ -112,18 +122,24 @@ export async function restoreBackup(file, actor = {}) {
   if (!sqlContent.trim()) {
     throw ApiError.badRequest('El archivo SQL está vacío')
   }
+  if (/\b(?:USE|CREATE\s+DATABASE|DROP\s+DATABASE)\b/i.test(sqlContent)) {
+    throw ApiError.badRequest('El respaldo no puede seleccionar, crear ni eliminar otra base de datos')
+  }
 
   const args = [
     `-h${db.host}`,
     `-P${db.port}`,
     `-u${db.user}`,
+    '--one-database',
     db.database,
   ]
-  if (db.password) args.splice(3, 0, `-p${db.password}`)
 
   try {
     await new Promise((resolve, reject) => {
-      const proc = spawn('mysql', args, { stdio: ['pipe', 'pipe', 'pipe'] })
+      const proc = spawn('mysql', args, {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: { ...process.env, ...(db.password ? { MYSQL_PWD: db.password } : {}) },
+      })
       let stderr = ''
       proc.stderr.on('data', (d) => { stderr += d.toString() })
       proc.on('close', (code) => code === 0 ? resolve() : reject(new Error(stderr || `mysql exited with code ${code}`)))
@@ -173,7 +189,7 @@ export async function getBackupFile(id, actor = {}) {
   if (!rows.length) throw ApiError.notFound('Respaldo no encontrado')
 
   const backup = rows[0]
-  const filepath = path.join(BACKUP_DIR, backup.filename)
+  const filepath = path.join(getBackupDir(getDbConfig().database), backup.filename)
 
   try {
     await fs.access(filepath)
@@ -196,7 +212,7 @@ export async function deleteBackup(id, actor = {}) {
   if (!rows.length) throw ApiError.notFound('Respaldo no encontrado')
 
   const backup = rows[0]
-  const filepath = path.join(BACKUP_DIR, backup.filename)
+  const filepath = path.join(getBackupDir(getDbConfig().database), backup.filename)
 
   try { await fs.unlink(filepath) } catch { /* file may already be gone */ }
   await getPool().query('DELETE FROM backups WHERE id = ?', [id])

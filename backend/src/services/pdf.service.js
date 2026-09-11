@@ -2,6 +2,7 @@ import PDFDocument from 'pdfkit'
 import QRCode from 'qrcode'
 import * as OrderModel from '../models/order.model.js'
 import { ApiError } from '../utils/ApiError.js'
+import { getTenantContext } from '../config/requestContext.js'
 
 const TRACKING_BASE = process.env.TRACKING_BASE_URL ?? 'https://enginesjds.com/tracking'
 const WHATSAPP_NUMBER = '573183531500'
@@ -37,7 +38,7 @@ export async function generateOrderPDF(orderId) {
 
   // ── Header ─────────────────────────────────────────
   doc.fontSize(20).fillColor(ORANGE).text('◈', { continued: true })
-  doc.fillColor(DARK).text(`  ENGINES JDS`, { continued: false })
+  doc.fillColor(DARK).text(`  SGTM`, { continued: false })
   doc.moveDown(0.2)
   doc.fontSize(9).fillColor(MUTED).text('Taller especializado en motocicletas')
   doc.moveDown(0.5)
@@ -166,7 +167,8 @@ export async function generateOrderPDF(orderId) {
 
   // ── QR Code ────────────────────────────────────────
   if (o.tracking_token) {
-    const trackingUrl = `${TRACKING_BASE}/${o.tracking_token}`
+    const tenant = getTenantContext()
+    const trackingUrl = `${TRACKING_BASE}/${tenant?.slug ? `${tenant.slug}/` : ''}${o.tracking_token}`
     try {
       const qrDataUrl = await QRCode.toDataURL(trackingUrl, { width: 100, margin: 1 })
       const qrBuffer = Buffer.from(qrDataUrl.split(',')[1], 'base64')
@@ -184,7 +186,7 @@ export async function generateOrderPDF(orderId) {
   const footerY = doc.page.height - doc.page.margins.bottom - 30
   doc.moveTo(leftCol, footerY).lineTo(leftCol + pageW, footerY).strokeColor(LINE).lineWidth(0.5).stroke()
   doc.fontSize(8).fillColor(MUTED)
-  doc.text('Gracias por confiar en ENGINES JDS', leftCol, footerY + 6, { width: pageW, align: 'center' })
+  doc.text('Gracias por confiar en SGTM', leftCol, footerY + 6, { width: pageW, align: 'center' })
   doc.text(`WhatsApp: +57 ${WHATSAPP_NUMBER.slice(2)}  ·  www.enginesjds.com`, { width: pageW, align: 'center' })
 
   doc.end()

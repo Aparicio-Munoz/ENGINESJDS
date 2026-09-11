@@ -1,5 +1,5 @@
 
-# ENGINES JDS
+# SGTM
 
 Sistema de gestión administrativa para taller de motocicletas. Plataforma web con landing pública, panel administrativo completo y catálogo de repuestos en línea.
 
@@ -7,7 +7,7 @@ Sistema de gestión administrativa para taller de motocicletas. Plataforma web c
 
 ## Descripción
 
-ENGINES JDS centraliza los procesos operativos de un taller de motocicletas: clientes, motocicletas, órdenes de trabajo, inventario de repuestos, empleados, citas y reportes. El frontend está completamente desarrollado con React y listo para integrarse con un backend REST y base de datos SQL Server.
+SGTM centraliza los procesos operativos de un taller de motocicletas: clientes, motocicletas, órdenes de trabajo, inventario de repuestos, empleados, citas y reportes. El frontend está completamente desarrollado con React y listo para integrarse con un backend REST y MySQL.
 
 ---
 
@@ -199,4 +199,4 @@ Modelo de datos sugerido para SQL Server:
 
 ---
 
-*ENGINES JDS — Taller especializado en motocicletas · Bogotá, Colombia*
+*SGTM — Sistema de Gestión para Talleres de Motocicletas · Bogotá, Colombia*

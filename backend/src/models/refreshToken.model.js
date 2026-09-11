@@ -17,13 +17,30 @@ export async function create({ userId, tokenHash, expiresAt, ip = null }) {
 // ── Buscar token válido (no revocado, no expirado) ───────────
 export async function findValid(tokenHash) {
   const [rows] = await getPool().query(
-    `SELECT id, user_id, expires_at
+    `SELECT id, user_id, expires_at, last_activity
      FROM refresh_tokens
      WHERE token_hash = ? AND revoked = 0 AND expires_at > NOW()
      LIMIT 1`,
     [tokenHash]
   )
   return rows[0] ?? null
+}
+
+export async function touchActivity(id) {
+  await getPool().query(
+    `UPDATE refresh_tokens
+     SET last_activity = NOW()
+     WHERE id = ? AND revoked = 0 AND expires_at > NOW()`,
+    [id]
+  )
+}
+
+export async function revokeById(id) {
+  const [result] = await getPool().query(
+    'UPDATE refresh_tokens SET revoked = 1 WHERE id = ? AND revoked = 0',
+    [id]
+  )
+  return result.affectedRows > 0
 }
 
 // ── Revocar un token (logout) ────────────────────────────────

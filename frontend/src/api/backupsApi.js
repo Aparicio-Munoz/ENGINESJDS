@@ -1,4 +1,5 @@
 import { apiClient } from './apiClient'
+import { downloadBlob, getFilenameFromContentDisposition } from '../utils/downloadBlob'
 
 export const backupsApi = {
   getAll(params = {}) {
@@ -29,13 +30,9 @@ export const backupsApi = {
 
   async download(id) {
     const res = await apiClient.get(`/backups/download/${id}`, { responseType: 'blob' })
-    const url = URL.createObjectURL(res.data)
     const disposition = res.headers['content-disposition'] || ''
-    const match = disposition.match(/filename="?(.+?)"?$/)
-    const filename = match ? match[1] : `backup_${id}.sql`
-    const a = document.createElement('a')
-    a.href = url; a.download = filename; a.click()
-    URL.revokeObjectURL(url)
+    const filename = getFilenameFromContentDisposition(disposition, `backup_${id}.sql`)
+    downloadBlob(res.data, filename)
   },
 
   remove(id) {

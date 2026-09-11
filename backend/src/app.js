@@ -8,6 +8,9 @@ import { validateEnv } from './config/env.js'
 import { apiRouter } from './routes/index.js'
 import { errorHandler } from './middlewares/error.middleware.js'
 import { apiLimiter } from './middlewares/rateLimit.middleware.js'
+import { requestContextMiddleware } from './config/requestContext.js'
+import { csrfProtection } from './middlewares/csrf.middleware.js'
+import { isProductionEnvironment } from './utils/authCookies.js'
 
 validateEnv()
 
@@ -24,7 +27,7 @@ app.use(cors({
   origin(origin, callback) {
     if (!origin) return callback(null, true)
     if (allowedOrigins.includes(origin)) return callback(null, true)
-    if (process.env.NODE_ENV !== 'production' && (origin.includes('://192.168.') || origin.includes('://10.') || origin.includes('://172.') || origin.includes('://localhost'))) {
+    if (!isProductionEnvironment() && (origin.includes('://192.168.') || origin.includes('://10.') || origin.includes('://172.') || origin.includes('://localhost'))) {
       return callback(null, true)
     }
     callback(null, false)
@@ -32,12 +35,21 @@ app.use(cors({
   credentials: true,
 }))
 
+// Las cookies HttpOnly se adjuntan automáticamente. Verificar el origen en
+// métodos mutables evita CSRF cuando producción usa SameSite=None.
+app.use(csrfProtection)
+
 // ── Parseo de body ────────────────────────────────────────
-app.use(express.json())
+app.use(express.json({
+  verify(req, _res, buffer) {
+    if (req.originalUrl.includes('/billing/webhook')) req.rawBody = buffer.toString('utf8')
+  },
+}))
 app.use(express.urlencoded({ extended: false }))
 
 // ── Logging HTTP ──────────────────────────────────────────
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'))
+app.use(requestContextMiddleware)
 
 // ── Rutas API ─────────────────────────────────────────────
 app.use('/api', apiLimiter, apiRouter)
@@ -46,7 +58,7 @@ app.use('/api', apiLimiter, apiRouter)
 app.get('/health', (_req, res) => {
   res.json({
     status:    'ok',
-    service:   'ENGINES JDS API',
+    service:   'SGTM API',
     version:   '1.0.0',
     timestamp: new Date().toISOString(),
   })

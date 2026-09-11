@@ -84,7 +84,7 @@ function fmtAuditDate(d) {
   return new Date(d).toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
-// ── Opciones base de gráficas (tema ENGINES JDS) ─────────────
+// ── Opciones base de gráficas (tema SGTM) ────────────────────
 const chartDefaults = {
   responsive: true,
   maintainAspectRatio: false,
@@ -105,7 +105,7 @@ function exportToPDF(title, columns, rows, filename) {
   const doc = new jsPDF({ orientation: 'landscape' })
   doc.setFontSize(16)
   doc.setTextColor(15, 23, 42)
-  doc.text(`ENGINES JDS — ${title}`, 14, 16)
+  doc.text(`SGTM — ${title}`, 14, 16)
   doc.setFontSize(9)
   doc.setTextColor(100, 116, 139)
   doc.text(`Generado: ${new Date().toLocaleString('es-CO')}`, 14, 23)
@@ -279,7 +279,7 @@ export function Reportes() {
     if (!chartData) return
     const doc = new jsPDF({ orientation: 'landscape' })
     doc.setFontSize(18); doc.setTextColor(15, 23, 42)
-    doc.text('ENGINES JDS — Reportes', 14, 16)
+    doc.text('SGTM — Reportes', 14, 16)
     doc.setFontSize(9); doc.setTextColor(100, 116, 139)
     doc.text(`Generado: ${new Date().toLocaleString('es-CO')}`, 14, 23)
     let y = 30

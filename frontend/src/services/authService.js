@@ -1,32 +1,35 @@
 import { authApi } from '../api/authApi'
+import { notifySessionEvent } from './sessionEvents'
 
 const AUTH_STORAGE_KEY = 'engines-jds-auth'
 
+function clearLegacySessionStorage() {
+  try {
+    localStorage.removeItem(AUTH_STORAGE_KEY)
+    sessionStorage.removeItem(AUTH_STORAGE_KEY)
+  } catch {
+    // Storage may be unavailable in a restricted browser context.
+  }
+}
+
 export const authService = {
   async login(credentials) {
-    // Calls POST /auth/login → { token, refreshToken, user }
-    const { token, refreshToken, user } = await authApi.login(credentials)
-    const session = { user, token, refreshToken }
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session))
-    return session
+    // The backend sets the access and refresh cookies; only safe user data
+    // remains in React memory.
+    const { user } = await authApi.login(credentials)
+    clearLegacySessionStorage()
+    return { user }
   },
 
   logout() {
-    // Invalida el refresh token en el backend (best-effort) antes de limpiar
-    const { refreshToken } = this.getSession()
-    if (refreshToken) {
-      authApi.logout(refreshToken).catch(() => { /* sesión local se limpia igual */ })
-    }
-    localStorage.removeItem(AUTH_STORAGE_KEY)
+    // The server revokes the HttpOnly refresh cookie. Broadcast immediately
+    // so other tabs stop rendering protected content as well.
+    const request = authApi.logout().catch(() => {})
+    notifySessionEvent('logout')
+    clearLegacySessionStorage()
+    return request
   },
 
-  getSession() {
-    try {
-      const stored = localStorage.getItem(AUTH_STORAGE_KEY)
-      return stored ? JSON.parse(stored) : { user: null, token: null, refreshToken: null }
-    } catch {
-      localStorage.removeItem(AUTH_STORAGE_KEY)
-      return { user: null, token: null }
-    }
-  },
+  clearLegacySessionStorage,
+
 }

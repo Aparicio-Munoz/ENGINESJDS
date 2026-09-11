@@ -18,6 +18,8 @@ import settingsRoutes    from './settings.routes.js'
 import publicRoutes      from './public.routes.js'
 import quickJobsRoutes   from './quickJobs.routes.js'
 import searchRoutes      from './search.routes.js'
+import onboardingRoutes  from './onboarding.routes.js'
+import billingRoutes     from './billing.routes.js'
 import { sendTestEmail } from '../services/email.service.js'
 
 export const apiRouter = Router()
@@ -27,6 +29,8 @@ apiRouter.use('/public', publicRoutes)
 
 // ── Autenticación (pública) ───────────────────────────
 apiRouter.use('/auth', authRoutes)
+apiRouter.use('/onboarding', onboardingRoutes)
+apiRouter.use('/billing', billingRoutes)
 
 // ── Módulos administrativos (requieren JWT) ───────────
 apiRouter.use('/clients',      clientRoutes)

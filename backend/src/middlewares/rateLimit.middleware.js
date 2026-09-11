@@ -43,3 +43,13 @@ export const otpLimiter = rateLimit({
   legacyHeaders: false,
   handler: tooManyRequestsHandler,
 })
+
+// Alta de talleres: es más costosa que un login porque puede crear una
+// base completa y ejecutar todas las migraciones del sistema.
+export const registrationLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: tooManyRequestsHandler,
+})

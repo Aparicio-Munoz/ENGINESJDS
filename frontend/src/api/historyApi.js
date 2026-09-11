@@ -1,4 +1,5 @@
 import { apiClient } from './apiClient'
+import { downloadBlob } from '../utils/downloadBlob'
 
 export const historyApi = {
   getFullHistory(motorcycleId) {
@@ -15,9 +16,6 @@ export const historyApi = {
 
   async downloadPDF(motorcycleId) {
     const res = await apiClient.get(`/history/motorcycle/${motorcycleId}/pdf`, { responseType: 'blob' })
-    const url = URL.createObjectURL(res.data)
-    const a = document.createElement('a')
-    a.href = url; a.download = `historial_moto_${motorcycleId}.pdf`; a.click()
-    URL.revokeObjectURL(url)
+    downloadBlob(res.data, `historial_moto_${motorcycleId}.pdf`)
   },
 }
