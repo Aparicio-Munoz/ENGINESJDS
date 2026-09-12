@@ -142,7 +142,7 @@ export function Auditoria() {
       Descripción: r.description ?? '—',
       IP: r.ip_address ?? '—',
     }))
-    await exportWorkbook([{ name: 'Auditoría', rows: data }], 'ENGINES_JDS_Auditoria.xlsx')
+    await exportWorkbook([{ name: 'Auditoría', rows: data }], 'SGTM_Auditoria.xlsx')
   }
 
   function handleExportPDF() {
@@ -165,7 +165,7 @@ export function Auditoria() {
       headStyles: { fillColor: [249, 115, 22], textColor: 255, fontStyle: 'bold' },
       alternateRowStyles: { fillColor: [248, 250, 252] },
     })
-    doc.save('ENGINES_JDS_Auditoria.pdf')
+    doc.save('SGTM_Auditoria.pdf')
   }
 
   return (

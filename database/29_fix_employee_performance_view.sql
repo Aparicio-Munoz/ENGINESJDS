@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Migración: corregir v_employee_performance
+-- SGTM — Migración: corregir v_employee_performance
 --
 -- Bugs corregidos (vista original en 02_views.sql):
 -- 1. Fan-out: `orders` y `order_services` se unían AMBAS directamente a

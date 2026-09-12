@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Schema de base de datos
+-- SGTM — Schema de base de datos
 -- Motor:   MySQL 8.0+
 -- Charset: utf8mb4 / utf8mb4_unicode_ci
 -- ============================================================

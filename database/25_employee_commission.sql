@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Migración: comisión por empleado
+-- SGTM — Migración: comisión por empleado
 -- Porcentaje editable por el administrador. Las ganancias del
 -- empleado se calculan como:
 --   SUM(orders.labor_cost) de sus órdenes asignadas × commission_percent / 100

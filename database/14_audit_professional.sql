@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Migración: Auditoría profesional
+-- SGTM — Migración: Auditoría profesional
 -- Agrega user_name, role, description a audit_logs
 -- ============================================================
 

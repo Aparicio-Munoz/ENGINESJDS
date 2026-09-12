@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Migración: simplificar inventory.category a 5 categorías
+-- SGTM — Migración: simplificar inventory.category a 5 categorías
 -- Categorías finales: 'Transmisión', 'Eléctrico', 'Rodaje y Suspensión',
 --                      'Motor', 'Frenos y Dirección'
 -- Se eliminan: 'Aceites', 'Filtros', 'Llantas', 'Frenos', 'Eléctricos', 'Accesorios'

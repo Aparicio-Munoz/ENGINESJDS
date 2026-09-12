@@ -15,6 +15,13 @@ function requireStripeConfig() {
   }
 }
 
+function getFrontendOrigin() {
+  return (process.env.FRONTEND_URL ?? 'http://localhost:5173')
+    .split(',')[0]
+    .trim()
+    .replace(/\/$/, '')
+}
+
 function stripeDate(unixSeconds) {
   return unixSeconds ? new Date(Number(unixSeconds) * 1000) : null
 }
@@ -86,8 +93,9 @@ export async function createCheckoutSession() {
   const owner = await PlatformModel.findTenantOwnerAccount(tenant.tenantId)
   if (!owner) throw ApiError.internal('No se encontró el administrador del taller')
 
-  const successUrl = process.env.BILLING_SUCCESS_URL ?? 'http://localhost:5173/admin/suscripcion?billing=success'
-  const cancelUrl = process.env.BILLING_CANCEL_URL ?? 'http://localhost:5173/admin/suscripcion?billing=cancelled'
+  const frontendOrigin = getFrontendOrigin()
+  const successUrl = process.env.BILLING_SUCCESS_URL ?? `${frontendOrigin}/admin/suscripcion?billing=success`
+  const cancelUrl = process.env.BILLING_CANCEL_URL ?? `${frontendOrigin}/admin/suscripcion?billing=cancelled`
   const body = new URLSearchParams({
     mode: 'subscription',
     'line_items[0][price]': process.env.STRIPE_PRICE_ID,

@@ -1,4 +1,5 @@
-const KEY = 'engines_jds_taller_config'
+const KEY = 'sgtm_taller_config'
+const LEGACY_KEY = 'engines_jds_taller_config'
 
 const DEFAULTS = {
   nombre: 'SGTM',
@@ -16,7 +17,11 @@ const DEFAULTS = {
 
 export function getTallerConfig() {
   try {
-    const stored = localStorage.getItem(KEY)
+    const stored = localStorage.getItem(KEY) ?? localStorage.getItem(LEGACY_KEY)
+    if (!localStorage.getItem(KEY) && stored) {
+      localStorage.setItem(KEY, stored)
+      localStorage.removeItem(LEGACY_KEY)
+    }
     return stored ? { ...DEFAULTS, ...JSON.parse(stored) } : { ...DEFAULTS }
   } catch {
     return { ...DEFAULTS }

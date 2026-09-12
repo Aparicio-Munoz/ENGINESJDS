@@ -382,7 +382,7 @@ export function Usuarios() {
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  placeholder="usuario@enginesjds.com"
+                  placeholder="usuario@sgtm.test"
                   autoComplete="off"
                   disabled={submitting}
                 />

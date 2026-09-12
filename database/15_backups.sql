@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Migración: Módulo de respaldos
+-- SGTM — Migración: Módulo de respaldos
 -- ============================================================
 
 USE engines_jds;

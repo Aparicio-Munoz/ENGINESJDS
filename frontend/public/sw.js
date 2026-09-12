@@ -1,6 +1,6 @@
 // Cambiar esta versión obliga al navegador a activar un caché nuevo y
 // descartar el manifest que pudiera conservar la instalación anterior.
-const CACHE_NAME = 'sgtm-v4'
+const CACHE_NAME = 'sgtm-v5'
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',

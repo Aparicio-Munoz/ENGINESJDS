@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Cliente y motocicleta opcionales en órdenes
+-- SGTM — Cliente y motocicleta opcionales en órdenes
 -- Permite crear una orden de trabajo sin cliente ni motocicleta
 -- asignados todavía (ej. la moto entra al taller antes de tener
 -- todos los datos del cliente registrados). No se exige llenarlos

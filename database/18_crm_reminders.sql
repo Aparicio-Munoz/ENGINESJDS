@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Migración: CRM y Recordatorios
+-- SGTM — Migración: CRM y Recordatorios
 -- ============================================================
 
 USE engines_jds;

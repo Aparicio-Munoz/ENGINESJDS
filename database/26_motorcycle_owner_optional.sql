@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Migración: motorcycles.client_id opcional
+-- SGTM — Migración: motorcycles.client_id opcional
 -- El campo "Propietario" deja de ser obligatorio al registrar una
 -- motocicleta nueva: puede guardarse sin cliente asignado y
 -- vincularse después mediante edición.

@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Migración: clients.name / last_name / phone opcionales
+-- SGTM — Migración: clients.name / last_name / phone opcionales
 -- El formulario "Nuevo cliente" deja de exigir estos datos: se puede
 -- registrar un cliente con información parcial y completarla después.
 -- document_type conserva su DEFAULT 'CC' (ya cubre el caso de no

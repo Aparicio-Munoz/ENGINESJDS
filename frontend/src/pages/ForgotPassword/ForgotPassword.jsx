@@ -157,7 +157,7 @@ export function ForgotPassword() {
                   className={`${styles.input} ${error ? styles.inputError : ''}`}
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); setError('') }}
-                  placeholder="usuario@enginesjds.com"
+                  placeholder="usuario@sgtm.test"
                   autoComplete="email"
                   required
                 />

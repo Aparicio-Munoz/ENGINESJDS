@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Migración: simplificar motorcycles.status a 4 estados
+-- SGTM — Migración: simplificar motorcycles.status a 4 estados
 -- Estados finales: 'En servicio', 'En reparación', 'Lista para entrega', 'Entregada'
 -- Se eliminan: 'Disponible', 'Esperando repuesto'
 --

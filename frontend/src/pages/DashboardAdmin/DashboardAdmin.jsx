@@ -111,7 +111,7 @@ export function DashboardAdmin() {
       ],
       headStyles: { fillColor: [249, 115, 22] },
     })
-    doc.save('ENGINES_JDS_Dashboard.pdf')
+    doc.save('SGTM_Dashboard.pdf')
   }
 
   async function exportExcel() {
@@ -147,7 +147,7 @@ export function DashboardAdmin() {
         rows: data.charts.topClients.map((c) => ({ Cliente: c.client_name, Órdenes: c.orders_count, Total: Number(c.total_spent) })),
       })
     }
-    await exportWorkbook(sheets, 'ENGINES_JDS_Dashboard.xlsx')
+    await exportWorkbook(sheets, 'SGTM_Dashboard.xlsx')
   }
 
   const k = data?.kpis

@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Limpieza de datos demo para producción
+-- SGTM — Limpieza de datos demo para producción
 --
 -- Elimina TODOS los registros de prueba.
 -- Conserva: estructura, vistas, triggers, roles, settings.
@@ -51,7 +51,7 @@ VALUES (
   1,
   (SELECT id FROM roles WHERE name = 'Administrador'),
   'Administrador',
-  'admin@enginesjds.com',
+  'admin@sgtm.test',
   -- Hash generado para: Admin123*
   '$2a$12$w4aYUt/PMIJ1wJ1Q4aR6B.msi6rRTL6wRJ1RfFw1fVuJceZ3/5lKS',
   'Activo'

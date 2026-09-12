@@ -1,5 +1,5 @@
 {
-  "name": "engines-jds-backend",
+  "name": "sgtm-backend",
   "version": "1.0.0",
   "description": "API REST para SGTM — Sistema de Gestión para Talleres de Motocicletas",
   "type": "module",

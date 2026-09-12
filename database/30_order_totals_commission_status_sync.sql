@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Corrección definitiva del módulo Órdenes de Trabajo
+-- SGTM — Corrección definitiva del módulo Órdenes de Trabajo
 --
 -- 1. TOTAL de la orden no incluía los servicios (order_services).
 --    subtotal/final_price sólo sumaban labor_cost + parts_cost.

@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Migración: Historial clínico de motocicletas
+-- SGTM — Migración: Historial clínico de motocicletas
 -- Vista que consolida órdenes, servicios, repuestos y técnicos
 -- ============================================================
 

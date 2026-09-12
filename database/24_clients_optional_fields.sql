@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Migración: clients.document nullable
+-- SGTM — Migración: clients.document nullable
 -- El documento volvió a capturarse en el formulario (obligatorio a
 -- nivel de aplicación), pero la columna queda NULL-able para tolerar
 -- clientes históricos registrados sin documento.

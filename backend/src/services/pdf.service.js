@@ -4,7 +4,11 @@ import * as OrderModel from '../models/order.model.js'
 import { ApiError } from '../utils/ApiError.js'
 import { getTenantContext } from '../config/requestContext.js'
 
-const TRACKING_BASE = process.env.TRACKING_BASE_URL ?? 'https://enginesjds.com/tracking'
+const trackingOrigin = (process.env.FRONTEND_URL ?? 'http://localhost:5173')
+  .split(',')[0]
+  .trim()
+  .replace(/\/$/, '')
+const TRACKING_BASE = process.env.TRACKING_BASE_URL ?? `${trackingOrigin}/tracking`
 const WHATSAPP_NUMBER = '573183531500'
 
 const ORANGE = '#F97316'
@@ -187,7 +191,7 @@ export async function generateOrderPDF(orderId) {
   doc.moveTo(leftCol, footerY).lineTo(leftCol + pageW, footerY).strokeColor(LINE).lineWidth(0.5).stroke()
   doc.fontSize(8).fillColor(MUTED)
   doc.text('Gracias por confiar en SGTM', leftCol, footerY + 6, { width: pageW, align: 'center' })
-  doc.text(`WhatsApp: +57 ${WHATSAPP_NUMBER.slice(2)}  ·  www.enginesjds.com`, { width: pageW, align: 'center' })
+  doc.text(`WhatsApp: +57 ${WHATSAPP_NUMBER.slice(2)}`, { width: pageW, align: 'center' })
 
   doc.end()
 

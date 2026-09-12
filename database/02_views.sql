@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Vistas para reportes y dashboards
+-- SGTM — Vistas para reportes y dashboards
 -- Requiere: 01_schema.sql ejecutado previamente
 -- ============================================================
 

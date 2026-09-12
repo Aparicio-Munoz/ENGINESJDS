@@ -824,7 +824,7 @@ export function Empleados() {
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  placeholder="empleado@enginesjds.com"
+                  placeholder="empleado@sgtm.test"
                   disabled={submitting}
                 />
                 {formErrors.email ? <span>{formErrors.email}</span> : null}

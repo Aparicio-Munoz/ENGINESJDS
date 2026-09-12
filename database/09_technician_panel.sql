@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Migración: Panel Técnico
+-- SGTM — Migración: Panel Técnico
 -- Agrega estados granulares a órdenes y tabla de solicitud de repuestos
 -- ============================================================
 

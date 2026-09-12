@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Reset de usuarios
+-- SGTM — Reset de usuarios
 -- Limpia todos los usuarios y datos relacionados.
 -- Crea un administrador por defecto.
 -- ============================================================
@@ -46,17 +46,17 @@ EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
 -- Crear usuario administrador por defecto
--- Email: admin@enginesjds.com
+-- Email: admin@sgtm.test
 -- Contraseña: Admin123*
 -- Hash bcrypt (12 rounds): $2a$12$T6.mkaGu6gkCbUx8opN34e2KIF5F66aR3rdEgPiXy1x1VnM0CoV/C
 INSERT INTO users (role_id, username, email, password_hash, status)
 VALUES (
   (SELECT id FROM roles WHERE name = 'Administrador'),
   'Administrador',
-  'admin@enginesjds.com',
+  'admin@sgtm.test',
   '$2a$12$T6.mkaGu6gkCbUx8opN34e2KIF5F66aR3rdEgPiXy1x1VnM0CoV/C',
   'Activo'
 );
 
 SELECT '✓ Usuarios limpiados' AS resultado;
-SELECT '✓ Admin creado: admin@enginesjds.com / Admin123*' AS resultado;
+SELECT '✓ Admin creado: admin@sgtm.test / Admin123*' AS resultado;

@@ -1,4 +1,4 @@
-# ENGINES JDS — Base de datos MySQL 8
+# SGTM — Base de datos MySQL 8
 
 ## Archivos
 
@@ -8,6 +8,7 @@
 | `02_views.sql`  | 8 vistas para reportes, dashboard y alertas |
 | `03_seed.sql`   | Datos iniciales: roles, admin, servicios, clientes y órdenes demo |
 | `37_session_activity.sql` | Añade `refresh_tokens.last_activity` para timeout por inactividad |
+| `38_rebrand_sgtm.sql` | Actualiza los valores de branding predeterminados en instalaciones existentes |
 
 ## Ejecutar (orden obligatorio)
 

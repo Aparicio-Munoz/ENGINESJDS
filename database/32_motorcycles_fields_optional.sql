@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Migración: motorcycles.plate / brand / model / year opcionales
+-- SGTM — Migración: motorcycles.plate / brand / model / year opcionales
 -- El formulario "Nueva motocicleta" deja de exigir estos datos: se puede
 -- registrar una moto con información parcial y completarla después.
 -- client_id ya es nullable desde 26_motorcycle_owner_optional.sql.

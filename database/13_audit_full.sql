@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Migración: Auditoría completa
+-- SGTM — Migración: Auditoría completa
 -- Amplía audit_logs para registrar cambios de entidades
 -- (table_name, record_id, old_values, new_values, ip_address)
 -- manteniendo la auditoría de autenticación existente.

@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Base confiable para utilidad bruta
+-- SGTM — Base confiable para utilidad bruta
 --
 -- Conserva los costos que cambian con el tiempo en el momento en
 -- que se agregan a la orden. Sin estos snapshots, cambiar el costo

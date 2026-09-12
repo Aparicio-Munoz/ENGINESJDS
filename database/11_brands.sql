@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Migración: Gestión de marcas de repuestos
+-- SGTM — Migración: Gestión de marcas de repuestos
 -- Tabla brands (con precio) + seed por categoría
 -- ============================================================
 

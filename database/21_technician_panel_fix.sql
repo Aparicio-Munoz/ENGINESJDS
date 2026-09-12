@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Fix Panel Técnico
+-- SGTM — Fix Panel Técnico
 -- 1. Expande ENUM de status en orders para incluir estados del técnico
 -- 2. Crea tabla part_requests para solicitudes de repuestos
 -- ============================================================

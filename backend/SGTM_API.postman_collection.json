@@ -39,7 +39,7 @@
             "url": "{{baseUrl}}/api/auth/login",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@enginesjds.com\",\n  \"password\": \"admin123\"\n}"
+              "raw": "{\n  \"email\": \"admin@sgtm.test\",\n  \"password\": \"admin123\"\n}"
             }
           }
         },
@@ -70,7 +70,7 @@
             "url": "{{baseUrl}}/api/auth/register",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"username\": \"tecnico01\",\n  \"email\": \"tecnico@enginesjds.com\",\n  \"password\": \"tecnico123\",\n  \"role\": \"Técnico\"\n}"
+              "raw": "{\n  \"username\": \"tecnico01\",\n  \"email\": \"tecnico@sgtm.test\",\n  \"password\": \"tecnico123\",\n  \"role\": \"Técnico\"\n}"
             }
           }
         }
@@ -111,7 +111,7 @@
             "url": "{{baseUrl}}/api/users",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"username\": \"recepcion01\",\n  \"email\": \"recepcion@enginesjds.com\",\n  \"password\": \"recep123\",\n  \"role\": \"Recepcionista\",\n  \"status\": \"Activo\"\n}"
+              "raw": "{\n  \"username\": \"recepcion01\",\n  \"email\": \"recepcion@sgtm.test\",\n  \"password\": \"recep123\",\n  \"role\": \"Recepcionista\",\n  \"status\": \"Activo\"\n}"
             }
           }
         },
@@ -271,7 +271,7 @@
             "url": "{{baseUrl}}/api/employees",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"document_type\": \"CC\",\n  \"document\": \"87654321\",\n  \"name\": \"Luis\",\n  \"last_name\": \"García\",\n  \"specialty\": \"Motor\",\n  \"phone\": \"3157654321\",\n  \"email\": \"luis@enginesjds.com\",\n  \"daily_rate\": 80000,\n  \"hire_date\": \"2024-01-15\",\n  \"status\": \"Activo\"\n}"
+              "raw": "{\n  \"document_type\": \"CC\",\n  \"document\": \"87654321\",\n  \"name\": \"Luis\",\n  \"last_name\": \"García\",\n  \"specialty\": \"Motor\",\n  \"phone\": \"3157654321\",\n  \"email\": \"luis@sgtm.test\",\n  \"daily_rate\": 80000,\n  \"hire_date\": \"2024-01-15\",\n  \"status\": \"Activo\"\n}"
             }
           }
         },

@@ -51,8 +51,8 @@ export function getTransporter() {
 export async function sendTestEmail() {
   await ensureInitialized()
   const t = getTransporter()
-  const to   = process.env.SMTP_USER ?? 'test@enginesjds.com'
-  const from = process.env.SMTP_FROM ?? process.env.SMTP_USER ?? 'noreply@enginesjds.com'
+  const to   = process.env.SMTP_USER ?? 'test@sgtm.test'
+  const from = process.env.SMTP_FROM ?? process.env.SMTP_USER ?? 'noreply@sgtm.test'
 
   const info = await t.sendMail({
     from,
