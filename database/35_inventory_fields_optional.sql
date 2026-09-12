@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Migración: inventory.code / name / brand / category opcionales
+-- SGTM — Migración: inventory.code / name / brand / category opcionales
 -- El formulario "Nuevo repuesto" deja de exigir estos datos: se puede
 -- registrar un repuesto con información parcial y completarla después.
 -- unit_price, sale_price, quantity, min_stock ya tienen DEFAULT en el

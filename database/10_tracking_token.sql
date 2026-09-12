@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Migración: Token de seguimiento público
+-- SGTM — Migración: Token de seguimiento público
 -- Agrega tracking_token a orders para consulta sin autenticación
 -- ============================================================
 

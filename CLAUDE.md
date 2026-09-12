@@ -1,4 +1,4 @@
-# ENGINES JDS
+# SGTM
 
 Sistema interno de gestión administrativa para un taller de motocicletas (Bogotá, Colombia). No es un sitio público: la raíz redirige siempre a `/login`. Roles: **Administrador**, **Recepcionista**, **Técnico**, cada uno con acceso restringido por ruta (ver `frontend/src/routes/AppRouter.jsx`).
 
@@ -7,7 +7,7 @@ Sistema interno de gestión administrativa para un taller de motocicletas (Bogot
 ## Estructura
 
 ```
-ENGINES-JDS/
+SGTM/
 ├── frontend/   # React 19 + Vite 8, PWA, panel por rol
 ├── backend/    # Node.js + Express (ESM), API REST
 ├── database/   # Migraciones SQL numeradas secuencialmente

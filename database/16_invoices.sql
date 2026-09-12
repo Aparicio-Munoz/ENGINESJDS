@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Migración: Facturación y caja
+-- SGTM — Migración: Facturación y caja
 -- ============================================================
 
 USE engines_jds;

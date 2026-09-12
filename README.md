@@ -36,7 +36,7 @@ SGTM centraliza los procesos operativos de un taller de motocicletas: clientes, 
 ## Estructura del proyecto
 
 ```text
-ENGINES-JDS/
+SGTM/
 ├── frontend/    # Aplicación web React (COMPLETADA)
 ├── backend/     # API REST Node.js/Express (pendiente)
 ├── database/    # Scripts, migraciones y modelo SQL Server (pendiente)

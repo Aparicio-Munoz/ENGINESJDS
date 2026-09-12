@@ -1,10 +1,12 @@
 import fs from 'fs'
 import path from 'path'
+import { fileURLToPath } from 'url'
 import dotenv from 'dotenv'
 import mysql from 'mysql2/promise'
 
-const scratch = '/private/tmp/claude-501/-Users-danilomunoz-Desktop-ENGINES-JDS/27f4bbe3-6254-4c93-b9ff-1f949bd52ac3/scratchpad'
-dotenv.config({ path: path.join(scratch, '.env.prod') })
+const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const envPath = process.env.MIGRATION_ENV_FILE ?? path.join(projectRoot, 'backend', '.env.production')
+dotenv.config({ path: envPath })
 
 const files = [
   '27_motorcycle_status_simplify.sql',
@@ -23,7 +25,7 @@ const conn = await mysql.createConnection({
 })
 
 for (const file of files) {
-  const sql = fs.readFileSync(path.join('../database', file), 'utf8')
+  const sql = fs.readFileSync(path.join(projectRoot, 'database', file), 'utf8')
   await conn.query(sql)
   console.log(`Applied: ${file}`)
 }

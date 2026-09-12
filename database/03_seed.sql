@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Datos iniciales (seed)
+-- SGTM — Datos iniciales (seed)
 -- Requiere: 01_schema.sql, 02_views.sql ejecutados previamente
 -- ADVERTENCIA: Solo para entorno de desarrollo
 -- ============================================================
@@ -22,9 +22,9 @@ INSERT INTO roles (id, name, description) VALUES
 -- CAMBIAR EN PRODUCCIÓN
 -- ────────────────────────────────────────────────────────────
 INSERT INTO users (id, role_id, username, email, password_hash, status) VALUES
-  (1, 1, 'admin',        'admin@enginesjds.co',         '$2a$12$AB.ktkz05CzFPEXCI3E9dOIdrOt520itCPoZ/51Rry0GH5CGS3hdO', 'Activo'),
-  (2, 3, 'recepcion',    'recepcion@enginesjds.co',     '$2a$12$AB.ktkz05CzFPEXCI3E9dOIdrOt520itCPoZ/51Rry0GH5CGS3hdO', 'Activo'),
-  (3, 2, 'tecnico1',     'tecnico1@enginesjds.co',      '$2a$12$AB.ktkz05CzFPEXCI3E9dOIdrOt520itCPoZ/51Rry0GH5CGS3hdO', 'Activo');
+  (1, 1, 'admin',        'admin@sgtm.test',             '$2a$12$AB.ktkz05CzFPEXCI3E9dOIdrOt520itCPoZ/51Rry0GH5CGS3hdO', 'Activo'),
+  (2, 3, 'recepcion',    'recepcion@sgtm.test',         '$2a$12$AB.ktkz05CzFPEXCI3E9dOIdrOt520itCPoZ/51Rry0GH5CGS3hdO', 'Activo'),
+  (3, 2, 'tecnico1',     'tecnico1@sgtm.test',          '$2a$12$AB.ktkz05CzFPEXCI3E9dOIdrOt520itCPoZ/51Rry0GH5CGS3hdO', 'Activo');
 
 -- ────────────────────────────────────────────────────────────
 -- 3. Catálogo de servicios estándar
@@ -57,8 +57,8 @@ INSERT INTO service_catalog (id, name, description, category, base_price, estima
 -- 4. Empleados de ejemplo
 -- ────────────────────────────────────────────────────────────
 INSERT INTO employees (id, user_id, document_type, document, name, last_name, specialty, phone, email, daily_rate, status, hire_date) VALUES
-  (1, 3,    'CC', '1001234567', 'Carlos',   'Rodríguez', 'Motor y Transmisión',  '3001234567', 'carlos.r@enginesjds.co', 120000.00, 'Activo',    '2022-03-15'),
-  (2, NULL, 'CC', '1007654321', 'Miguel',   'Torres',    'Eléctrico y Frenos',   '3107654321', 'miguel.t@enginesjds.co', 100000.00, 'Activo',    '2023-01-10'),
+  (1, 3,    'CC', '1001234567', 'Carlos',   'Rodríguez', 'Motor y Transmisión',  '3001234567', 'carlos.r@sgtm.test', 120000.00, 'Activo',    '2022-03-15'),
+  (2, NULL, 'CC', '1007654321', 'Miguel',   'Torres',    'Eléctrico y Frenos',   '3107654321', 'miguel.t@sgtm.test', 100000.00, 'Activo',    '2023-01-10'),
   (3, NULL, 'CC', '1009876543', 'Sebastián','García',    'General',              '3209876543', NULL,                     90000.00,  'Vacaciones','2021-08-20');
 
 -- ────────────────────────────────────────────────────────────

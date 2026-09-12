@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Migración: Seguridad de login
+-- SGTM — Migración: Seguridad de login
 -- Bloqueo de IP por intentos fallidos + refresh tokens
 -- ============================================================
 

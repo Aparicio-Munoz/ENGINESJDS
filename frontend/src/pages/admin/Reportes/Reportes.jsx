@@ -272,7 +272,7 @@ export function Reportes() {
     if (chartData.stockByCategory?.length) {
       sheets.push({ name: 'Inventario', data: chartData.stockByCategory.map((r) => ({ Categoría: r.category, Items: r.items_count, Stock: r.total_stock, Agotado: r.out_of_stock, 'Stock bajo': r.low_stock })) })
     }
-    await exportToExcel(sheets, 'ENGINES_JDS_Reportes.xlsx')
+    await exportToExcel(sheets, 'SGTM_Reportes.xlsx')
   }
 
   function handleExportPDF() {
@@ -329,7 +329,7 @@ export function Reportes() {
         styles: { fontSize: 8 }, headStyles: { fillColor: [5, 150, 105] },
       })
     }
-    doc.save('ENGINES_JDS_Reportes.pdf')
+    doc.save('SGTM_Reportes.pdf')
   }
 
   // ── Chart configs ──────────────────────────────────────────

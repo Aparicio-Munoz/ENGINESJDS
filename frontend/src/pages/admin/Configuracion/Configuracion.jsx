@@ -130,8 +130,8 @@ export function Configuracion() {
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>Redes Sociales</h2>
             <form className={styles.form} onSubmit={(e) => { e.preventDefault(); handleSave({ facebook: settings.facebook, instagram: settings.instagram, website: settings.website }) }}>
-              <div className={styles.field}><label className={styles.label}>Facebook</label><input className={styles.input} placeholder="https://facebook.com/enginesjds" value={settings.facebook ?? ''} onChange={(e) => upd('facebook', e.target.value)} /></div>
-              <div className={styles.field}><label className={styles.label}>Instagram</label><input className={styles.input} placeholder="https://instagram.com/enginesjds" value={settings.instagram ?? ''} onChange={(e) => upd('instagram', e.target.value)} /></div>
+              <div className={styles.field}><label className={styles.label}>Facebook</label><input className={styles.input} placeholder="https://facebook.com/tuempresa" value={settings.facebook ?? ''} onChange={(e) => upd('facebook', e.target.value)} /></div>
+              <div className={styles.field}><label className={styles.label}>Instagram</label><input className={styles.input} placeholder="https://instagram.com/tuempresa" value={settings.instagram ?? ''} onChange={(e) => upd('instagram', e.target.value)} /></div>
               <div className={`${styles.field} ${styles.fieldFull}`}><label className={styles.label}>Página web</label><input className={styles.input} value={settings.website ?? ''} onChange={(e) => upd('website', e.target.value)} /></div>
               <div className={styles.formActions}><button type="submit" className={styles.primaryButton} disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</button></div>
             </form>

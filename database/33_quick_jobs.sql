@@ -1,5 +1,5 @@
 -- ============================================================
--- ENGINES JDS — Trabajos rápidos
+-- SGTM — Trabajos rápidos
 -- Trabajo suelto (sin orden completa, sin cliente ni motocicleta):
 -- descripción, precio y quién lo hizo. El precio se abona 100% al
 -- empleado (sin aplicar commission_percent — a diferencia de las
