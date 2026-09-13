@@ -1,11 +1,13 @@
 import axios from 'axios'
 import { notifySessionEvent } from '../services/sessionEvents'
+import { resolveApiBaseURL } from './resolveApiBaseUrl'
 
 function resolveBaseURL() {
-  const env = import.meta.env.VITE_API_BASE_URL
-  if (env) return env
-  const { protocol, hostname } = window.location
-  return `${protocol}//${hostname}:3000/api`
+  return resolveApiBaseURL({
+    apiBaseURL: import.meta.env.VITE_API_BASE_URL,
+    isProduction: import.meta.env.PROD,
+    location: window.location,
+  })
 }
 
 export const apiClient = axios.create({
